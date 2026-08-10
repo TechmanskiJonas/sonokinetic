@@ -1,0 +1,33 @@
+# environment
+.venv/
+__pycache__/
+.pytest_cache/
+
+# render cache and outputs
+.cache/
+renders/
+exports/
+
+# audio: source tracks are not distributable and renders derive from them
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.aif
+*.aiff
+*.m4a
+uploads/
+
+# derived timelines from local renders
+variations.json
+compare.json
+arrangement.json
+
+# per-user data
+sessions/
+feedback/
+presets/
+
+# local machine settings
+.claude/settings.local.json
+

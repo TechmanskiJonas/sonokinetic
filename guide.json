@@ -1,0 +1,148 @@
+{
+  "_note": "The theory and practice page. Distinct from encyclopedia.json, which defines terms; this is about what the project is for and how to get effects out of the tool. Body text supports the same [[entry-id]] links into the encyclopedia.",
+
+  "chapters": [
+    {
+      "id": "question",
+      "title": "The question",
+      "sections": [
+        {
+          "heading": "What is being asked",
+          "body": "Can a listener hear a field of sound as **rotating** without **localizing** anything in it?\n\nNot \"a sound moves from left to right.\" That is ordinary and well understood. The target is a pooled, global sense of a field turning, where nothing in it is pointable.\n\nThe distinction is worth holding onto because it is easy to lose. A very wide, enveloping source that sweeps around you is still a source: you can point at the middle of it. The claim here is stronger, and the listening-test question that tracks it is \"can you point at anything?\", not \"does it sound wide?\""
+        },
+        {
+          "heading": "Why it is not obviously possible",
+          "body": "The dominant account of [[auditory-motion]] is a [[snapshot-hypothesis|snapshot]] one: the auditory system estimates where a sound is at successive moments and infers motion from the change. There is no dedicated motion detector in that story; motion perception is parasitic on [[localization]].\n\nIf that account is complete, this project's question has a trivial answer. No localizable sources means no position estimates, which means nothing to difference, which means no motion.\n\nSo a positive result would be interesting precisely because it is difficult for the standard model to accommodate."
+        },
+        {
+          "heading": "The visual analogy that motivates it",
+          "body": "In vision the corresponding thing is settled. A [[random-dot-kinematogram]] is a field of dots, some fraction moving coherently, the rest randomly. Observers see the global rotation or translation reliably, and can report its direction, well below the coherence level at which any individual dot can be tracked.\n\nMotion there is extracted by **pooling** across elements. It is a property of the ensemble. See [[global-motion]].\n\nTwo details matter when carrying this across. **The dots move**: coherence lives in their shared direction of travel. And no individual dot is hidden, it is simply uninformative on its own.\n\nThe auditory case cannot work identically, and it is worth being honest about why. Vision has an array of independently resolvable spatial channels; hearing reconstructs space from a two-channel comparison. Whatever pooling exists in hearing has to operate over [[interaural-statistics|interaural statistics]] rather than over a spatial map. That is the specific bet this tool is built to test."
+        },
+        {
+          "heading": "The main experiment",
+          "body": "[[unison-rotation]]. A [[ring]] of mutually [[decorrelation|decorrelated]] sources, all turning together at the same rate.\n\nThe two properties come from two different controls, and keeping them separate is the whole design. **Rotation** is the ring rate: every source travels, keeping its position relative to the others. **Unlocalizability** is the decorrelation amount: no individual source presents interaural cues coherent enough to be picked out and pointed at.\n\nSo the question becomes sharp. Turn decorrelation down and you get trackable objects circling you, which nobody disputes is possible. Turn it up and the sources dissolve into a diffuse field. Does that field still turn?\n\nThe [[snapshot-hypothesis]] says it should not, because there are no position estimates to difference."
+        },
+        {
+          "heading": "A further probe, once the main case is settled",
+          "body": "The [[circulating-hotspot]] removes even the source motion: the sources hold still and only the coherence structure sweeps around the ring at its own rate.\n\nThis is a narrower and stranger question than the main one, and it is worth being clear that it is not a substitute for it. It asks whether rotation can ride on coherence structure **alone**. A null result here would say much less than a null result for unison rotation, because it has removed the very thing the ordinary account of [[auditory-motion]] would work with.\n\nUse it to ask what the percept depends on, after establishing whether the percept exists."
+        }
+      ]
+    },
+    {
+      "id": "literature",
+      "title": "Where this sits in the literature",
+      "sections": [
+        {
+          "heading": "A caution about this chapter",
+          "body": "This is orientation, not a review. It names areas and standard entry points so you know what to read and what vocabulary to search with. Verify specifics against the sources before citing anything.\n\nThe Reference section labels every entry with its status: **established** material with a literature behind it, **implementation** choices particular to this codebase, **vocabulary** invented here, results **measured here**, and open **conjecture**. That distinction matters for the same reason. Terms such as unison rotation and circulating coherence hotspot are this project's own coinages, and describing the configuration is safer than using the name when writing for anyone else."
+        },
+        {
+          "heading": "Spatial hearing generally",
+          "body": "Blauert's *Spatial Hearing* is the standard reference and covers [[itd]], [[ild]], [[spectral-cues]], the [[cone-of-confusion]], and [[externalization]] in depth. Middlebrooks and Green's review of sound localization by human listeners is a good shorter entry point.\n\nThe [[duplex-theory]] framing traces to Rayleigh and remains the right first approximation, though the modern picture treats the two cues as flexibly weighted rather than switched between."
+        },
+        {
+          "heading": "Auditory motion",
+          "body": "Grantham's work is the usual starting point, including the [[snapshot-hypothesis|snapshot]] account and [[binaural-sluggishness]], the finding that the binaural system integrates over a long enough window that it cannot follow fast changes in interaural cues. That sluggishness sets a real ceiling on how fast a field can rotate and still read as rotating.\n\n[[mama|Minimum audible movement angle]] work, associated with Perrott and colleagues, establishes that motion detection is coarser than static localization.\n\nAn auditory [[motion-aftereffect]] has been reported, which is harder to explain with snapshots alone. The literature has not settled this. **That unsettledness is the opening this project is aimed at.**"
+        },
+        {
+          "heading": "Coherence, envelopment and IACC",
+          "body": "[[iacc]] as an objective correlate of spatial impression comes from room acoustics. Ando's work on subjective preference in concert halls and Beranek's on hall acoustics are the standard references, and the split between [[apparent-source-width]] and [[envelopment]] as separable qualities comes from that tradition.\n\nThe caveat that matters here: these measures were developed for halls and steady sources. They were never validated on rotating decorrelated fields. Where they fail on this material is new information, not a mistake. See [[metric-vs-percept]]."
+        },
+        {
+          "heading": "Decorrelation technique",
+          "body": "Kendall's paper on the decorrelation of audio signals and its impact on spatial imagery is the standard reference for why and how. [[velvet-noise]] as a near-colourless sparse decorrelator is associated with Välimäki and colleagues, developed largely for efficient artificial reverberation.\n\nThe [[analytic-hrtf]] here follows the structural modelling approach: [[woodworth-model|Woodworth's]] ray-tracing ITD formula plus the [[brown-duda-shadow|Brown and Duda]] one-pole/one-zero head-shadow filter."
+        },
+        {
+          "heading": "What appears to be missing, and how confident to be about that",
+          "body": "The specific combination this project occupies: a rotating field of mutually [[decorrelation|decorrelated]] sources, examined for **global** motion percepts rather than source localization.\n\nThe adjacent literatures each cover part of it. Motion perception studies mostly use single sources. Decorrelation work targets width and envelopment, not motion. Room acoustics measures static fields.\n\n**Treat that as a hypothesis about the literature, not a finding.** An apparent gap is more often an unsearched corner than an unexplored question, and the cost of claiming novelty that does not exist is high. Before describing this as new, search deliberately for auditory global motion, spatial coherence and motion, diffuse field motion perception, and rotating sound fields, and check the ambisonics and spatial audio production literature as well as the psychoacoustic one."
+        }
+      ]
+    },
+    {
+      "id": "recipes",
+      "title": "Getting effects out of the tool",
+      "sections": [
+        {
+          "heading": "Start by choosing the right material",
+          "body": "This has more effect than any parameter. Sustained, nearly transient-free material decorrelates far more readily than percussive material: measured here, theremin passages reach [[iacc]] around 0.04 to 0.05 where guitar sits at 0.38 to 0.62 under identical treatment.\n\nThe reason is mechanical. Transients hand the auditory system discrete, well-timed [[localization]] snapshots, and those are exactly the cues that let it pick out individual sources. See [[transient-material]].\n\n**If you cannot get the percept, change the passage before changing the parameters.** Pads, drones, bowed strings, organ, sustained vocals, feedback, cymbal wash. Anything with a hard onset every half second is fighting you."
+        },
+        {
+          "heading": "If you hear nothing at all",
+          "body": "Check for a [[degenerate-ring]] first. A fully coherent, evenly spaced ring cancels to a dead-centre mono image with left and right identical to machine precision, and rotating it changes nothing whatsoever. The only audible effect is faint timbral shimmer from shifting [[comb-filtering]].\n\nThe fix is [[symmetry-breaking]]: raise the [[decorrelation-amount]] above zero, use uneven [[azimuth|azimuths]], use an odd source count so there are no [[antipodal-cancellation|antipodal pairs]], or unbalance the per-source gains.\n\nAlso check that your operating system is not applying its own spatializer on top: Windows Sonic and Dolby Atmos for Headphones both do. See [[headphone-compensation]]."
+        },
+        {
+          "heading": "Diffuse and enveloping, nothing pointable",
+          "body": "The easy half of the target. Push [[decorrelation-amount]] to 1, use [[allpass-filter|allpass]] rather than velvet for a smoother, more continuous texture, and lengthen [[ir-length]] toward 60 to 120 ms. Five sources, unevenly spaced.\n\nExpect [[iacc]] to fall well below 0.2 on sustained material. This alone gets you [[envelopment]] without localizability.\n\nWhat it does **not** get you is rotation, which is the hard half."
+        },
+        {
+          "heading": "Obvious rotation with sources you can follow",
+          "body": "The conventional case, useful as a reference point at the other end of the same axis. Moderate [[decorrelation-amount]] around 0.4 to 0.6, three sources, [[rotation-rate]] around 60 to 120 deg/s.\n\nAt partial coherence the individual sources retain enough interaural cue to be tracked, so this reads as things moving around you. It is the percept the [[snapshot-hypothesis]] comfortably explains, and it is what the project is trying to get **past**.\n\nWorth having as a variant, because the interesting question is where along the decorrelation sweep the percept stops being \"things circling me\" and becomes \"a field turning\", or stops being anything at all."
+        },
+        {
+          "heading": "The main case: unison rotation",
+          "body": "[[unison-rotation]]. Five sources, uneven [[azimuth|azimuths]], [[decorrelation-amount]] at 1.0, allpass, [[ir-length]] 30 to 60 ms, ring [[rotation-rate]] 60 to 120 deg/s. Sustained material.\n\nEvery source travels, together, at the same rate. Each is individually diffuse. This is the direct counterpart of the [[random-dot-kinematogram]] and it is what the tool opens on.\n\nThe listening question is the two-part one: **can you point at anything**, and **is the field turning**. Those should come apart here, and if they do not, sweep the decorrelation amount until they do.\n\nAlways pair it with a static control at the same settings, or the objective side of the comparison is uninterpretable."
+        },
+        {
+          "heading": "The narrower probe: a circulating hotspot",
+          "body": "Ring [[rotation-rate]] **zero**. [[circulating-hotspot]] enabled, rate 60 to 120 deg/s, [[hotspot-width|width]] around 80 degrees, hot amount 0, bed amount 1.\n\nNothing moves. What circulates is which part of the ring is momentarily coherent. Use this after the main case, as a way of asking whether the percept survives when all source motion is removed.\n\nTune the width by ear. Too wide and everything is partly coherent at once, so there is no structure to circulate. Too narrow and one source at a time becomes coherent, which is audible as a single source moving and collapses back to the conventional case."
+        },
+        {
+          "heading": "Rate, and why there is a usable window",
+          "body": "Bounded below by [[mama]]: too slow and there is nothing detectable within a listening window. Bounded above by [[binaural-sluggishness]]: the binaural system integrates over roughly a hundred milliseconds or more, so fast modulation is smoothed into texture rather than tracked as motion.\n\nIn practice, slow drift around 30 deg/s, clear rotation around 60 to 120, and past a few hundred it stops reading as motion at all.\n\nRemember that under the current HRTF the [[interaural-pattern-rate]] is **twice** the lap rate, so a 90 deg/s rotation modulates the cues at 0.5 Hz."
+        },
+        {
+          "heading": "Controls worth your time, and controls that are not",
+          "body": "[[ir-length]] is the filter-shape control with real headroom: inter-source [[coherence]] runs from about 0.19 at 5 ms to 0.04 at 120 ms, which is large against the roughly 0.05 [[noise-floor]].\n\n[[impulse-density]] saturates. It matters a lot below about 400 impulses/sec and does nothing measurable above it. Sweeping the top of that range is wasted effort.\n\n[[ir-envelope]] dominates when the IR is sparse and is nearly inert when dense. Hold it fixed when comparing families, or you will attribute the window's effect to something else.\n\nRing geometry moves [[iacc]] by less than the noise floor, which does **not** mean it is inaudible. It means [[iacc]] cannot adjudicate it and your ears will have to, [[blind-testing|blind]]."
+        },
+        {
+          "heading": "Keeping the low end intact",
+          "body": "Decorrelating the bass usually makes it vague and weak rather than wide, because the head does not [[head-shadow|shadow]] low frequencies and there is little [[ild]] down there to carry a position. Standard practice keeps bass coherent.\n\nSet a [[crossover]] around 150 to 250 Hz and a band amount of 0 for the low band. See [[bass-coherence]].\n\nWhether this practice holds for a **rotating** field is genuinely open, which is why the crossover is exposed rather than baked in. Try it both ways on the same passage."
+        },
+        {
+          "heading": "Listening technique",
+          "body": "Use [[live-apply|applying a variant during playback]] rather than listening to whole renders in sequence. [[auditory-memory]] for spatial quality is short, and the contrast is far easier to hear across an instant switch mid-note than across two separate listens.\n\nLoop a passage of 15 to 30 seconds. Long enough to settle into, short enough to hold in mind.\n\nKeep [[envelopment]] and rotation separate in your notes. It is easy to hear the first, which is easy to produce, and report it as the second."
+        }
+      ]
+    },
+    {
+      "id": "honesty",
+      "title": "Not fooling yourself",
+      "sections": [
+        {
+          "heading": "The central problem",
+          "body": "You designed the stimulus, you know what it should do, and the differences are small. Every condition for [[experimenter-bias]] is met.\n\nThis is not a character flaw and it is not fixed by trying to be objective. It is fixed procedurally: [[blind-testing]], [[randomization]], [[forced-choice]] questions, and [[catch-trial|catch trials]] where the right answer is that nothing is happening.\n\nUnblinded self-listening is fine for **exploring**. It is worthless as evidence. Use the bench to find candidates and the blind mode to test them."
+        },
+        {
+          "heading": "No single render can show rotation",
+          "body": "This is measured, not cautionary.\n\n[[iacc]] does not separate rotation from diffuseness: a static decorrelated field and a rotating one routinely land on the same value. The obvious alternative, looking for modulation of the interaural statistics at the rotation rate, is [[confound|confounded]] on real music, because the song's own periodicity sits in the same part of the series.\n\nOver a 20-second passage, a **completely static** field scored a modulation ratio of 2.04 at 0.5 Hz where genuinely rotating fields scored 2.65 to 3.14. Read on its own, the static field looks like it is rotating.\n\nSo every rotation claim needs a [[matched-control]]: the identical configuration with every rate set to zero and the same [[seed]]. The tool detects these automatically and reports the paired difference. For a hotspot, the right control is the hotspot **frozen**, not switched off."
+        },
+        {
+          "heading": "Sanity-check the measure on material that cannot confound it",
+          "body": "Before trusting a rotation number on a song, run the same configuration on a sustained synthetic tone. A drone has no rhythmic periodicity, so nothing competes with the rotation signature.\n\nMeasured here: the same hotspot configuration scored a paired delta of **+4.74** on a four-note synthetic drone against **+1.54** on real music. The synthetic case tells you the configuration genuinely produces a signature; the musical case tells you how much of it survives contact with the material.\n\nIf the synthetic case is near zero, the problem is your configuration, not the song. `sweep.py` has a generator for broadband test material, and any sustained tone will do."
+        },
+        {
+          "heading": "Know the noise floor before you interpret anything",
+          "body": "The decorrelating filters are random draws, so measurements vary by [[seed]]. [[iacc]] at full decorrelation has standard deviation about 0.038 across twelve seeds, spanning 0.166 to 0.283. Inter-source coherence carries about 0.05 per draw.\n\nSeveral effects under study are **smaller than this**. Ring geometry moves IACC by 0.039 to 0.051, entirely inside the floor.\n\nSo: fix the seed when comparing two settings, average across seeds when characterising one, and treat any difference smaller than the floor as not a finding. See [[noise-floor]]."
+        },
+        {
+          "heading": "What a null result would and would not mean",
+          "body": "If the [[circulating-hotspot]] produces no rotation percept, the honest reading is limited. It would be consistent with the [[snapshot-hypothesis]], but it would also be consistent with the [[analytic-hrtf]] being too impoverished, with the material being wrong, with the rate being outside the usable window, or with [[n-of-1|one listener's]] head.\n\nLow [[statistical-power]] cuts the same way: a handful of trials cannot support \"there is no difference.\"\n\nDecide how many repeats constitute a real test before running it, not after looking at the results."
+        },
+        {
+          "heading": "The honest summary of current status",
+          "body": "One listener, who holds the hypothesis, on a non-[[individualization|individualized]] [[analytic-hrtf]] with no [[front-back-confusion|front-back discrimination]] and no [[head-tracking]]. Rotation **direction** is confounded by construction. The objective rotation measure is noisy and needs long passages.\n\nWhat is solid: the [[degenerate-ring]] result, the level-preservation properties, the measured [[noise-floor]], and the fact that the [[circulating-hotspot]] is expressible and produces a field whose interaural statistics demonstrably vary over time while no source moves.\n\nWhat is not yet established is the perceptual claim itself. That needs [[blind-testing|blind]] trials, more than one listener, and ideally [[sofa|measured HRTFs]]."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "What would move this forward",
+      "sections": [
+        {
+          "heading": "In rough order of value",
+          "body": "**Measured [[sofa|HRTFs]].** The single highest-value upgrade. Brings [[pinna]] [[spectral-cues]] and real front-back discrimination, which makes rotation direction answerable for the first time. The class already exists with an identical interface; the real work is [[hrtf-interpolation]], which has to separate the [[itd]], interpolate magnitude, and reapply the delay to avoid [[comb-filtering]].\n\n**Other listeners.** Ideally naive to the hypothesis. The blind mode already logs to CSV with full parameter provenance, so this is a matter of sitting people down rather than building anything. It addresses [[n-of-1]] and the individuality of HRTFs at the same time.\n\n**[[head-tracking]].** Resolves front-back robustly and improves [[externalization]]. Comes with a caveat: it gives the listener an active strategy for probing the field, which may change the percept under study.\n\n**An [[motion-aftereffect|aftereffect]] experiment.** If prolonged exposure to a circulating hotspot biases the perceived direction of a subsequent static field, that is evidence for direction-selective adaptation and therefore for something more than [[snapshot-hypothesis|snapshots]]. It is a much stronger result than a description task, because it does not depend on the listener's report of a subtle quality.\n\n**[[abx]] discrimination.** Before asking what a difference is like, establish that it exists at all. Clean statistics, well-defined chance level.\n\n**A target coherence matrix as a first-class control.** The [[circulating-hotspot]] covers the case that mattered, but arbitrary coherence structures are not currently expressible."
+        }
+      ]
+    }
+  ]
+}

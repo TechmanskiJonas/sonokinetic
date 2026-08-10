@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ringfield</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<header>
+  <h1>ringfield</h1>
+  <span class="sub">can a field be heard rotating without anything in it being localizable?</span>
+  <button id="starttour" class="help" title="Take a guided tour of the interface">?</button>
+  <nav>
+    <button class="tab on" data-tab="bench">Bench</button>
+    <button class="tab" data-tab="arrange">Arrangement</button>
+    <button class="tab" data-tab="blind">Blind test</button>
+    <button class="tab" data-tab="feedback" id="feedbacktab">Feedback</button>
+    <button id="openlearn">Learn</button>
+  </nav>
+</header>
+
+<!-- ================================================================== -->
+<section id="bench" class="page on">
+
+  <div class="wavecard">
+    <div class="row" style="margin-bottom:8px">
+      <label>Track
+        <select id="track"></select>
+      </label>
+      <span id="trackinfo" class="dim num"></span>
+      <div class="drop" id="drop" style="flex:1">
+        Drop an audio file here, or click to choose one
+        <input type="file" id="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.aif,.aiff,.m4a" hidden>
+      </div>
+    </div>
+
+    <canvas id="wave" height="92"></canvas>
+
+    <div class="wavefoot">
+      <button id="addpassage">Add passage from selection</button>
+      <label>Selection
+        <input id="pstart" type="number" step="0.5" value="84"> to
+        <input id="pend" type="number" step="0.5" value="104"> s</label>
+      <span class="dim">drag on the waveform to select</span>
+      <span class="grow"></span>
+      <span id="expbar" class="row">
+        <button id="expsave" class="sm">Save experiment</button>
+        <select id="exppick" class="sm"><option value="">Load experiment…</option></select>
+      </span>
+      <label class="chk"><input type="checkbox" id="drymono" checked> Mono dry
+        <button class="i" data-ref="mono-dry">i</button></label>
+      <label>Level match
+        <select id="match">
+          <option value="lufs">LUFS</option>
+          <option value="rms">RMS</option>
+          <option value="none">none</option>
+        </select>
+        <button class="i" data-ref="level-matching">i</button>
+      </label>
+    </div>
+  </div>
+
+  <div class="cols">
+
+    <div class="card wide">
+      <div class="cardhead">
+        <h2>Passages</h2>
+        <button class="i" data-ref="passage">i</button>
+        <span class="grow"></span>
+        <span class="dim">hold <kbd>1</kbd>–<kbd>9</kbd> to apply a variant while playing</span>
+        <button id="render" class="primary">Render</button>
+      </div>
+      <div id="passages"></div>
+      <div class="row">
+        <button id="newpassage" class="sm">Add passage</button>
+        <span id="renderstate" class="msg"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead">
+        <h2>Monitor</h2>
+        <span class="grow"></span>
+        <label>Playback
+          <select id="playmode">
+            <option value="live">Apply while playing</option>
+            <option value="programmed">Programmed arrangement</option>
+          </select>
+          <button class="i" data-ref="live-apply">i</button>
+        </label>
+      </div>
+
+      <canvas id="ring" width="300" height="300"></canvas>
+
+      <div class="transport">
+        <button id="play" class="primary">Play</button>
+        <input id="seek" type="range" min="0" max="1" step="0.0005" value="0">
+        <span id="clock" class="clock">0:00</span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label class="chk"><input type="checkbox" id="loop" checked> Loop passage</label>
+        <label>Fade <input id="fadems" type="number" value="18" min="0" max="400" step="2"> ms
+          <button class="i" data-ref="equal-power-crossfade">i</button></label>
+      </div>
+
+      <div id="nowbar" class="nowbar"></div>
+      <div id="readout" class="readout"></div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead">
+        <h2>Measurement</h2>
+        <button class="i" data-ref="iacc">i</button>
+      </div>
+      <div id="metrics"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<section id="arrange" class="page">
+  <div class="cols">
+    <div class="card wide">
+      <div class="cardhead">
+        <h2>Arrangement</h2>
+        <span class="grow"></span>
+        <label>Mode
+          <select id="amode">
+            <option value="timeline">One arrangement across the track</option>
+            <option value="blocks">Whole arrangements back to back</option>
+            <option value="sequence">One passage, different treatments</option>
+          </select>
+        </label>
+        <button id="arender" class="primary">Render</button>
+      </div>
+      <p class="note">Each passage contributes its selected variant. The result
+        is a single rendered file, with a timeline and subtitle track describing
+        what is playing at each moment.</p>
+      <div id="arrangelist" class="tlist"></div>
+      <div class="row">
+        <button id="aimport" class="sm">Import JSON</button>
+        <button id="aexport" class="sm">Export JSON</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h2>Result</h2></div>
+      <audio id="aplayer" controls style="width:100%"></audio>
+      <div id="atimeline" class="tlist"></div>
+      <div class="hr"></div>
+      <div class="row">
+        <label>Name <input id="exname" value="ringfield"></label>
+        <button id="doexport">Export WAV + JSON + SRT</button>
+      </div>
+      <div id="aexportstate" class="msg"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<section id="blind" class="page">
+  <div class="cols">
+    <div class="card">
+      <div class="cardhead">
+        <h2>Setup</h2>
+        <button class="i" data-ref="blind-testing">i</button>
+      </div>
+      <p class="note">Variants of the selected passage are presented in random
+        order with their labels hidden. Responses are written to disk as they
+        are made, and can be exported as CSV with the full parameter set
+        attached to each trial.</p>
+      <div class="row"><label>Session <input id="bsession" value="s1"></label></div>
+      <div class="row"><label>Repeats per condition
+        <input id="brepeats" type="number" value="3" min="1" max="20"></label></div>
+      <div class="row"><label class="chk"><input type="checkbox" id="bincludedry" checked>
+        Include a dry catch trial <button class="i" data-ref="catch-trial">i</button></label></div>
+      <div class="row">
+        <button id="bstart" class="primary">Start</button>
+        <button id="bstop">Stop</button>
+        <a id="bcsv" class="btn" href="/api/session/s1.csv" download>Download CSV</a>
+      </div>
+      <div id="bprogress" class="dim" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card wide">
+      <div class="cardhead"><h2>Trial</h2></div>
+      <div id="btrial" class="trial">
+        <p class="dim">Not running. Render a passage with at least two variants
+          on the bench, then start.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<section id="feedback" class="page">
+  <div class="cols">
+    <div class="card">
+      <div class="cardhead"><h2>Feedback</h2></div>
+      <p class="note">Anything is welcome here, from a one-line observation to a
+        full bug report. Entries are filed as issues on the project's GitHub
+        repository, and kept locally as well.</p>
+      <div class="row">
+        <label>Type
+          <select id="fkind">
+            <option value="bug">Something is broken</option>
+            <option value="idea">Idea or request</option>
+            <option value="question">Question</option>
+            <option value="note" selected>General note</option>
+          </select>
+        </label>
+        <label>Area
+          <select id="farea">
+            <option value="">anywhere</option>
+            <option value="bench">Bench</option>
+            <option value="arrangement">Arrangement</option>
+            <option value="blind-test">Blind test</option>
+            <option value="learn">Learn</option>
+            <option value="measurement">Measurement</option>
+            <option value="audio">Sound quality</option>
+          </select>
+        </label>
+      </div>
+      <div class="row"><label style="flex:1">Title (optional)
+        <input id="ftitle" style="flex:1" placeholder="taken from the first line if left empty"></label></div>
+      <div class="row"><textarea id="fbody"
+        placeholder="What happened, what you expected, or what you would like."></textarea></div>
+      <div class="row"><label style="flex:1">Contact (optional)
+        <input id="fcontact" style="flex:1" placeholder="name or email, if a reply is wanted"></label></div>
+      <div class="row">
+        <button id="fsend" class="primary">Send</button>
+        <span id="fstate" class="msg"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<div class="overlay" id="sheet">
+  <div class="sheet">
+    <div class="sheethead">
+      <button id="sheetback" class="ghost sm" title="Back">&larr;</button>
+      <h2 id="sheettitle">Learn</h2>
+      <div class="crumbs" id="crumbs"></div>
+      <span class="grow"></span>
+      <input type="search" id="sheetsearch" placeholder="Search lessons and terms">
+      <button id="sheetclose" class="ghost">Close</button>
+    </div>
+    <div class="sheetbody">
+      <div class="sheetnav" id="sheetnav"></div>
+      <div class="sheetmain" id="sheetmain"></div>
+    </div>
+  </div>
+</div>
+
+<div class="defcard" id="card"></div>
+
+<script src="/tour.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
