@@ -85,6 +85,11 @@
       "title": "Perceptual qualities",
       "status": "established",
       "family": "established"
+    },
+    {
+      "id": "experience",
+      "family": "established",
+      "title": "Experience and method"
     }
   ],
   "entries": {
@@ -1746,6 +1751,52 @@
         "whirlpool",
         "source-distance",
         "distance-hearing"
+      ]
+    },
+    "phenomenology": {
+      "title": "Phenomenology",
+      "section": "experience",
+      "status": "established",
+      "grounding": "Husserl's Logical Investigations and Ideas I for the method; Merleau-Ponty's Phenomenology of Perception for the embodied treatment of space; Gurwitsch's The Field of Consciousness for figure and ground.",
+      "short": "The systematic study of the structure of experience, as distinct from the study of the stimulus or the mechanism.",
+      "body": "A discipline concerned with how things are given in experience: what is attended, what forms the background, and what a property is experienced as belonging to.\n\nIt bears directly on this project because the question here is whether a particular experience is available, not whether a signal difference is detectable. A listener could tell two renders apart on a timbral cue while hearing no motion at all, and that would pass a discrimination test while missing the point.\n\nSee [[micro-phenomenology]] for the interview technique and [[neurophenomenology]] for the pairing of first-person report with measurement.",
+      "prereq": [],
+      "see": [
+        "micro-phenomenology",
+        "neurophenomenology",
+        "blind-testing"
+      ]
+    },
+    "micro-phenomenology": {
+      "title": "Micro-phenomenology",
+      "section": "experience",
+      "status": "established",
+      "grounding": "Petitmengin (2006, Phenomenology and the Cognitive Sciences) on describing subjective experience; Petitmengin, Remillieux and Valenzuela-Moguillansky (2019) on the analysis procedure.",
+      "short": "A structured interview technique for obtaining fine-grained descriptions of an experience without leading the participant.",
+      "body": "The interviewer guides attention back to a specific remembered moment and asks about its structure rather than about its interpretation, avoiding questions that supply the categories being sought.\n\nRelevant here because the blind test's fixed-response items necessarily impose categories, and whether those categories fit the percept is exactly what is uncertain. Applied to a few listeners it would produce an account of what the percept is like, which a discrimination task cannot supply.\n\nIt does not replace [[blind-testing]]: an unblinded interview collects expectation as readily as experience.",
+      "prereq": [
+        "phenomenology"
+      ],
+      "see": [
+        "phenomenology",
+        "blind-testing",
+        "forced-choice"
+      ]
+    },
+    "neurophenomenology": {
+      "title": "Neurophenomenology",
+      "section": "experience",
+      "status": "established",
+      "grounding": "Varela (1996, Journal of Consciousness Studies), 'Neurophenomenology: a methodological remedy for the hard problem'; Lutz and Thompson (2003) for a worked application.",
+      "short": "Pairing disciplined first-person reports with third-person measurement, with neither treated as the arbiter of the other.",
+      "body": "The proposal is that trained description and physiological or signal measurement constrain each other, rather than one being reduced to the other.\n\nThis instrument already has the shape of that pairing: it reports [[iacc]] and related measures beside a listener's response and states explicitly that where the two disagree is informative rather than an error. Adopting the programme properly would mean improving the first-person half, which is currently a set of fixed-response items, to match the care taken over the measurement half.",
+      "prereq": [
+        "phenomenology"
+      ],
+      "see": [
+        "phenomenology",
+        "micro-phenomenology",
+        "iacc"
       ]
     }
   },

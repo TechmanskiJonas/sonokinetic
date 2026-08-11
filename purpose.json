@@ -23,6 +23,32 @@
       ]
     },
     {
+      "id": "phenomenology",
+      "title": "The phenomenological side",
+      "sections": [
+        {
+          "id": "why-phenomenology",
+          "heading": "The question is about experience, not detection",
+          "body": "Most of this instrument measures signals. The question it exists for does not: it asks whether a certain **experience** is available, namely hearing a field move while hearing nothing in it as placed.\n\nThat is a question about the structure of perceptual experience, which is what phenomenology studies. It is not a decorative framing. A purely psychophysical version of the question would ask whether listeners can discriminate a moving field from a static one above chance, and a listener could pass that test on a cue that has nothing to do with hearing motion, such as a timbral flutter. The interesting claim is stronger and specifically experiential: that the field is **given as** moving.\n\nThe two approaches need each other here. Discrimination without description cannot tell you what was heard; description without blinding is not evidence. See [[blind-testing]]."
+        },
+        {
+          "id": "figure-ground",
+          "heading": "Figure, ground, and what a property belongs to",
+          "body": "The distinction the project rests on has a phenomenological name. Experience is structured into what is thematically attended and the field or horizon against which it appears, a distinction developed by Husserl and central to Gurwitsch's work on the field of consciousness.\n\nStated that way, the question becomes: **can motion be a property of the ground rather than of a figure?** Ordinary auditory motion belongs to a figure, a thing that moves. What is under test is whether the same property can be carried by the ambient field with no figure at all.\n\nA related distinction is between hearing motion as a property of an object and hearing it as a manner in which the whole scene is given. Auditory experience often works the second way: a room sounds live, a space sounds close. Merleau-Ponty's treatment of spatial level, where space is a setting the body inhabits rather than a container of located objects, is the closest classical statement of that idea and is worth reading alongside the [[random-dot-kinematogram]] analogy."
+        },
+        {
+          "id": "phenom-method",
+          "heading": "What phenomenology contributes methodologically",
+          "body": "Three concrete things, in increasing order of commitment.\n\n**Better questions.** The forced-choice items in the blind test embed assumptions. Asking whether anything can be pointed at treats pointing as the criterion for localization, which may not survive scrutiny: a listener might have a sense of direction without any confidence about position. A phenomenologist's job is to notice that the category has been chosen and to ask whether it carves the experience correctly.\n\n**Description before categories.** A free description collected before any fixed-response item avoids the items shaping what is noticed. This costs one text box and is worth adding.\n\n**Structured elicitation.** Micro-phenomenology, developed by Petitmengin and colleagues, is a published interview technique for obtaining fine-grained reports of an experience without leading the participant. Applied to a small number of listeners it would produce something a discrimination task cannot: an account of what the percept is like and how it is organised.\n\nThe overarching precedent is Varela's neurophenomenology, which proposes pairing disciplined first-person reports with third-person measurement rather than treating either as primary. That is structurally what this instrument already does when it shows [[iacc]] beside a listening report, so the pairing is a formalisation of existing practice rather than a new direction."
+        },
+        {
+          "id": "phenom-limits",
+          "heading": "What it cannot do",
+          "body": "Phenomenological description is not a substitute for blinding. A rich account of a percept collected while the listener knows the condition is exactly the evidence [[experimenter-bias]] predicts, however carefully it was elicited. The techniques above sit **inside** a blind protocol or they add nothing.\n\nNor does it settle the mechanism. If listeners reliably report a field as moving with nothing locatable in it, that is a fact about experience which the [[snapshot-hypothesis|snapshot account]] then has to accommodate; it is not itself a claim about how the auditory system does it.\n\nThe honest position is that this project needs both halves and currently has neither in a strong form: no blind data from listeners other than its author, and no structured description at all."
+        }
+      ]
+    },
+    {
       "id": "literature",
       "title": "Where this sits",
       "sections": [

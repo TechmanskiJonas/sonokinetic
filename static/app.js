@@ -2322,6 +2322,12 @@ function wireArrangement() {
  * recoverable from the cues it produces, and asking would collect noise.
  */
 const QUESTIONS = [
+  // Free description comes first, before any fixed response supplies the
+  // categories. What the percept is like is exactly what the fixed items
+  // cannot ask, and asking after them collects their vocabulary back.
+  { id: "description", type: "text", optional: true, ref: "phenomenology",
+    text: "Describe what you hear, in your own words.",
+    placeholder: "Whatever stands out. There is no right answer." },
   { id: "focus", type: "scale", text: "How spatially focused is the sound?",
     lo: "one compact source", hi: "no direction at all", ref: "apparent-source-width" },
   { id: "individual", type: "opts", ref: "localization",
@@ -2347,7 +2353,8 @@ function questionHtml(q) {
       Array.from({ length: 7 }, (_, k) => `<button data-v="${k}">${k}</button>`).join("") +
       `<span class="endlab">${esc(q.hi)}</span></div>`;
   } else if (q.type === "text") {
-    controls = `<textarea class="tnotes" data-notes placeholder="Anything worth recording about this one."></textarea>`;
+    controls = `<textarea class="tnotes" data-text="${q.id}"
+      placeholder="${esc(q.placeholder || "Anything worth recording about this one.")}"></textarea>`;
   } else {
     controls = `<div class="opts">` +
       q.opts.map(o => `<button data-v="${esc(o)}">${esc(o)}</button>`).join("") + `</div>`;
@@ -2437,8 +2444,10 @@ async function submitTrial() {
   const b = S.blind;
   const cond = b.order[b.idx];
   const v = S.rendered.passages[S.active].variants[cond.vi];
-  const notes = $("#btrial [data-notes]")?.value.trim();
-  if (notes) b.responses.notes = notes;
+  $$("#btrial [data-text]").forEach(t => {
+    const val = t.value.trim();
+    if (val) b.responses[t.dataset.text] = val;
+  });
   await post("/api/trial", {
     session: b.session, trial: b.idx, condition: v.label, params: v.params,
     responses: b.responses, blind: true,
