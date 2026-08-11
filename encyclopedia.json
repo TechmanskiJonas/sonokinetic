@@ -1461,53 +1461,54 @@
       ]
     },
     "source-distance": {
-      "title": "Ring distance",
+      "title": "Distance",
       "section": "p-components",
       "status": "implementation",
-      "short": "Each ring sits at a distance from the head, carried by per-ear gains computed from the geometry.",
-      "body": "Distance is set in metres per ring, with 2 m rendering at unity gain. The gain for each ear follows the inverse of that ear's path length to the source, so nearby sources are louder and their [[ild]] grows beyond the far-field value, which is the near-field effect described under [[distance-hearing]].\n\nWhat is deliberately absent: propagation delay, Doppler from radial motion, air absorption, and reverberation. Distance here is level and near-field ILD only, which makes it a thin cue on its own. Rings at different distances still differ audibly in level balance and in how sharply their sources lateralize, and radial wander modulates both.",
+      "short": "How far a source sits from the head, carried by level and by near-field interaural level growth. It may reach zero.",
+      "body": "Distance is set in metres, with 2 m rendering at unity gain. Each ear's gain follows the inverse of its own path length to the source, so a near source is louder and its [[ild]] grows beyond the far-field value, which is the near-field effect described under [[distance-hearing]].\n\n**Distance may be zero.** At the head centre both ears are equidistant, so the interaural differences vanish and the source is heard as a centred, in-head image, which is what a mono signal is. Sources may therefore pass through the listener without artefact: the cues fade out as they approach rather than swinging wildly, which is what would happen if they were held at arm's length instead.\n\nA ceiling limits the loudness of a very near source. It scales the two ears together rather than clipping each, so the level difference between them survives.\n\nAbsent: propagation delay, Doppler, air absorption, and reverberation. Distance here is level and near-field ILD only.",
       "prereq": [
         "distance-hearing"
       ],
       "see": [
         "distance-hearing",
-        "ring",
-        "motion-coherence"
+        "radial-flow",
+        "lateralization",
+        "component"
       ]
     },
     "motion-coherence": {
       "title": "Motion coherence share",
       "section": "p-motion",
       "status": "project",
-      "short": "The share of a ring's sources rotating together, the rest wandering with no net direction.",
-      "body": "**Vocabulary invented here**, after the coherence manipulation in the [[random-dot-kinematogram]], where the proportion of coherently moving dots sets the strength of the global motion signal and the psychophysical threshold on that proportion is a standard measure.\n\nEach ring assigns a share of its sources to smooth wandering in azimuth, and optionally in distance, while the remainder rotate at the ring rate. The wander is a bounded sum of slow sinusoids generated from the [[seed]], so a given setting renders identically every time and has no net rotation.\n\nSweeping the share asks how much coherent motion the ensemble needs before it reads as turning, which is the closest this instrument comes to a coherence-threshold measurement.",
+      "short": "The share of a component's sources taking part in its motion, the rest wandering with no net direction.",
+      "body": "**Vocabulary invented here**, after the coherence manipulation in the [[random-dot-kinematogram]], where the proportion of coherently moving dots sets the strength of the global motion signal and the threshold on that proportion is a standard measure.\n\nA share of the sources is excluded from the component's motion entirely, whatever that motion is: they neither turn, nor flow, nor drift. They wander instead, on a bounded path generated from the [[seed]], so the setting renders identically every time.\n\nIt applies to any lattice, so a drifting [[grid-lattice]] can be made partly incoherent exactly as a turning [[polar-lattice]] can. Sweeping the share asks how much coherent motion the ensemble needs before it reads as moving.",
       "prereq": [
         "random-dot-kinematogram",
-        "unison-rotation"
+        "component"
       ],
       "see": [
         "random-dot-kinematogram",
-        "unison-rotation",
+        "component",
         "seed",
-        "source-distance"
+        "unison-rotation"
       ]
     },
     "unison-rotation": {
       "title": "Unison rotation",
       "section": "p-motion",
       "status": "project",
-      "short": "This project's name for its main configuration: mutually decorrelated sources all turning together. Not a term of art.",
-      "body": "**Vocabulary invented here.** No one outside this project will recognise the phrase; describe the configuration rather than naming it when writing for others.\n\nWhat it refers to: a [[ring]] of [[source|sources]], each [[decorrelation|decorrelated]] from the others, all rotating at the same rate and keeping their relative positions.\n\nThe design point is that two properties come from two separate controls. **Rotation** from the ring rate; **unlocalizability** from the decorrelation amount. Turning decorrelation down yields trackable objects circling the listener, which is unremarkable. Turning it up dissolves them into a diffuse field. Whether that field still audibly turns is [[the-question]].\n\nWatch for the failure mode at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]].",
+      "short": "This project's name for a group of decorrelated sources moving together as one. Not a term of art.",
+      "body": "**Vocabulary invented here.** No one outside this project will recognise the phrase; describe the configuration rather than naming it when writing for others.\n\nA [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. Named for rotation because that was the first case studied, but the idea applies to any motion a lattice can carry: a drifting grid and an inward flow are the same arrangement with a different motion field.\n\nThe design point is that two properties come from two separate controls. **Motion** comes from the component's rates. **Unlocalizability** comes from the decorrelation amount. Turning decorrelation down yields trackable objects; turning it up dissolves them into a diffuse field. Whether that field still audibly moves is [[the-question]].\n\nWatch for the failure at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]].",
       "prereq": [
         "ring",
         "decorrelation"
       ],
       "see": [
         "the-question",
-        "circulating-hotspot",
+        "component",
+        "motion-coherence",
         "degenerate-ring",
-        "rotation-rate",
-        "motion-coherence"
+        "circulating-hotspot"
       ]
     },
     "circulating-hotspot": {
@@ -1590,16 +1591,16 @@
       "title": "Ring",
       "section": "p-components",
       "status": "project",
-      "short": "A component whose sources sit on a circle at one distance and turn together.",
-      "body": "**Vocabulary specific to this instrument.**\n\nSources sit at [[azimuth|azimuths]] around the head at a shared distance, evenly spaced, unevenly spaced, or listed explicitly, and rotate at a common rate.\n\nGeometry is not cosmetic: an evenly spaced ring of identical sources cancels to a centred mono image, and odd source counts avoid the exact opposition that causes it; see [[antipodal-cancellation]].\n\nThe ring was the first pattern built here and is one [[component]] kind among several.",
+      "short": "A single circle of sources: the simplest polar lattice, and the configuration this project began with.",
+      "body": "**Vocabulary specific to this instrument.**\n\nOne ring of a [[polar-lattice]], at a single radius. Sources sit at [[azimuth|azimuths]] around the head, evenly spaced, unevenly spaced, or listed explicitly.\n\nGeometry is not cosmetic: an evenly spaced ring of identical sources cancels to a centred mono image, and odd counts avoid the exact opposition that causes it; see [[antipodal-cancellation]].\n\nRotation was the first motion studied here, and a turning ring remains the clearest case. It is one configuration among many rather than the subject of the project.",
       "prereq": [
-        "azimuth"
+        "polar-lattice"
       ],
       "see": [
+        "polar-lattice",
         "component",
         "antipodal-cancellation",
-        "symmetry-breaking",
-        "unison-rotation"
+        "symmetry-breaking"
       ]
     },
     "passage": {
@@ -1723,86 +1724,105 @@
       "title": "Component",
       "section": "p-components",
       "status": "project",
-      "short": "One group of sources sharing a motion pattern. A variant is a list of them.",
-      "body": "**Vocabulary specific to this instrument.**\n\nEvery component gives its sources a trajectory around the head: an azimuth, a distance, and a level at each instant. Four patterns are available, and a component of any kind can also hand a share of its sources over to wandering.\n\n  [[ring]] sources on a circle, turning\n  [[stream]] straight-line travel across the space\n  [[radial-flow|radial]] travel inward or outward along radii\n  [[spiral]] turning and travelling at once\n\nA component carries its own [[decorrelation]] settings, or inherits the variant's. Two components in one field can therefore differ in coherence as well as in motion, which is what makes a near ring against a far crossing stream expressible.\n\nComponents can be duplicated, copied and pasted between variants, so two variants can share a component exactly while differing in one other.",
+      "short": "A lattice of sources with a motion field applied to it. A variant is a list of components.",
+      "body": "**Vocabulary specific to this instrument.**\n\nA component has two parts: a **lattice** that places its sources, and a **motion field** that moves them. Two lattices are available.\n\nA [[polar-lattice|polar lattice]] is concentric rings: so many rings deep, so many sources around each. A [[grid-lattice|grid]] is a rectangle of sources spanning an extent in metres.\n\nMotion combines freely on either. [[rotation-rate|Rotation]] turns the lattice about the head, [[radial-flow]] moves sources inward or outward, and [[translation|drift]] carries the whole lattice in a direction. Setting more than one at a time is the point: a [[whirlpool]] is a polar lattice turning and flowing inward together.\n\nSources **wrap** within the lattice, so one leaving the far edge reappears at the near edge and the count never changes.\n\nEach component carries its own [[decorrelation]] or inherits the variant's, so a near group and a far group can differ in coherence as well as in motion. Components can be copied and pasted between variants.",
       "prereq": [
         "variant",
         "source"
       ],
       "see": [
-        "ring",
-        "stream",
+        "polar-lattice",
+        "grid-lattice",
+        "translation",
         "radial-flow",
-        "spiral",
-        "variant",
-        "decorrelation"
+        "whirlpool",
+        "motion-coherence"
       ]
     },
-    "stream": {
-      "title": "Stream",
+    "translation": {
+      "title": "Translation",
+      "section": "p-motion",
+      "status": "implementation",
+      "short": "Straight-line drift of a whole lattice. Carried strongly left to right, and barely at all front to back.",
+      "body": "Drift is given as a velocity on two axes: positive x to the right, positive y ahead. A [[grid-lattice]] with a backward drift is the field-passing-the-listener case.\n\n**Left and right travel** moves both [[itd]] and [[ild]] substantially and is presented well.\n\n**Front and back travel** is another matter. The head model is front-back symmetric, so mirror-image directions produce identical signals, and a source crossing the median plane keeps both ears equidistant throughout, so nothing interaural changes at all. Such motion is heard only as a change of level and near-field balance. It remains worth presenting, since it asks whether approach and recession read as motion on level alone, but it should not be described as a front-back percept. See [[front-back-measured]].\n\nMeasured [[sofa|HRTFs]] would change this.",
+      "prereq": [
+        "azimuth",
+        "itd"
+      ],
+      "see": [
+        "grid-lattice",
+        "front-back-confusion",
+        "source-distance",
+        "sofa"
+      ]
+    },
+    "polar-lattice": {
+      "title": "Polar lattice",
       "section": "p-components",
       "status": "project",
-      "short": "A component whose sources travel in a straight line across the space, fading in and out at the ends of the path.",
-      "body": "**Vocabulary specific to this instrument.**\n\nSources are spread across a width and staggered along a path, travelling along a heading at a set speed. Each fades in as it enters, crosses, and fades out as it leaves, then recycles to the start, so the flow is continuous rather than a single event. Without the fades a recycling source would appear abruptly and be heard as a click.\n\nThis is the translational counterpart of a [[ring]], and the configuration for asking whether translation can be perceived without localization; see [[translation]] for what the head model can actually carry, which for front-to-back headings is very little.",
+      "short": "Concentric rings of sources: a number of rings across a radial band, with a number of sources around each.",
+      "body": "**Vocabulary specific to this instrument.**\n\nRings are spaced evenly across the band between the inner and outer radius, at half-steps rather than at the endpoints so that the outermost ring does not sit where the innermost one wraps to.\n\nOne ring with a single radius is the simplest case and was the original configuration this project studied. Several rings make a field with depth, and give [[radial-flow]] something to carry.\n\nRing stagger rotates each successive ring, which breaks the alignment that would otherwise put sources on shared radial spokes.",
+      "prereq": [
+        "component",
+        "azimuth"
+      ],
+      "see": [
+        "component",
+        "grid-lattice",
+        "radial-flow",
+        "whirlpool",
+        "antipodal-cancellation"
+      ]
+    },
+    "grid-lattice": {
+      "title": "Grid lattice",
+      "section": "p-components",
+      "status": "project",
+      "short": "A rectangle of sources spanning an extent in metres, which wraps as it drifts.",
+      "body": "**Vocabulary specific to this instrument.**\n\nSources sit on a rectangular grid centred on the listener, so many columns across and rows deep, spanning a stated extent. Giving the grid a drift velocity carries the whole lattice past the listener, and because it wraps, the field is endless: a source leaving the back edge reappears at the front.\n\nThe motivating image is driving through a space with sources placed at regular intervals. It is the configuration for asking whether [[translation]] can be perceived without localization, in the same way a turning [[polar-lattice]] asks it of rotation.\n\nRotation and [[radial-flow]] still apply to a grid, about the listener, so a drifting grid can also turn.",
       "prereq": [
         "component",
         "translation"
       ],
       "see": [
         "component",
+        "polar-lattice",
         "translation",
-        "radial-flow",
-        "motion-coherence"
+        "source-distance"
       ]
     },
-    "translation": {
-      "title": "Translation, and what this model carries",
-      "section": "p-components",
-      "status": "implementation",
-      "short": "Straight-line motion. Carried strongly left to right, and barely at all front to back.",
-      "body": "Left-and-right travel moves both [[itd]] and [[ild]] substantially, so it is presented well.\n\nFront-and-back travel is a different matter. The head model is front-back symmetric, so an azimuth ahead and the mirror-image azimuth behind produce identical signals. A source crossing the median plane also keeps both ears equidistant for the whole crossing, so **nothing interaural changes at all**. A front-to-back stream is heard only as a change of level and near-field balance.\n\nThat is worth presenting, since it asks whether approach and recession read as motion on level alone, but it should not be described as a front-back percept. Measured [[sofa|HRTFs]] would change this.\n\nHeading is given in the same convention as [[azimuth]]: 0 travels toward the front, 90 toward the right.",
+    "whirlpool": {
+      "title": "Whirlpool",
+      "section": "p-motion",
+      "status": "project",
+      "short": "A polar lattice turning and flowing inward at once, with inner rings turning faster than outer ones.",
+      "body": "**Vocabulary specific to this instrument.**\n\nNot a separate pattern but a combination: set a [[polar-lattice]] rotating, give it an inward [[radial-flow]], and set the outer rotation rate lower than the inner one. Rings then wind inward while the inner ones outrun the outer ones.\n\nEach source keeps the angular rate of the radius it started at rather than picking up the local rate as it travels. That is a simplification: a real vortex conserves angular momentum, so a particle spun faster as it fell inward. The stateless version is reproducible and adequate for asking whether the pattern is perceived as one motion or as two.\n\nIt is the clearest case of the general point that motions compose within a single component.",
       "prereq": [
-        "azimuth",
-        "itd"
+        "polar-lattice",
+        "radial-flow"
       ],
       "see": [
-        "stream",
-        "front-back-confusion",
-        "source-distance",
-        "sofa"
+        "polar-lattice",
+        "radial-flow",
+        "rotation-rate",
+        "component"
       ]
     },
     "radial-flow": {
       "title": "Radial flow",
-      "section": "p-components",
+      "section": "p-motion",
       "status": "project",
-      "short": "A component whose sources travel inward or outward along radii, fading at both limits.",
-      "body": "**Vocabulary specific to this instrument.**\n\nSources hold their azimuth and change distance between an inner and an outer limit, staggered so the flow is continuous, fading at both ends and recycling.\n\nDistance is carried by level and by the near-field growth of the [[ild]]; see [[source-distance]] and [[distance-hearing]]. With no reverberation the cue is thin, so radial motion is a weaker percept than lateral motion and should be judged with that in mind.\n\nInward flow and outward flow are separate conditions worth comparing, since approach and recession are not symmetric in perception.",
+      "short": "Sources travelling inward or outward, wrapping at the limits of the band.",
+      "body": "**Vocabulary specific to this instrument.**\n\nOn a [[polar-lattice]] this moves whole rings inward or outward together, so a ring reaching the inner limit reappears at the outer one and the flow is endless rather than emptying out. Sources fade briefly at each limit, which prevents the wrap being heard as a click while keeping every source present.\n\nDistance is carried by level and by the near-field growth of the [[ild]]: see [[source-distance]]. With no reverberation the cue is thin, so radial motion is a weaker percept than lateral motion.\n\nInward and outward are worth treating as separate conditions, since approach and recession are not symmetric in perception.",
       "prereq": [
         "component",
         "source-distance"
       ],
       "see": [
-        "component",
+        "polar-lattice",
+        "whirlpool",
         "source-distance",
-        "spiral",
         "distance-hearing"
-      ]
-    },
-    "spiral": {
-      "title": "Spiral",
-      "section": "p-components",
-      "status": "project",
-      "short": "A component that rotates and travels radially at the same time.",
-      "body": "**Vocabulary specific to this instrument.**\n\nCombines the rotation of a [[ring]] with the radial travel of [[radial-flow]], so sources wind inward or outward while circling. The two rates are set independently, so the pitch of the spiral is adjustable from almost circular to almost radial.\n\nIt is the simplest case in which two motion types act on the same sources at once, and a useful test of whether a compound motion is perceived as one thing or as two.",
-      "prereq": [
-        "ring",
-        "radial-flow"
-      ],
-      "see": [
-        "ring",
-        "radial-flow",
-        "component"
       ]
     }
   },

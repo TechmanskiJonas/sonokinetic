@@ -326,53 +326,55 @@ REF_DISTANCE = 2.0   # m. A source at this distance renders at unity gain.
 
 @dataclass
 class ComponentConfig:
-    """One group of sources sharing a motion pattern. A variant is a list.
+    """A lattice of sources with a motion field applied to it.
 
-    Every kind is a trajectory in polar coordinates around the head, giving each
-    source an azimuth, a distance, and a gain at every instant. Writing them as
-    one mechanism rather than four means a component can combine motions:
-    `spiral` is rotation and radial drift at once, and any kind can hand a share
-    of its sources over to wandering.
+    Two lattices, and motion that combines freely on either:
 
-        ring    sources on a circle, rotating at rotation_deg_per_sec
-        stream  straight-line travel across the space along heading_deg,
-                fading in and out at the ends of the path and recycling
-        radial  travel along radii, inward or outward, fading at both ends
-        spiral  rotation and radial travel together
+        polar      concentric rings of sources, `rings` deep and `per_ring` wide
+        cartesian  a grid, `cols` by `rows`, spanning an extent in metres
 
-    A stationary component is any kind with its rates at zero.
+    Rotation, radial flow and translational drift all act at once, so a
+    whirlpool is a polar lattice rotating while flowing inward, and a field
+    drifting past the listener is a cartesian lattice with a drift velocity.
+    Rings rotating at different rates come from the inner and outer rate pair:
+    each source keeps the rate of the radius it started at, so a lattice flowing
+    inward carries its angular velocities with it.
 
-    Note what the head model can and cannot carry. Left-right motion moves both
-    interaural cues strongly. Front-back motion moves neither: the model is
-    front-back symmetric, and a source crossing the median plane keeps both ears
-    equidistant throughout, so such a stream is heard through distance alone.
-    See the reference entry on translation for what that implies for design.
+    Sources wrap within the lattice extent, so the count on screen and in the
+    render is constant: one reaching the far edge reappears at the near edge.
+
+    Distance may reach zero. At the head centre both ears are equidistant, so
+    interaural time and level differences vanish and the source is heard as a
+    centred, in-head image, which is what a mono signal is. That is why nothing
+    swings wildly as a source passes close: the cues fade out rather than
+    sweeping.
     """
-    kind: str = "ring"
-    n_sources: int = 5
+    lattice: str = "polar"
     label: str = ""
 
-    # placement
-    start_azimuths: Optional[List[float]] = None
-    spacing_deg: Optional[float] = None
+    # polar lattice
+    rings: int = 1
+    per_ring: int = 5
+    r_near_m: float = 1.5
+    r_far_m: float = 4.0
     offset_deg: float = 0.0
-    distance_m: float = 2.0
+    ring_stagger_deg: float = 0.0      # rotate each successive ring
+    start_azimuths: Optional[List[float]] = None   # overrides even spacing
 
-    # rotation, used by ring and spiral
-    rotation_deg_per_sec: float = 60.0
+    # cartesian lattice
+    cols: int = 5
+    rows: int = 5
+    extent_x_m: float = 8.0            # +x is to the right
+    extent_y_m: float = 8.0            # +y is ahead
 
-    # translation, used by stream
-    heading_deg: float = 180.0       # direction of travel, 0 ahead, 90 right
-    speed_mps: float = 1.5
-    path_m: float = 9.0              # length of the run before recycling
-    spread_m: float = 3.0            # lateral width of the flow
+    # motion, all combinable
+    rotation_deg_per_sec: float = 0.0             # at the inner radius
+    rotation_outer_deg_per_sec: Optional[float] = None  # None: same throughout
+    radial_speed_mps: float = 0.0                 # positive outward
+    drift_x_mps: float = 0.0                      # positive to the right
+    drift_y_mps: float = 0.0                      # positive ahead
 
-    # radial travel, used by radial and spiral
-    radial_speed_mps: float = 0.0    # positive outward, negative inward
-    r_near_m: float = 0.7
-    r_far_m: float = 6.0
-
-    # random motion, available to every kind
+    # random motion
     random_fraction: float = 0.0
     wander_deg: float = 60.0
     wander_hz: float = 0.25
@@ -380,44 +382,99 @@ class ComponentConfig:
 
     # level
     gain_db: float = 0.0
-    fade_frac: float = 0.3           # share of the path spent fading
-    min_distance_m: float = 0.4      # keeps a passing source out of the head
+    edge_fade: float = 0.12       # share of the extent spent fading at a wrap
+    min_distance_m: float = 0.0   # 0 allows a source to reach the head centre
+    max_gain_db: float = 12.0     # ceiling on the inverse-distance gain
 
     # Decorrelation for this component's sources. None inherits the variant's,
     # so two components can carry different coherence in one field.
     decorr: Optional["DecorrConfig"] = None
 
+    @property
+    def n_sources(self) -> int:
+        if self.lattice == "cartesian":
+            return max(int(self.cols), 1) * max(int(self.rows), 1)
+        return max(int(self.rings), 1) * max(int(self.per_ring), 1)
+
     def resolved_azimuths(self) -> np.ndarray:
-        n = max(int(self.n_sources), 1)
-        if self.start_azimuths:
-            az = np.array(self.start_azimuths, dtype=float)
-            if len(az) < n:
-                az = np.tile(az, int(np.ceil(n / len(az))))
-            return az[:n]
-        if self.spacing_deg is not None:
-            return self.offset_deg + np.arange(n) * self.spacing_deg
-        return self.offset_deg + np.linspace(0, 360, n, endpoint=False)
+        """Starting azimuths, in source order. Used for reporting and for the
+        hotspot, which acts on angle."""
+        if self.lattice == "cartesian":
+            out = []
+            for i in range(max(int(self.cols), 1)):
+                for j in range(max(int(self.rows), 1)):
+                    x, y = self._grid_xy(i, j)
+                    out.append(float(np.degrees(np.arctan2(x, y))))
+            return np.array(out)
+        out = []
+        for k in range(max(int(self.rings), 1)):
+            base = self.offset_deg + k * self.ring_stagger_deg
+            if self.start_azimuths:
+                az = np.array(self.start_azimuths, dtype=float)
+                n = max(int(self.per_ring), 1)
+                if len(az) < n:
+                    az = np.tile(az, int(np.ceil(n / len(az))))
+                out.extend((az[:n] + k * self.ring_stagger_deg).tolist())
+            else:
+                out.extend((base + np.linspace(
+                    0, 360, max(int(self.per_ring), 1), endpoint=False)).tolist())
+        return np.array(out)
+
+    def _grid_xy(self, i: int, j: int):
+        cols, rows = max(int(self.cols), 1), max(int(self.rows), 1)
+        x = (-self.extent_x_m / 2) + (i + 0.5) / cols * self.extent_x_m
+        y = (-self.extent_y_m / 2) + (j + 0.5) / rows * self.extent_y_m
+        return x, y
+
+    def ring_radius(self, k: int) -> float:
+        """Radius of ring k, spaced evenly across the band.
+
+        Placed at half-steps rather than at the endpoints so that the outer
+        ring does not sit exactly where the inner one wraps to: with radial
+        flow on, endpoints would make the outermost ring a duplicate of the
+        innermost.
+        """
+        rings = max(int(self.rings), 1)
+        span = self.r_far_m - self.r_near_m
+        if abs(span) < 1e-9:
+            return self.r_near_m
+        return self.r_near_m + ((k + 0.5) / rings) * span
+
+    def rate_at(self, r: float) -> float:
+        """Angular rate for a source that started at radius r.
+
+        With an outer rate given, the rate is interpolated across the lattice's
+        radial extent, which is what makes inner rings turn faster than outer
+        ones and produces a whirlpool rather than a rigid rotation.
+        """
+        if self.rotation_outer_deg_per_sec is None:
+            return self.rotation_deg_per_sec
+        span = self.r_far_m - self.r_near_m
+        if abs(span) < 1e-9:
+            return self.rotation_deg_per_sec
+        u = float(np.clip((r - self.r_near_m) / span, 0.0, 1.0))
+        return (1 - u) * self.rotation_deg_per_sec + u * self.rotation_outer_deg_per_sec
 
     def is_static(self) -> bool:
-        moving = abs(self.rotation_deg_per_sec) > 1e-9
-        if self.kind in ("stream",):
-            moving = moving or abs(self.speed_mps) > 1e-9
-        if self.kind in ("radial", "spiral"):
-            moving = moving or abs(self.radial_speed_mps) > 1e-9
-        wandering = self.random_fraction > 0 and self.wander_hz > 0
-        radial_wandering = self.radial_wander_m > 0 and self.wander_hz > 0
-        return not (moving or wandering or radial_wandering)
+        moving = any(abs(v) > 1e-9 for v in (
+            self.rotation_deg_per_sec,
+            self.rotation_outer_deg_per_sec or 0.0,
+            self.radial_speed_mps, self.drift_x_mps, self.drift_y_mps))
+        wandering = self.wander_hz > 0 and (
+            self.random_fraction > 0 or self.radial_wander_m > 0)
+        return not (moving or wandering)
 
     def frozen(self) -> "ComponentConfig":
         """The same component with every motion removed.
 
-        A matched control has to hold the spatial and level distribution while
-        removing movement, so rates go to zero and the oscillators stop rather
-        than the component being deleted. Sources stay wherever their offsets
-        place them, including partway through a fade.
+        A matched control holds the spatial and level distribution while
+        removing movement, so every rate goes to zero and the oscillators stop.
+        Sources stay exactly where they are.
         """
-        return replace(self, rotation_deg_per_sec=0.0, speed_mps=0.0,
-                       radial_speed_mps=0.0, wander_hz=0.0)
+        return replace(self, rotation_deg_per_sec=0.0,
+                       rotation_outer_deg_per_sec=None,
+                       radial_speed_mps=0.0, drift_x_mps=0.0, drift_y_mps=0.0,
+                       wander_hz=0.0)
 
 
 @dataclass
@@ -481,44 +538,59 @@ class FieldGeometry:
         rng = np.random.default_rng(cfg.seed + 7919)
         self.comps = comps
         self.comp_of: List[int] = []
+        self.shade_of: List[int] = []      # ring or row index, for display
         self._src: List[Dict[str, Any]] = []
         gains = []
 
         for ci, c in enumerate(comps):
-            n = max(int(c.n_sources), 1)
-            az = c.resolved_azimuths()
+            n = c.n_sources
             n_rand = int(round(np.clip(c.random_fraction, 0.0, 1.0) * n))
             idx_rand = set(rng.choice(n, size=n_rand, replace=False).tolist()) \
                 if n_rand else set()
+            az_all = c.resolved_azimuths()
+
             for i in range(n):
-                s: Dict[str, Any] = {
-                    "c": c, "ci": ci, "i": i, "n": n,
-                    "az0": float(az[i % len(az)]),
-                    "random": i in idx_rand,
-                    "wander": None, "radial_wander": None,
-                    # even stagger along a path so a flow is continuous rather
-                    # than every source arriving at once
-                    "phase": (i + 0.5) / n,
-                }
+                s: Dict[str, Any] = {"c": c, "ci": ci, "i": i,
+                                     "random": i in idx_rand,
+                                     "wander": None, "radial_wander": None}
+                if c.lattice == "cartesian":
+                    rows = max(int(c.rows), 1)
+                    col, row = divmod(i, rows)
+                    s["x0"], s["y0"] = c._grid_xy(col, row)
+                    s["shade"] = row
+                else:
+                    per = max(int(c.per_ring), 1)
+                    k, j = divmod(i, per)
+                    s["r0"] = c.ring_radius(k)
+                    s["az0"] = float(az_all[i % len(az_all)])
+                    s["rate"] = c.rate_at(s["r0"])
+                    s["shade"] = k
                 if s["random"]:
+                    # A random source takes no part in the coherent motion:
+                    # that is what the coherence share means. It only wanders.
+                    s["rate"] = 0.0
                     s["wander"] = self._osc(rng, c.wander_deg, c.wander_hz)
                 if c.radial_wander_m > 0:
                     s["radial_wander"] = self._osc(rng, c.radial_wander_m, c.wander_hz)
-                # lateral placement across a stream's width
-                s["lateral"] = (((i + 0.5) / n) - 0.5) * c.spread_m
                 self._src.append(s)
                 self.comp_of.append(ci)
+                self.shade_of.append(s["shade"])
                 gains.append(10 ** (c.gain_db / 20.0))
 
         self.gain = np.array(gains) if gains else np.zeros(0)
         self.n = len(self._src)
+        # Distance processing costs a multiply per source per block and adds a
+        # small azimuth-dependent level difference of its own, so it stays off
+        # when every component sits at the reference distance and holds still.
         self.uses_distance = any(
-            c.kind in ("stream", "radial", "spiral")
-            or abs(c.distance_m - REF_DISTANCE) > 1e-9
-            or c.radial_wander_m > 0
-            for c in comps)
-        self.uses_envelope = any(c.kind in ("stream", "radial", "spiral")
-                                 for c in comps)
+            abs(c.radial_speed_mps) > 1e-9 or abs(c.drift_x_mps) > 1e-9
+            or abs(c.drift_y_mps) > 1e-9 or c.radial_wander_m > 0
+            or c.lattice == "cartesian"
+            or abs(c.ring_radius(k) - REF_DISTANCE) > 1e-9
+            for c in comps for k in range(max(int(c.rings), 1)))
+        self.uses_envelope = any(
+            abs(c.radial_speed_mps) > 1e-9 or abs(c.drift_x_mps) > 1e-9
+            or abs(c.drift_y_mps) > 1e-9 for c in comps)
 
     @staticmethod
     def _osc(rng, amp: float, hz: float):
@@ -538,55 +610,67 @@ class FieldGeometry:
         """(azimuth, distance, envelope) for one source at time t."""
         c: ComponentConfig = s["c"]
         env = 1.0
-        az = s["az0"]
-        dist = max(c.distance_m, 0.2)
 
-        if c.kind == "stream":
-            # Travel along heading, staggered along the path, spread across it.
-            h = np.deg2rad(c.heading_deg)
-            fwd = np.array([np.sin(h), np.cos(h)])       # x right, y forward
-            side = np.array([np.cos(h), -np.sin(h)])
-            path = max(c.path_m, 0.1)
-            u = (s["phase"] + (c.speed_mps * t) / path) % 1.0
-            along = (u - 0.5) * path
-            p = fwd * along + side * s["lateral"]
-            dist = float(np.hypot(p[0], p[1]))
-            az = float(np.degrees(np.arctan2(p[0], p[1])))
-            env = self._fade(u, c.fade_frac)
-
-        elif c.kind in ("radial", "spiral"):
+        moves = not s["random"]
+        if c.lattice == "cartesian":
+            # The lattice translates as a whole and wraps, so the grid is
+            # endless: a source leaving one edge reappears at the opposite one.
+            ex, ey = max(c.extent_x_m, 0.1), max(c.extent_y_m, 0.1)
+            dx = c.drift_x_mps if moves else 0.0
+            dy = c.drift_y_mps if moves else 0.0
+            x, ux = self._wrap(s["x0"] + dx * t, ex)
+            y, uy = self._wrap(s["y0"] + dy * t, ey)
+            r = float(np.hypot(x, y))
+            az = float(np.degrees(np.arctan2(x, y)))
+            # Fade only along the axes that are actually wrapping.
+            if abs(dx) > 1e-9:
+                env *= self._edge(ux, c.edge_fade)
+            if abs(dy) > 1e-9:
+                env *= self._edge(uy, c.edge_fade)
+            # Rotation and radial flow still apply, about the head.
+            if moves and abs(c.rotation_deg_per_sec) > 1e-9:
+                az += c.rotation_deg_per_sec * t
+            if moves and abs(c.radial_speed_mps) > 1e-9:
+                r += c.radial_speed_mps * t
+            dist = r
+        else:
             near, far = min(c.r_near_m, c.r_far_m), max(c.r_near_m, c.r_far_m)
-            span = max(far - near, 0.05)
-            if abs(c.radial_speed_mps) > 1e-9:
-                u = (s["phase"] + (c.radial_speed_mps * t) / span) % 1.0
+            span = far - near
+            rs = c.radial_speed_mps if moves else 0.0
+            if abs(rs) > 1e-9 and span > 1e-6:
+                # Concentric rings flowing in or out, wrapping at the limits.
+                u = ((s["r0"] - near) / span + (rs * t) / span) % 1.0
                 dist = near + u * span
-                env = self._fade(u, c.fade_frac)
+                env *= self._edge(u, c.edge_fade)
             else:
-                dist = near + s["phase"] * span
-            if c.kind == "spiral":
-                az = s["az0"] + c.rotation_deg_per_sec * t
-            else:
-                az = s["az0"]
-
-        else:                                            # ring
-            if not s["random"]:
-                az = s["az0"] + c.rotation_deg_per_sec * t
+                dist = s["r0"] + rs * t
+            # Each source keeps the angular rate of the radius it started at,
+            # which is what makes inner rings outrun outer ones.
+            az = s["az0"] + s["rate"] * t
 
         if s["wander"] is not None:
             az += self._eval(s["wander"], t)
         if s["radial_wander"] is not None:
             dist += self._eval(s["radial_wander"], t)
 
-        return az, max(dist, c.min_distance_m), env
+        return az, max(dist, max(c.min_distance_m, 0.0)), env
 
     @staticmethod
-    def _fade(u: float, frac: float) -> float:
-        """Fade in at the start of a run and out at the end.
+    def _wrap(v: float, extent: float):
+        """Wrap a coordinate into [-extent/2, extent/2]. Returns the position
+        and its normalised place in the span, for edge fading."""
+        u = ((v + extent / 2) % extent) / extent
+        return (u - 0.5) * extent, u
 
-        Without it a recycling source would appear and vanish abruptly, which
-        is heard as a click and read as an event rather than as flow.
+    @staticmethod
+    def _edge(u: float, frac: float) -> float:
+        """Fade near a wrap boundary.
+
+        A source jumping from one edge to the other is a discontinuity, heard
+        as a click. Fading it across a narrow band at each edge removes that
+        while keeping the source present, so the count stays constant.
         """
-        f = float(np.clip(frac, 0.001, 0.5))
+        f = float(np.clip(frac, 1e-4, 0.5))
         return float(_smoothstep(np.array(u / f)) * _smoothstep(np.array((1.0 - u) / f)))
 
     def azimuths(self, t: float) -> np.ndarray:
@@ -606,20 +690,34 @@ class FieldGeometry:
         return az, dist, env
 
     def ear_gains(self, az_deg: np.ndarray, dist: np.ndarray,
-                  head_radius: float) -> np.ndarray:
+                  head_radius: float, max_gain: float = 4.0) -> np.ndarray:
         """(S, 2) gains, left then right, from source-to-ear path lengths.
 
-        The 1/d law applied per ear rather than per source is what produces the
-        near-field ILD growth: for a close source the two path lengths differ
-        proportionally more, so the level difference rises beyond its far-field
-        value even at frequencies the head does not shadow.
+        The inverse-distance law applied per ear rather than per source is what
+        produces near-field ILD growth: for a close source the two path lengths
+        differ proportionally more, so the level difference rises beyond its
+        far-field value even where the head casts no shadow.
+
+        It also behaves correctly all the way to the centre. At distance zero
+        both path lengths equal the head radius, so the two gains are equal and
+        the interaural difference vanishes: the source is heard as a centred,
+        in-head image. The ceiling keeps that from being deafening, since the
+        inverse law is a far-field approximation and is not to be trusted at
+        arm's length anyway.
         """
         th = np.deg2rad(az_deg)
         r, a = dist, head_radius
         dl = np.sqrt(r * r + a * a + 2 * a * r * np.sin(th))
         dr = np.sqrt(r * r + a * a - 2 * a * r * np.sin(th))
-        return np.stack([REF_DISTANCE / np.maximum(dl, 1e-3),
-                         REF_DISTANCE / np.maximum(dr, 1e-3)], axis=1)
+        gl = REF_DISTANCE / np.maximum(dl, 1e-3)
+        gr = REF_DISTANCE / np.maximum(dr, 1e-3)
+        # Limit the pair together rather than each ear separately. Clipping
+        # them independently would flatten both to the ceiling for a very close
+        # source and destroy the level difference that is the whole near-field
+        # effect; scaling preserves the ratio and only bounds the loudness.
+        peak = np.maximum(np.maximum(gl, gr), 1e-9)
+        scale = np.minimum(1.0, max_gain / peak)
+        return np.stack([gl * scale, gr * scale], axis=1)
 
 
 def _lowpass(x: np.ndarray, cutoff: float, fs: int, order: int = 4) -> np.ndarray:
@@ -895,10 +993,11 @@ class FieldConfig:
             return list(self.components)
         if self.rings:
             return [ComponentConfig(
-                kind="ring", n_sources=r.n_sources,
+                lattice="polar", rings=1, per_ring=r.n_sources,
                 rotation_deg_per_sec=r.rotation_deg_per_sec,
-                start_azimuths=r.start_azimuths, spacing_deg=r.spacing_deg,
-                offset_deg=r.offset_deg, distance_m=r.distance_m,
+                start_azimuths=r.start_azimuths,
+                offset_deg=r.offset_deg,
+                r_near_m=r.distance_m, r_far_m=r.distance_m,
                 gain_db=r.gain_db, random_fraction=r.random_fraction,
                 wander_deg=r.wander_deg, wander_hz=r.wander_hz,
                 radial_wander_m=r.radial_wander_m,
@@ -907,10 +1006,12 @@ class FieldConfig:
                         if r.decorr_amount is not None else None))
                 for r in self.rings]
         return [ComponentConfig(
-            kind="ring", n_sources=self.n_sources,
+            lattice="polar", rings=1, per_ring=self.n_sources,
             rotation_deg_per_sec=self.rotation_deg_per_sec,
-            start_azimuths=self.start_azimuths, spacing_deg=self.spacing_deg,
-            offset_deg=self.offset_deg)]
+            start_azimuths=(list(self.start_azimuths)
+                            if self.start_azimuths is not None else None),
+            offset_deg=self.offset_deg,
+            r_near_m=REF_DISTANCE, r_far_m=REF_DISTANCE)]
 
     def resolved_rings(self) -> List[ComponentConfig]:
         return self.resolved_components()
@@ -1042,7 +1143,8 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
         # one batched convolution for all sources and both ears
         seg = fftconvolve(blocks[:, None, :], h, mode="full", axes=-1)
         if geom is not None and geom.uses_distance:
-            seg = seg * geom.ear_gains(az, dist, cfg.head_radius)[:, :, None]
+            cap = 10 ** (max(c.max_gain_db for c in geom.comps) / 20.0)
+            seg = seg * geom.ear_gains(az, dist, cfg.head_radius, cap)[:, :, None]
         seg = seg.sum(axis=0).T                                  # (block+taps-1, 2)
         out[start:start + len(seg)] += seg
 
@@ -1181,11 +1283,15 @@ def config_dict(cfg: Optional["FieldConfig"]) -> Optional[Dict[str, Any]]:
                                   for g in geom.gain]
         d["resolved_ring_of"] = list(geom.comp_of)
         d["resolved_component_of"] = list(geom.comp_of)
+        d["resolved_shade_of"] = list(geom.shade_of)
         d["resolved_distances"] = [round(float(v), 2) for v in dist0]
-        d["resolved_components"] = [_jsonable(asdict(c))
-                                    for c in geom.comps]
-        d["component_labels"] = [c.label or f"{c.kind} {i + 1}"
+        d["resolved_components"] = [_jsonable(asdict(c)) for c in geom.comps]
+        d["component_labels"] = [c.label or f"{c.lattice} {i + 1}"
                                  for i, c in enumerate(geom.comps)]
+        d["component_sources"] = [c.n_sources for c in geom.comps]
+        d["component_shades"] = [
+            (max(int(c.rows), 1) if c.lattice == "cartesian" else max(int(c.rings), 1))
+            for c in geom.comps]
     else:
         d["resolved_gains_db"] = [round(float(20 * np.log10(max(g, 1e-9))), 2)
                                   for g in cfg.resolved_gains()]

@@ -1,6 +1,5 @@
 {
   "_note": "The research programme: what is being asked, what has been measured, how it is tested, and what the instrument cannot do. Sections carry ids so [[links]] from courses and glossaries resolve here. Term definitions belong in the glossaries, not here.",
-
   "chapters": [
     {
       "id": "question",
@@ -9,7 +8,7 @@
         {
           "id": "the-question",
           "heading": "What is being asked",
-          "body": "Can a listener perceive motion in a field of sound without localizing anything in it?\n\nMotion here is a global property of the ensemble; localizability is a local property of its parts. The two are controlled separately in this instrument, which is what makes the question testable: motion comes from the trajectories given to components, and localizability from how strongly the sources are [[decorrelation|decorrelated]] from one another.\n\nThe standard account of [[auditory-motion]] holds that motion is inferred by comparing successive position estimates. Under it, a field with nothing localizable provides no estimates to compare and should not be heard as moving. A listener who hears the motion anyway would indicate that the account is incomplete.\n\nRotation was the first case examined. The question generalises to any motion the ensemble can carry: translation across the space, radial flow inward or outward, spirals, and mixtures of these.\n\nNothing here demonstrates that the percept exists. What exists is an instrument able to produce the stimulus and test for it."
+          "body": "Can a listener perceive motion in a field of sound without localizing anything in it?\n\nMotion here is a global property of the ensemble; localizability is a local property of its parts. The two are controlled separately in this instrument, which is what makes the question testable: motion comes from the trajectories given to components, and localizability from how strongly the sources are [[decorrelation|decorrelated]] from one another.\n\nThe standard account of [[auditory-motion]] holds that motion is inferred by comparing successive position estimates. Under it, a field with nothing localizable provides no estimates to compare and should not be heard as moving. A listener who hears the motion anyway would indicate that the account is incomplete.\n\nRotation was the first case examined, and the question generalises to any motion an ensemble can carry: a grid drifting past the listener, rings closing in or opening out, a whirlpool turning and drawing inward at once, and mixtures of these. The instrument builds all of them from the same parts, so the framing throughout is motion rather than rotation.\n\nNothing here demonstrates that the percept exists. What exists is an instrument able to produce the stimulus and test for it."
         },
         {
           "id": "the-analogy",
@@ -19,11 +18,10 @@
         {
           "id": "what-can-move",
           "heading": "Which motions this instrument can present",
-          "body": "The head model determines what is available, and it is worth being exact about it.\n\n**Left and right** are carried strongly. Both [[itd]] and [[ild]] change with lateral angle, and the model reproduces both.\n\n**Front and back** are not carried at all. The model is front-back symmetric, so azimuth 0° and 180° produce identical signals; see [[front-back-measured]]. A source crossing the median plane from front to back also keeps both ears equidistant throughout, so nothing interaural changes during the crossing. A front-to-back stream is therefore heard only as a change of level and near-field balance, not as a change of direction. It remains worth presenting, since it asks whether level-modulated approach and recession reads as motion, but it should not be described as a front-back percept.\n\n**Distance** is carried weakly, through level and the near-field growth of the [[ild]]; see [[source-distance]] and [[distance-hearing]]. There is no reverberation, so the strongest natural distance cue is absent.\n\n**Elevation** is not modelled at all. A sphere has no [[pinna]], so there are no [[spectral-cues]] to carry it.\n\nMeasured [[sofa|HRTFs]] would supply front-back discrimination and elevation, and are the single upgrade that would most expand what can be asked."
+          "body": "The head model determines what is available, and it is worth being exact about it.\n\n**Left and right** are carried strongly. Both [[itd]] and [[ild]] change with lateral angle, and the model reproduces both.\n\n**Front and back** are not carried at all. The model is front-back symmetric, so azimuth 0° and 180° produce identical signals; see [[front-back-measured]]. A source crossing the median plane from front to back also keeps both ears equidistant throughout, so nothing interaural changes during the crossing. Motion toward or away from the listener is therefore heard only as a change of level and near-field balance, not as a change of direction. It remains worth presenting, since it asks whether level-modulated approach and recession reads as motion, but it should not be described as a front-back percept.\n\n**Distance** is carried weakly, through level and the near-field growth of the [[ild]]; see [[source-distance]] and [[distance-hearing]]. There is no reverberation, so the strongest natural distance cue is absent.\n\n**Elevation** is not modelled at all. A sphere has no [[pinna]], so there are no [[spectral-cues]] to carry it.\n\nMeasured [[sofa|HRTFs]] would supply front-back discrimination and elevation, and are the single upgrade that would most expand what can be asked."
         }
       ]
     },
-
     {
       "id": "literature",
       "title": "Where this sits",
@@ -56,11 +54,10 @@
         {
           "id": "lit-gap",
           "heading": "The apparent gap, and how confident to be",
-          "body": "The combination occupied here is a field of mutually decorrelated sources given global motion, examined for ensemble motion percepts rather than for source localization.\n\nThe adjacent literatures each cover part of it: motion studies mostly use single sources, decorrelation work targets width and envelopment rather than motion, and room acoustics measures static fields.\n\n**Treat that as a hypothesis about the literature rather than a finding.** An apparent gap is more often an unsearched corner than an unexplored question. Before describing this as new, search deliberately for auditory global motion, spatial coherence and motion, moving diffuse fields, and rotating sound fields, and check the spatial audio production and ambisonics literature as well as the psychoacoustic one."
+          "body": "The combination occupied here is a field of mutually decorrelated sources given global motion, examined for ensemble motion percepts rather than for source localization.\n\nThe adjacent literatures each cover part of it: motion studies mostly use single sources, decorrelation work targets width and envelopment rather than motion, and room acoustics measures static fields.\n\n**Treat that as a hypothesis about the literature rather than a finding.** An apparent gap is more often an unsearched corner than an unexplored question. Before describing this as new, search deliberately for auditory global motion, spatial coherence and motion, moving diffuse fields, rotating sound fields, and auditory optic flow, and check the spatial audio production and ambisonics literature as well as the psychoacoustic one."
         }
       ]
     },
-
     {
       "id": "findings",
       "title": "What has been measured",
@@ -98,7 +95,7 @@
         {
           "id": "front-back-measured",
           "heading": "The model has no front-back discrimination",
-          "body": "Azimuth 0° and 180° produce bit-identical impulse responses, as do 45°/135° and 225°/315°. This is asserted in the test suite rather than assumed, and follows from the [[woodworth-model]] being front-back symmetric and the sphere having no [[pinna]].\n\nA full rotation therefore produces an interaural pattern completing twice, so rotation is not distinguishable from side-to-side oscillation at double the rate and its direction cannot be recovered. The blind test asks no direction question for this reason.\n\nFront-to-back translation is affected more severely still: a source crossing the median plane keeps both ears equidistant, so such a stream carries no interaural change at all and is heard only through level.\n\nWhen measured HRTFs land, this test should be inverted."
+          "body": "Azimuth 0° and 180° produce bit-identical impulse responses, as do 45°/135° and 225°/315°. This is asserted in the test suite rather than assumed, and follows from the [[woodworth-model]] being front-back symmetric and the sphere having no [[pinna]].\n\nA full rotation therefore produces an interaural pattern completing twice, so rotation is not distinguishable from side-to-side oscillation at double the rate and its direction cannot be recovered. The blind test asks no direction question for this reason.\n\nFront-to-back translation is affected more severely still: a source crossing the median plane keeps both ears equidistant, so such motion carries no interaural change at all and is heard only through level.\n\nWhen measured HRTFs land, this test should be inverted."
         },
         {
           "id": "level-preserved",
@@ -112,7 +109,6 @@
         }
       ]
     },
-
     {
       "id": "method",
       "title": "Testing without fooling yourself",
@@ -154,7 +150,6 @@
         }
       ]
     },
-
     {
       "id": "next",
       "title": "What would move this forward",

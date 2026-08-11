@@ -1,4 +1,4 @@
-/* ringfield bench.
+/* Sonokinetic bench.
  *
  * No framework and no build step: this is a research sandbox that should stay
  * editable without a toolchain.
@@ -435,38 +435,64 @@ function wireSheet() {
 // Parameter schema
 // ====================================================================
 
-const KINDS = {
-  ring:   { label: "Ring",   hint: "sources on a circle, turning" },
-  stream: { label: "Stream", hint: "straight-line travel across the space" },
-  radial: { label: "Radial", hint: "travel inward or outward along radii" },
-  spiral: { label: "Spiral", hint: "turning and travelling in or out at once" },
+const LATTICES = {
+  polar: { label: "Polar", hint: "concentric rings of sources" },
+  cartesian: { label: "Grid", hint: "a rectangular grid of sources" },
 };
 
-const rotates = c => c.kind === "ring" || c.kind === "spiral";
-const travels = c => c.kind === "stream";
-const radiates = c => c.kind === "radial" || c.kind === "spiral";
+const isPolar = c => c.lattice !== "cartesian";
+const isGrid = c => c.lattice === "cartesian";
+const wanders = c => c.random_fraction > 0 || c.radial_wander_m > 0;
+
+/** Starting points, not finished variants. Each sets a few numbers on one
+ *  lattice; everything remains editable afterwards. */
+const COMPONENT_PRESETS = {
+  polar: [
+    { label: "Ring", set: { rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 2 } },
+    { label: "Turning ring", set: { rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 2, rotation_deg_per_sec: 60 } },
+    { label: "Concentric rings", set: { rings: 3, per_ring: 6, r_near_m: 1, r_far_m: 5 } },
+    { label: "Closing in", set: { rings: 4, per_ring: 6, r_near_m: 0.4, r_far_m: 6, radial_speed_mps: -0.8 } },
+    { label: "Opening out", set: { rings: 4, per_ring: 6, r_near_m: 0.4, r_far_m: 6, radial_speed_mps: 0.8 } },
+    { label: "Whirlpool", set: { rings: 4, per_ring: 6, r_near_m: 0.4, r_far_m: 6, radial_speed_mps: -0.5, rotation_deg_per_sec: 160, rotation_outer_deg_per_sec: 40 } },
+  ],
+  cartesian: [
+    { label: "Still grid", set: { cols: 5, rows: 5 } },
+    { label: "Driving forward", set: { cols: 5, rows: 5, extent_y_m: 10, drift_y_mps: -2 } },
+    { label: "Passing left to right", set: { cols: 5, rows: 5, extent_x_m: 10, drift_x_mps: 1.5 } },
+    { label: "Diagonal drift", set: { cols: 5, rows: 5, drift_x_mps: 1, drift_y_mps: -1 } },
+  ],
+};
 
 const COMPONENT_ROWS = [
-  { k: "kind", ref: "component", type: "sel", opts: Object.keys(KINDS), structural: true },
-  { k: "n_sources", ref: "source", type: "int", min: 1, max: 16, step: 1 },
-  { k: "rotation_deg_per_sec", ref: "rotation-rate", type: "range", min: -720, max: 720, step: 5, unit: "°/s", showIf: rotates },
-  { k: "distance_m", ref: "source-distance", type: "range", min: 0.3, max: 8, step: 0.1, unit: "m", showIf: c => c.kind === "ring" },
-  { k: "heading_deg", ref: "translation", type: "range", min: 0, max: 359, step: 5, unit: "°", showIf: travels },
-  { k: "speed_mps", ref: "translation", type: "range", min: -6, max: 6, step: 0.1, unit: "m/s", showIf: travels },
-  { k: "path_m", ref: "translation", type: "range", min: 2, max: 20, step: 0.5, unit: "m", showIf: travels },
-  { k: "spread_m", ref: "translation", type: "range", min: 0, max: 8, step: 0.25, unit: "m", showIf: travels },
-  { k: "radial_speed_mps", ref: "radial-flow", type: "range", min: -4, max: 4, step: 0.1, unit: "m/s", showIf: radiates },
-  { k: "r_near_m", ref: "radial-flow", type: "range", min: 0.3, max: 4, step: 0.1, unit: "m", showIf: radiates },
-  { k: "r_far_m", ref: "radial-flow", type: "range", min: 1, max: 12, step: 0.5, unit: "m", showIf: radiates },
-  { k: "fade_frac", ref: "translation", type: "range", min: 0.05, max: 0.5, step: 0.05, showIf: c => travels(c) || radiates(c) },
-  { k: "start_azimuths", ref: "azimuth", type: "list", placeholder: "even, or -90, -18, 54, 126, 198", showIf: c => !travels(c) },
-  { k: "spacing_deg", ref: "ring", type: "optnum", placeholder: "even", unit: "°", showIf: c => !travels(c) },
-  { k: "offset_deg", ref: "ring", type: "range", min: 0, max: 360, step: 5, unit: "°", showIf: c => !travels(c) },
+  { k: "lattice", ref: "component", type: "sel", opts: Object.keys(LATTICES), structural: true },
+
+  { k: "rings", ref: "component", type: "int", min: 1, max: 8, step: 1, showIf: isPolar, structural: true },
+  { k: "per_ring", ref: "source", type: "int", min: 1, max: 24, step: 1, showIf: isPolar },
+  { k: "r_near_m", ref: "source-distance", type: "range", min: 0, max: 8, step: 0.1, unit: "m", showIf: isPolar },
+  { k: "r_far_m", ref: "source-distance", type: "range", min: 0, max: 12, step: 0.1, unit: "m", showIf: c => isPolar(c) && c.rings > 1 },
+  { k: "offset_deg", ref: "azimuth", type: "range", min: 0, max: 360, step: 5, unit: "°", showIf: isPolar, adv: true },
+  { k: "ring_stagger_deg", ref: "component", type: "range", min: 0, max: 90, step: 5, unit: "°", showIf: c => isPolar(c) && c.rings > 1, adv: true },
+  { k: "start_azimuths", ref: "azimuth", type: "list", placeholder: "even", showIf: isPolar, adv: true },
+
+  { k: "cols", ref: "component", type: "int", min: 1, max: 12, step: 1, showIf: isGrid },
+  { k: "rows", ref: "component", type: "int", min: 1, max: 12, step: 1, showIf: isGrid },
+  { k: "extent_x_m", ref: "component", type: "range", min: 1, max: 24, step: 0.5, unit: "m", showIf: isGrid, adv: true },
+  { k: "extent_y_m", ref: "component", type: "range", min: 1, max: 24, step: 0.5, unit: "m", showIf: isGrid, adv: true },
+
+  { k: "rotation_deg_per_sec", ref: "rotation-rate", type: "range", min: -720, max: 720, step: 5, unit: "°/s" },
+  { k: "rotation_outer_deg_per_sec", ref: "whirlpool", type: "optnum", placeholder: "same as inner", unit: "°/s", showIf: c => isPolar(c) && c.rings > 1 },
+  { k: "radial_speed_mps", ref: "radial-flow", type: "range", min: -4, max: 4, step: 0.1, unit: "m/s" },
+  { k: "drift_x_mps", ref: "translation", type: "range", min: -6, max: 6, step: 0.1, unit: "m/s" },
+  { k: "drift_y_mps", ref: "translation", type: "range", min: -6, max: 6, step: 0.1, unit: "m/s" },
+
   { k: "random_fraction", ref: "motion-coherence", type: "range", min: 0, max: 1, step: 0.05, structural: true },
-  { k: "wander_deg", ref: "motion-coherence", type: "range", min: 0, max: 180, step: 5, unit: "°", showIf: c => c.random_fraction > 0 || c.radial_wander_m > 0 },
-  { k: "wander_hz", ref: "motion-coherence", type: "range", min: 0, max: 2, step: 0.05, unit: "Hz", showIf: c => c.random_fraction > 0 || c.radial_wander_m > 0 },
-  { k: "radial_wander_m", ref: "motion-coherence", type: "range", min: 0, max: 3, step: 0.05, unit: "m", structural: true },
-  { k: "gain_db", ref: "level-matching", type: "range", min: -24, max: 12, step: 1, unit: "dB" },
+  { k: "wander_deg", ref: "motion-coherence", type: "range", min: 0, max: 180, step: 5, unit: "°", showIf: wanders },
+  { k: "wander_hz", ref: "motion-coherence", type: "range", min: 0, max: 2, step: 0.05, unit: "Hz", showIf: wanders },
+  { k: "radial_wander_m", ref: "motion-coherence", type: "range", min: 0, max: 3, step: 0.05, unit: "m", structural: true, adv: true },
+
+  { k: "gain_db", ref: "level-matching", type: "range", min: -24, max: 12, step: 1, unit: "dB", adv: true },
+  { k: "edge_fade", ref: "component", type: "range", min: 0.02, max: 0.5, step: 0.02, adv: true },
+  { k: "min_distance_m", ref: "source-distance", type: "range", min: 0, max: 2, step: 0.05, unit: "m", adv: true },
 ];
 
 const PARAMS = [
@@ -552,47 +578,64 @@ const defaultHotspot = () => ({
   enabled: false, deg_per_sec: 90, start_deg: 0, width_deg: 80,
   hot_amount: 0, bed_amount: 1, shape: "gaussian"
 });
-const defaultComponent = (kind = "ring") => {
+const defaultComponent = (lattice = "polar", preset = null) => {
   const c = {
-    kind, label: "", n_sources: 5,
-    start_azimuths: kind === "ring" ? [-90, -18, 54, 126, 198] : null,
-    spacing_deg: null, offset_deg: 0, distance_m: 2.0,
-    rotation_deg_per_sec: kind === "ring" || kind === "spiral" ? 60 : 0,
-    heading_deg: 90, speed_mps: 1.5, path_m: 9, spread_m: 3,
-    radial_speed_mps: kind === "radial" || kind === "spiral" ? 0.8 : 0,
-    r_near_m: 0.7, r_far_m: 6,
+    lattice, label: "",
+    rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 4,
+    offset_deg: 0, ring_stagger_deg: 0, start_azimuths: null,
+    cols: 5, rows: 5, extent_x_m: 8, extent_y_m: 8,
+    rotation_deg_per_sec: 0, rotation_outer_deg_per_sec: null,
+    radial_speed_mps: 0, drift_x_mps: 0, drift_y_mps: 0,
     random_fraction: 0, wander_deg: 60, wander_hz: 0.25, radial_wander_m: 0,
-    gain_db: 0, fade_frac: 0.3, min_distance_m: 0.4,
-    decorr: null, collapsed: false,
+    gain_db: 0, edge_fade: 0.12, min_distance_m: 0, max_gain_db: 12,
+    decorr: null, collapsed: false, advanced: false,
   };
-  if (kind === "stream" || kind === "radial") c.n_sources = 7;
+  if (preset) Object.assign(c, preset.set, { label: preset.label.toLowerCase() });
   return c;
 };
 
 const defaultField = () => ({
-  components: [defaultComponent("ring")],
+  components: [defaultComponent("polar",
+    COMPONENT_PRESETS.polar.find(p => p.label === "Turning ring"))],
   decorr: defaultDecorr(), hotspot: defaultHotspot(),
   head_radius: 0.0875, speed_of_sound: 343, hrtf_taps: 128, hrtf_grid_step: 1,
   block: 256, seed: 0
 });
 
+/** Distinct hues, one per variant. Components take shades of their variant's
+ *  hue, so a field of several reads as one thing with parts. */
+const VARIANT_HUES = [205, 25, 150, 285, 8, 45, 190, 320];
+
+function variantColour(v, vi) {
+  const h = v.hue !== undefined && v.hue !== null ? v.hue
+    : VARIANT_HUES[(vi - 1 + VARIANT_HUES.length) % VARIANT_HUES.length];
+  return h;
+}
+
+/** Shade k of n within a variant's hue: darker toward the centre of the field. */
+const shadeOf = (hue, k, n) => {
+  const l = n <= 1 ? 42 : 26 + (k / (n - 1)) * 34;
+  return `hsl(${hue} 42% ${l}%)`;
+};
+
 const effectiveRate = cfg => {
   if (!cfg) return 0;
   if (cfg.hotspot?.enabled) return cfg.hotspot.deg_per_sec || 0;
+  // Only rotation has a well-defined cyclic rate; drift and radial flow
+  // recycle at a period set by extent and speed instead.
   let r = 0;
   for (const c of (cfg.components || [])) {
-    if (!rotates(c)) continue;
-    if (Math.abs(c.rotation_deg_per_sec) > Math.abs(r)) r = c.rotation_deg_per_sec;
+    for (const v of [c.rotation_deg_per_sec, c.rotation_outer_deg_per_sec]) {
+      if (v && Math.abs(v) > Math.abs(r)) r = v;
+    }
   }
   return r;
 };
 
 const componentMoves = c =>
-  (rotates(c) && c.rotation_deg_per_sec !== 0) ||
-  (travels(c) && c.speed_mps !== 0) ||
-  (radiates(c) && c.radial_speed_mps !== 0) ||
-  (c.random_fraction > 0 && c.wander_hz > 0) ||
-  (c.radial_wander_m > 0 && c.wander_hz > 0);
+  !!c.rotation_deg_per_sec || !!c.rotation_outer_deg_per_sec ||
+  !!c.radial_speed_mps || !!c.drift_x_mps || !!c.drift_y_mps ||
+  (c.wander_hz > 0 && (c.random_fraction > 0 || c.radial_wander_m > 0));
 
 const hasMotion = cfg => !!cfg && (
   (cfg.hotspot?.enabled && cfg.hotspot.deg_per_sec !== 0) ||
@@ -602,13 +645,14 @@ function summarize(cfg) {
   if (!cfg) return "original, untreated";
   const comps = cfg.components || [];
   const bits = [];
-  if (comps.length > 1) {
-    const total = comps.reduce((n, c) => n + c.n_sources, 0);
-    const kinds = [...new Set(comps.map(c => KINDS[c.kind]?.label || c.kind))];
+  if (!comps.length) {
+    bits.push("no components yet");
+  } else if (comps.length > 1) {
+    const total = comps.reduce((n, c) => n + componentSources(c), 0);
     bits.push(`${comps.length} components · ${total} sources`);
-    bits.push(kinds.join(" + ").toLowerCase());
-  } else if (comps.length === 1) {
-    bits.push((KINDS[comps[0].kind]?.label || comps[0].kind).toLowerCase());
+    bits.push(comps.map(c => c.label || LATTICES[c.lattice]?.label || c.lattice)
+      .join(" + ").toLowerCase());
+  } else {
     bits.push(componentSummary(comps[0]));
   }
   if (cfg.hotspot?.enabled) {
@@ -638,14 +682,21 @@ const S = {
 
 const passage = () => S.passages[S.active];
 
+function emptyField() {
+  const c = defaultField();
+  c.components = [];
+  return c;
+}
+
 function newPassage(start, end, name) {
+  const first = rotatingRing(60);
   return {
     name: name || `Passage ${S.passages.length + 1}`,
     start, end, open: true, selected: 1,
     variants: [
       { name: "untreated", config: null },
-      { name: "ring rotating 60°/s", config: rotatingRing(60) },
-      { name: "ring static · control", config: controlOf(rotatingRing(60)) },
+      { name: "turning ring", config: first, hue: VARIANT_HUES[0] },
+      { name: "turning ring · control", config: controlOf(first), hue: VARIANT_HUES[1] },
     ]
   };
 }
@@ -669,100 +720,36 @@ function hotspotField(rate = 90) {
 
 /** A share of the sources rotates together; the rest wander without a net
  *  direction, after the coherence manipulation in random-dot kinematograms. */
-function kinematogramField(fraction = 0.5) {
-  const c = rotatingRing(60);
-  const k = c.components[0];
-  k.n_sources = 7; k.start_azimuths = null;
-  k.random_fraction = fraction; k.wander_deg = 70;
-  k.label = "partly coherent";
-  return c;
-}
-
-/** Two rings at different distances and rates: depth in the field. */
-function depthField() {
-  const c = rotatingRing(40);
-  Object.assign(c.components[0], {
-    n_sources: 3, start_azimuths: null, distance_m: 1.2, label: "inner",
-  });
-  c.components.push({ ...defaultComponent("ring"), n_sources: 5,
-    start_azimuths: null, rotation_deg_per_sec: 90, distance_m: 3.5,
-    label: "outer" });
-  return c;
-}
-
-function streamField(heading = 90) {
-  const c = rotatingRing(0);
-  c.components = [{ ...defaultComponent("stream"), heading_deg: heading,
-    n_sources: 8, speed_mps: 1.5, label: "crossing" }];
-  return c;
-}
-
-function radialField(speed = -0.8) {
-  const c = rotatingRing(0);
-  c.components = [{ ...defaultComponent("radial"), radial_speed_mps: speed,
-    n_sources: 8, label: speed < 0 ? "closing in" : "opening out" }];
-  return c;
-}
-
-function spiralField() {
-  const c = rotatingRing(0);
-  c.components = [{ ...defaultComponent("spiral"), rotation_deg_per_sec: 70,
-    radial_speed_mps: -0.5, n_sources: 8, label: "inward spiral" }];
-  return c;
-}
-
-/** Rotation near, translation far, each with its own coherence. */
-function layeredField() {
-  const c = rotatingRing(60);
-  Object.assign(c.components[0], {
-    n_sources: 4, start_azimuths: null, distance_m: 1.4, label: "near ring",
-    decorr: { ...defaultDecorr(), amount: 0.4, family: "velvet" },
-  });
-  c.components.push({ ...defaultComponent("stream"), n_sources: 7,
-    heading_deg: 90, speed_mps: 1.2, path_m: 12, spread_m: 4,
-    label: "far crossing",
-    decorr: { ...defaultDecorr(), amount: 1.0, family: "allpass" } });
-  return c;
-}
-
-const VARIANT_PRESETS = [
-  { label: "Rotating ring", make: () => rotatingRing(60) },
-  { label: "Static control", make: () => controlOf(rotatingRing(60)) },
-  { label: "Partial coherence", make: () => { const c = rotatingRing(60); c.decorr.amount = 0.5; return c; } },
-  { label: "Coherent ring (degenerate)", make: () => { const c = rotatingRing(60); c.decorr.amount = 0; return c; } },
-  { label: "Partly random motion", make: () => kinematogramField(0.5) },
-  { label: "Two rings, inner and outer", make: () => depthField() },
-  { label: "Stream, left to right", make: () => streamField(90) },
-  { label: "Stream, front to back", make: () => streamField(180) },
-  { label: "Closing in", make: () => radialField(-0.8) },
-  { label: "Opening out", make: () => radialField(0.8) },
-  { label: "Inward spiral", make: () => spiralField() },
-  { label: "Ring near, stream far", make: () => layeredField() },
-  { label: "Circulating hotspot", make: () => hotspotField(90) },
-  { label: "Hotspot frozen · control", make: () => controlOf(hotspotField(90)) },
-];
-
-/** Same configuration with every kind of motion removed: ring rotation,
- *  hotspot travel, and wander, which freezes at a seed-determined offset. */
+/** Same configuration with every kind of motion removed: rotation, radial
+ *  flow, drift, and wander, which freezes at a seed-determined offset. */
 function controlOf(cfg) {
   const c = JSON.parse(JSON.stringify(cfg));
   c.rotation_deg_per_sec = 0;
   c.total_degrees = null;
   if (c.hotspot) c.hotspot.deg_per_sec = 0;
-  for (const r of (c.rings || [])) { r.rotation_deg_per_sec = 0; r.wander_hz = 0; }
-  // Every motion kind stops; positions and levels stay where they are, so the
-  // ensemble's spatial and level distribution is preserved.
   for (const k of (c.components || [])) {
     k.rotation_deg_per_sec = 0;
-    k.speed_mps = 0;
+    k.rotation_outer_deg_per_sec = null;
     k.radial_speed_mps = 0;
+    k.drift_x_mps = 0;
+    k.drift_y_mps = 0;
     k.wander_hz = 0;
   }
   return c;
 }
 
+/** A turning ring: the simplest configuration and the one a new passage
+ *  starts from. Everything about it stays editable. */
+function rotatingRing(rate = 60) {
+  const c = defaultField();
+  c.components[0].rotation_deg_per_sec = rate;
+  c.decorr.amount = 1.0;
+  c.decorr.family = "allpass";
+  return c;
+}
+
 // ====================================================================
-// Parameter editor
+// Component editor
 // ====================================================================
 
 function parseList(s) {
@@ -772,108 +759,34 @@ function parseList(s) {
   return out.some(Number.isNaN) ? null : out;
 }
 
-function buildParams(host, cfg, onChange) {
-  host.innerHTML = "";
-  const rebuild = () => buildParams(host, cfg, onChange);
-
-  for (const grp of PARAMS) {
-    const obj = grp.path ? cfg[grp.path] : cfg;
-    const box = document.createElement("div");
-    box.className = "pgroup";
-    const gh = document.createElement("div");
-    gh.className = "ghead";
-    gh.append(grp.group, infoBtn(grp.ref));
-    box.appendChild(gh);
-
-    for (const row of grp.rows) {
-      if (row.showIf && !row.showIf(obj)) continue;
-      const el = document.createElement("div");
-      el.className = "prow";
-      const lab = document.createElement("span");
-      lab.className = "plabel";
-      lab.append(LABELS[row.k] || row.k, infoBtn(row.ref));
-      el.appendChild(lab);
-
-      const v = obj[row.k];
-      const changed = (val, structural) => {
-        obj[row.k] = val;
-        onChange();
-        if (structural) rebuild();
-      };
-
-      if (row.type === "range") {
-        const sl = document.createElement("input");
-        sl.type = "range";
-        Object.assign(sl, { min: row.min, max: row.max, step: row.step, value: v ?? 0 });
-        const num = document.createElement("input");
-        num.type = "number"; num.className = "pval";
-        Object.assign(num, { min: row.min, max: row.max, step: row.step, value: v ?? 0 });
-        const structural = ["lfo_hz", "crossovers"].includes(row.k);
-        sl.addEventListener("input", () => { num.value = sl.value; changed(Number(sl.value), false); });
-        sl.addEventListener("change", () => { if (structural) rebuild(); });
-        num.addEventListener("change", () => { sl.value = num.value; changed(Number(num.value), structural); });
-        el.append(sl, num);
-        const u = document.createElement("span");
-        u.className = "unit"; u.textContent = row.unit || "";
-        el.appendChild(u);
-      } else if (row.type === "int") {
-        const n = document.createElement("input");
-        n.type = "number";
-        Object.assign(n, { min: row.min, max: row.max, step: row.step, value: v ?? 0 });
-        n.addEventListener("change", () => changed(Number(n.value), false));
-        el.appendChild(n);
-      } else if (row.type === "optnum") {
-        const n = document.createElement("input");
-        n.type = "text"; n.placeholder = row.placeholder || ""; n.value = v ?? "";
-        n.addEventListener("change", () =>
-          changed(n.value.trim() === "" ? null : Number(n.value), false));
-        el.appendChild(n);
-      } else if (row.type === "sel") {
-        const s = document.createElement("select");
-        s.innerHTML = row.opts.map(o =>
-          `<option value="${o}"${o === v ? " selected" : ""}>${o}</option>`).join("");
-        s.addEventListener("change", () => changed(s.value, true));
-        el.appendChild(s);
-      } else if (row.type === "bool") {
-        const c = document.createElement("input");
-        c.type = "checkbox"; c.checked = !!v;
-        c.addEventListener("change", () => changed(c.checked, true));
-        el.appendChild(c);
-      } else if (row.type === "list") {
-        const t = document.createElement("input");
-        t.type = "text"; t.placeholder = row.placeholder || "";
-        t.value = Array.isArray(v) ? v.join(", ") : "";
-        t.addEventListener("change", () => changed(parseList(t.value), row.k === "crossovers"));
-        el.appendChild(t);
-      }
-      box.appendChild(el);
-    }
-    host.appendChild(box);
-  }
-}
-
-// ====================================================================
-// Ring modules
-// ====================================================================
-
-const HEADINGS = { 0: "→ front", 90: "→ right", 180: "→ back", 270: "→ left" };
+const componentSources = c => isGrid(c)
+  ? Math.max(c.cols, 1) * Math.max(c.rows, 1)
+  : Math.max(c.rings, 1) * Math.max(c.per_ring, 1);
 
 function componentSummary(c) {
-  const bits = [`${c.n_sources} src`];
-  if (rotates(c)) bits.push(c.rotation_deg_per_sec ? `${c.rotation_deg_per_sec}°/s` : "still");
-  if (travels(c)) {
-    const h = HEADINGS[Math.round(c.heading_deg / 90) * 90 % 360] || `${c.heading_deg}°`;
-    bits.push(`${h} ${fmt(Math.abs(c.speed_mps), 1)} m/s`);
+  const bits = [isGrid(c) ? `${c.cols}×${c.rows} grid`
+    : (c.rings > 1 ? `${c.rings} rings × ${c.per_ring}` : `ring of ${c.per_ring}`)];
+  const motion = [];
+  if (c.rotation_deg_per_sec) {
+    motion.push(c.rotation_outer_deg_per_sec != null
+      ? `turn ${c.rotation_deg_per_sec}→${c.rotation_outer_deg_per_sec}°/s`
+      : `turn ${c.rotation_deg_per_sec}°/s`);
   }
-  if (radiates(c) && c.radial_speed_mps)
-    bits.push(`${c.radial_speed_mps > 0 ? "outward" : "inward"} ${fmt(Math.abs(c.radial_speed_mps), 1)} m/s`);
-  if (c.kind === "ring") bits.push(`${fmt(c.distance_m, 1)} m`);
+  if (c.radial_speed_mps)
+    motion.push(`${c.radial_speed_mps < 0 ? "in" : "out"} ${fmt(Math.abs(c.radial_speed_mps), 1)} m/s`);
+  if (c.drift_x_mps || c.drift_y_mps) {
+    const dir = Math.abs(c.drift_y_mps) >= Math.abs(c.drift_x_mps)
+      ? (c.drift_y_mps < 0 ? "back" : "forward")
+      : (c.drift_x_mps > 0 ? "right" : "left");
+    motion.push(`drift ${dir} ${fmt(Math.hypot(c.drift_x_mps, c.drift_y_mps), 1)} m/s`);
+  }
+  bits.push(motion.length ? motion.join(", ") : "still");
   if (c.random_fraction > 0) bits.push(`${Math.round(c.random_fraction * 100)}% random`);
   if (c.decorr) bits.push(`decorr ${fmt(c.decorr.amount, 2)}`);
   return bits.join(" · ");
 }
 
-/** One row of controls bound to obj[row.k]. Shared by the ring editor. */
+/** One row of controls bound to obj[row.k]. Shared by both editors. */
 function makeParamRow(row, obj, onChange, rebuild) {
   const el = document.createElement("div");
   el.className = "prow";
@@ -882,7 +795,9 @@ function makeParamRow(row, obj, onChange, rebuild) {
   lab.append(LABELS[row.k] || row.k, infoBtn(row.ref));
   el.appendChild(lab);
   const v = obj[row.k];
-  const changed = (val, structural) => { obj[row.k] = val; onChange(); if (structural) rebuild(); };
+  const changed = (val, structural) => {
+    obj[row.k] = val; onChange(); if (structural) rebuild();
+  };
 
   if (row.type === "range") {
     const sl = document.createElement("input");
@@ -891,10 +806,9 @@ function makeParamRow(row, obj, onChange, rebuild) {
     const num = document.createElement("input");
     num.type = "number"; num.className = "pval";
     Object.assign(num, { min: row.min, max: row.max, step: row.step, value: v ?? 0 });
-    const structural = ["random_fraction", "radial_wander_m"].includes(row.k);
     sl.addEventListener("input", () => { num.value = sl.value; changed(Number(sl.value), false); });
-    sl.addEventListener("change", () => { if (structural) rebuild(); });
-    num.addEventListener("change", () => { sl.value = num.value; changed(Number(num.value), structural); });
+    sl.addEventListener("change", () => { if (row.structural) rebuild(); });
+    num.addEventListener("change", () => { sl.value = num.value; changed(Number(num.value), row.structural); });
     el.append(sl, num);
     const u = document.createElement("span");
     u.className = "unit"; u.textContent = row.unit || "";
@@ -903,13 +817,28 @@ function makeParamRow(row, obj, onChange, rebuild) {
     const n = document.createElement("input");
     n.type = "number";
     Object.assign(n, { min: row.min, max: row.max, step: row.step, value: v ?? 0 });
-    n.addEventListener("change", () => changed(Number(n.value), false));
+    n.addEventListener("change", () => changed(Number(n.value), row.structural));
     el.appendChild(n);
   } else if (row.type === "optnum") {
     const n = document.createElement("input");
     n.type = "text"; n.placeholder = row.placeholder || ""; n.value = v ?? "";
-    n.addEventListener("change", () => changed(n.value.trim() === "" ? null : Number(n.value), false));
+    n.addEventListener("change", () =>
+      changed(n.value.trim() === "" ? null : Number(n.value), row.structural));
     el.appendChild(n);
+  } else if (row.type === "sel") {
+    const s = document.createElement("select");
+    s.innerHTML = row.opts.map(o =>
+      `<option value="${o}"${String(o) === String(v) ? " selected" : ""}>${LATTICES[o]?.label || o}</option>`).join("");
+    s.addEventListener("change", () => {
+      const raw = s.value;
+      changed(Number.isNaN(Number(raw)) || raw === "" ? raw : Number(raw), true);
+    });
+    el.appendChild(s);
+  } else if (row.type === "bool") {
+    const c = document.createElement("input");
+    c.type = "checkbox"; c.checked = !!v;
+    c.addEventListener("change", () => changed(c.checked, true));
+    el.appendChild(c);
   } else if (row.type === "list") {
     const t = document.createElement("input");
     t.type = "text"; t.placeholder = row.placeholder || "";
@@ -920,21 +849,45 @@ function makeParamRow(row, obj, onChange, rebuild) {
   return el;
 }
 
-function buildComponentEditor(host, cfg, onChange) {
+function buildParams(host, cfg, onChange) {
   host.innerHTML = "";
-  if (!cfg.components) cfg.components = [defaultComponent()];
-  const rebuild = () => buildComponentEditor(host, cfg, onChange);
+  const rebuild = () => buildParams(host, cfg, onChange);
+  for (const grp of PARAMS) {
+    if (grp.path === "decorr" && false) continue;
+    const obj = grp.path ? cfg[grp.path] : cfg;
+    if (!obj) continue;
+    const box = document.createElement("div");
+    box.className = "pgroup";
+    const gh = document.createElement("div");
+    gh.className = "ghead";
+    gh.append(grp.group, infoBtn(grp.ref));
+    box.appendChild(gh);
+    for (const row of grp.rows) {
+      if (row.showIf && !row.showIf(obj)) continue;
+      box.appendChild(makeParamRow(row, obj, onChange, rebuild));
+    }
+    host.appendChild(box);
+  }
+}
+
+function buildComponentEditor(host, cfg, onChange, hue) {
+  host.innerHTML = "";
+  if (!cfg.components) cfg.components = [];
+  const rebuild = () => buildComponentEditor(host, cfg, onChange, hue);
+  const n = Math.max(cfg.components.length, 2);
 
   cfg.components.forEach((c, ci) => {
     const mod = document.createElement("div");
     mod.className = "ringmod";
     if (c.collapsed) mod.classList.add("collapsed");
+    mod.style.borderLeft = `3px solid ${shadeOf(hue, ci, n)}`;
 
     const head = document.createElement("div");
     head.className = "rmhead";
     const twist = document.createElement("button");
     twist.className = "sm ghost twist";
     twist.textContent = c.collapsed ? "▸" : "▾";
+    twist.title = c.collapsed ? "show settings" : "hide settings";
     twist.addEventListener("click", e => {
       e.stopPropagation(); c.collapsed = !c.collapsed; rebuild();
     });
@@ -943,7 +896,7 @@ function buildComponentEditor(host, cfg, onChange) {
     const name = document.createElement("input");
     name.className = "cname";
     name.value = c.label || "";
-    name.placeholder = `${KINDS[c.kind]?.label || c.kind} ${ci + 1}`;
+    name.placeholder = `${LATTICES[c.lattice]?.label || c.lattice} ${ci + 1}`;
     name.addEventListener("change", () => { c.label = name.value; onChange(); });
     head.appendChild(name);
 
@@ -954,48 +907,46 @@ function buildComponentEditor(host, cfg, onChange) {
 
     const mk = (label, title, fn) => {
       const b = document.createElement("button");
-      b.className = "sm"; b.textContent = label; b.title = title;
+      b.className = "sm ghost"; b.textContent = label; b.title = title;
       b.addEventListener("click", e => { e.stopPropagation(); fn(); });
       return b;
     };
-    head.appendChild(mk("Duplicate", "insert a copy below", () => {
-      cfg.components.splice(ci + 1, 0, JSON.parse(JSON.stringify(c)));
-      rebuild(); onChange();
-    }));
-    head.appendChild(mk("Copy", "copy; paste into any variant", () => {
+    head.appendChild(mk("Copy", "copy; paste into this or any variant", () => {
       CLIP.component = JSON.parse(JSON.stringify(c));
       rebuild();
     }));
-    if (cfg.components.length > 1) {
-      head.appendChild(mk("Remove", "remove this component", () => {
-        cfg.components.splice(ci, 1); rebuild(); onChange();
-      }));
-    }
+    head.appendChild(mk("×", "remove this component", () => {
+      cfg.components.splice(ci, 1); rebuild(); onChange();
+    }));
     mod.appendChild(head);
 
     if (!c.collapsed) {
       const body = document.createElement("div");
       body.className = "rmbody";
       const refresh = () => { sum.textContent = componentSummary(c); onChange(); };
+
       for (const row of COMPONENT_ROWS) {
+        if (row.adv && !c.advanced) continue;
         if (row.showIf && !row.showIf(c)) continue;
         body.appendChild(makeParamRow(row, c, refresh,
           row.structural ? rebuild : () => { }));
       }
 
-      // Per-component decorrelation, so two components in one field can carry
-      // different coherence.
+      const more = document.createElement("button");
+      more.className = "sm ghost";
+      more.textContent = c.advanced ? "Fewer settings" : "More settings";
+      more.addEventListener("click", () => { c.advanced = !c.advanced; rebuild(); });
+      body.appendChild(more);
+
+      // Per-component decorrelation, so components in one field can differ.
       const dec = document.createElement("div");
       dec.className = "pgroup";
       const dh = document.createElement("div");
       dh.className = "ghead";
       dh.append("Decorrelation", infoBtn("decorrelation"));
       const toggle = document.createElement("button");
-      toggle.className = "sm";
-      toggle.textContent = c.decorr ? "use variant's" : "override";
-      toggle.title = c.decorr
-        ? "fall back to the variant's decorrelation"
-        : "give this component its own decorrelation";
+      toggle.className = "sm ghost";
+      toggle.textContent = c.decorr ? "inherit" : "set separately";
       toggle.addEventListener("click", () => {
         c.decorr = c.decorr ? null : JSON.parse(JSON.stringify(cfg.decorr));
         rebuild(); onChange();
@@ -1008,10 +959,10 @@ function buildComponentEditor(host, cfg, onChange) {
           dec.appendChild(makeParamRow(row, c.decorr, refresh, rebuild));
         }
       } else {
-        const n = document.createElement("div");
-        n.className = "note";
-        n.textContent = "Inheriting the variant's decorrelation.";
-        dec.appendChild(n);
+        const note = document.createElement("div");
+        note.className = "note";
+        note.textContent = "Using the variant's decorrelation.";
+        dec.appendChild(note);
       }
       body.appendChild(dec);
       mod.appendChild(body);
@@ -1019,16 +970,27 @@ function buildComponentEditor(host, cfg, onChange) {
     host.appendChild(mod);
   });
 
+  if (!cfg.components.length) {
+    const empty = document.createElement("div");
+    empty.className = "note";
+    empty.textContent = "No components yet. Add one to give this variant a field.";
+    host.appendChild(empty);
+  }
+
   const bar = document.createElement("div");
   bar.className = "ringbar";
   const addSel = document.createElement("select");
   addSel.className = "sm";
   addSel.innerHTML = `<option value="">Add component…</option>` +
-    Object.entries(KINDS).map(([k, v]) =>
-      `<option value="${k}">${v.label} — ${v.hint}</option>`).join("");
+    Object.entries(LATTICES).map(([k, v]) =>
+      `<optgroup label="${v.label} — ${v.hint}">` +
+      COMPONENT_PRESETS[k].map((p, i) =>
+        `<option value="${k}:${i}">${esc(p.label)}</option>`).join("") +
+      `</optgroup>`).join("");
   addSel.addEventListener("change", () => {
     if (!addSel.value) return;
-    cfg.components.push(defaultComponent(addSel.value));
+    const [lat, i] = addSel.value.split(":");
+    cfg.components.push(defaultComponent(lat, COMPONENT_PRESETS[lat][Number(i)]));
     rebuild(); onChange();
   });
   bar.appendChild(addSel);
@@ -1073,14 +1035,13 @@ function renderPassages() {
       b.addEventListener("click", e => { e.stopPropagation(); fn(); });
       return b;
     };
-    const add = document.createElement("select");
-    add.innerHTML = `<option value="">+ variant…</option>` +
-      VARIANT_PRESETS.map((pr, i) => `<option value="${i}">${pr.label}</option>`).join("");
-    add.addEventListener("click", e => e.stopPropagation());
-    add.addEventListener("change", () => {
-      const pr = VARIANT_PRESETS[Number(add.value)];
-      if (!pr) return;
-      p.variants.push({ name: pr.label.toLowerCase(), config: pr.make() });
+    const add = document.createElement("button");
+    add.className = "sm";
+    add.textContent = "+ variant";
+    add.title = "add an empty variant to build from components";
+    add.addEventListener("click", e => {
+      e.stopPropagation();
+      p.variants.push({ name: `variant ${p.variants.length}`, config: emptyField() });
       renderPassages(); markStale();
     });
     head.appendChild(add);
@@ -1099,9 +1060,12 @@ function renderPassages() {
       body.className = "pasbody";
 
       p.variants.forEach((v, vi) => {
-        const isLive = S.live && S.live.pi === pi && S.live.set.includes(vi);
+        const isLive = S.live && S.live.pi === pi && S.live.vi === vi;
+        const latched = isLive && S.latched;
+        const hue = variantColour(v, vi);
         const vr = document.createElement("div");
-        vr.className = "variant" + (isLive ? " live" : "") + (vi === S.ref ? " ref" : "");
+        vr.className = "variant" + (isLive ? " live" : "") + (latched ? " latched" : "");
+        if (vi > 0) vr.style.borderLeft = `4px solid ${shadeOf(hue, 0, 2)}`;
 
         const key = document.createElement("span");
         key.className = "key"; key.textContent = vi === 0 ? "–" : vi;
@@ -1113,40 +1077,74 @@ function renderPassages() {
         vr.appendChild(vn);
 
         const tag = document.createElement("span");
-        const isControl = v.config && effectiveRate(v.config) === 0 &&
-          (v.config.hotspot?.enabled || true);
         tag.className = "tag " + (v.config ? "spin" : "dry");
-        tag.textContent = v.config ? summarize(v.config) : "original";
+        if (v.config) {
+          const comps = v.config.components || [];
+          const src = comps.reduce((n, c) => n + componentSources(c), 0);
+          tag.textContent = `${comps.length} comp · ${src} src`;
+          tag.title = summarize(v.config);
+        } else {
+          tag.textContent = "original";
+        }
         vr.appendChild(tag);
         vr.appendChild(document.createElement("span")).className = "grow";
 
-        if (v.config && effectiveRate(v.config) !== 0) {
-          vr.appendChild(mk("+ control", "add the matched static twin", () => {
+        if (latched) {
+          const lock = document.createElement("span");
+          lock.className = "lockmark"; lock.textContent = "latched";
+          vr.appendChild(lock);
+        }
+
+        if (vi > 0) {
+          const swatch = document.createElement("input");
+          swatch.type = "range"; swatch.min = 0; swatch.max = 359; swatch.step = 5;
+          swatch.value = hue; swatch.className = "huepick";
+          swatch.title = "variant colour";
+          swatch.style.accentColor = shadeOf(hue, 0, 2);
+          swatch.addEventListener("click", e => e.stopPropagation());
+          swatch.addEventListener("input", () => {
+            v.hue = Number(swatch.value); renderPassages();
+          });
+          vr.appendChild(swatch);
+        }
+
+        if (v.config && hasMotion(v.config)) {
+          vr.appendChild(mk("+ control", "add the matched still twin", () => {
             p.variants.splice(vi + 1, 0, {
-              name: v.name + " · control", config: controlOf(v.config)
+              name: v.name + " · control", config: controlOf(v.config),
+              hue: (hue + 180) % 360,
             });
             renderPassages(); markStale();
           }));
         }
-        vr.appendChild(mk("edit", "show parameters", () => {
+        vr.appendChild(mk(v.open ? "close" : "edit", "show parameters", () => {
           v.open = !v.open; renderPassages();
         }));
         if (vi > 0) vr.appendChild(mk("×", "remove variant", () => {
           p.variants.splice(vi, 1); renderPassages(); markStale();
         }, "sm ghost"));
 
+        // Clicking latches the variant on; clicking again releases it.
         vr.addEventListener("click", e => {
           if (e.target.closest("button, input")) return;
-          S.active = pi; applyVariant(pi, vi);
+          S.active = pi;
+          if (latched) { S.latched = false; applyVariant(pi, 0); }
+          else { S.latched = true; applyVariant(pi, vi); }
         });
         body.appendChild(vr);
 
         if (v.open && v.config) {
           const pane = document.createElement("div");
           pane.style.cssText = "padding:2px 8px 10px 26px";
-          const onchg = () => { tag.textContent = summarize(v.config); markStale(); };
+          const onchg = () => {
+            const comps = v.config.components || [];
+            const src = comps.reduce((n, c) => n + componentSources(c), 0);
+            tag.textContent = `${comps.length} comp · ${src} src`;
+            tag.title = summarize(v.config);
+            markStale();
+          };
           const compHost = document.createElement("div");
-          buildComponentEditor(compHost, v.config, onchg);
+          buildComponentEditor(compHost, v.config, onchg, hue);
           pane.appendChild(compHost);
           const rest = document.createElement("div");
           buildParams(rest, v.config, onchg);
@@ -1249,8 +1247,11 @@ function wireWave() {
       const hit = S.passages.findIndex(p => t >= p.start && t <= p.end);
       if (hit >= 0) { S.active = hit; renderPassages(); }
       if (S.rendered) seekTo(t);
-    } else if (S.sel[1] - S.sel[0] < 1) {
-      S.sel[1] = S.sel[0] + 1;
+    } else {
+      if (S.sel[1] - S.sel[0] < 1) S.sel[1] = S.sel[0] + 1;
+      // Audition the selection straight away, so it can be adjusted before
+      // committing it to a passage.
+      previewSelection();
     }
     from = null; syncSel(); drawWave();
   });
@@ -1261,6 +1262,47 @@ const syncSel = () => {
   $("#pstart").value = S.sel[0].toFixed(1);
   $("#pend").value = S.sel[1].toFixed(1);
 };
+
+/** Play the current selection straight from the source file.
+ *
+ * Deciding which stretch of a track is worth studying is a listening job, and
+ * it should not require committing to a passage and waiting for a render
+ * first. This plays the untreated audio directly, so it is instant.
+ */
+let previewSrc = null, previewGain = null;
+
+function stopPreview() {
+  try { previewSrc?.stop(); } catch (_) { }
+  previewSrc = null;
+  updateTransport();
+}
+
+async function previewSelection() {
+  stopPlayback();
+  stopPreview();
+  if (!S.track) return;
+  try {
+    if (!S.sourceBuffer || S.sourceFor !== S.track) {
+      const r = await fetch(`/api/source/${encodeURIComponent(S.track)}`);
+      S.sourceBuffer = await AC.decodeAudioData(await r.arrayBuffer());
+      S.sourceFor = S.track;
+    }
+  } catch (_) { return; }
+  if (AC.state === "suspended") AC.resume();
+
+  const [a, b] = S.sel;
+  previewGain = AC.createGain();
+  previewGain.connect(AC.destination);
+  previewSrc = AC.createBufferSource();
+  previewSrc.buffer = S.sourceBuffer;
+  previewSrc.loop = true;
+  previewSrc.loopStart = a;
+  previewSrc.loopEnd = Math.max(b, a + 0.2);
+  previewSrc.connect(previewGain);
+  previewSrc.start(AC.currentTime + 0.02, a);
+  S.previewAt = { start: a, t0: AC.currentTime + 0.02 };
+  updateTransport();
+}
 
 // ====================================================================
 // Render and playback
@@ -1399,10 +1441,9 @@ const seekTo = t => { if (S.playing) startPlayback(t); else { S.startOffset = t;
  */
 function applyVariant(pi, vi, ms) {
   if (!S.rendered) return;
-  const list = (Array.isArray(vi) ? vi : [vi])
-    .filter(i => i !== null && i !== undefined && i !== 0);
-  S.live = list.length ? { pi, vi: list[0], set: list } : null;
-  const share = list.length ? 1 / Math.sqrt(list.length) : 1;
+  const idx = Array.isArray(vi) ? vi[0] : vi;
+  S.live = (idx === null || idx === undefined || idx === 0) ? null : { pi, vi: idx };
+  const share = 1;
   const T = (ms ?? Number($("#fadems").value)) / 1000;
   const t0 = AC.currentTime;
 
@@ -1426,7 +1467,7 @@ function applyVariant(pi, vi, ms) {
 
   if (dryGain) ramp(dryGain.gain, S.live ? 0 : 1);
   varNodes.forEach(n => ramp(n.gain.gain,
-    S.live && n.pi === S.live.pi && S.live.set.includes(n.vi) ? share : 0));
+    S.live && n.pi === S.live.pi && n.vi === S.live.vi ? share : 0));
 
   renderPassages();
   showMetrics();
@@ -1447,26 +1488,33 @@ function wireTransport() {
   // Hold a number to audition that variant, release to fall back to the
   // reference. Instant switching mid-note is far more sensitive than
   // comparing two separate listens: auditory memory for spatial quality is short.
-  // Holding several numbers sounds several variants together.
-  const held = new Set();
-  const applyHeld = () => {
-    const set = [...held].map(Number).filter(n => n < passage().variants.length);
-    applyVariant(S.active, set.length ? set : S.ref);
-  };
+  // Hold a number to hear a variant momentarily; hold Ctrl with it, or click
+  // the row, to latch it on until released the same way.
+  let held = null;
   addEventListener("keydown", e => {
     if (e.target.matches("input, select, textarea")) return;
     if ($("#sheet").classList.contains("on") || Tour.active) return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); return; }
     const n = parseInt(e.key, 10);
-    if (n >= 1 && n <= 9 && passage() && n < passage().variants.length) {
-      if (!held.has(e.key)) { held.add(e.key); applyHeld(); }
-      e.preventDefault();
+    if (!(n >= 1 && n <= 9) || !passage() || n >= passage().variants.length) return;
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      const already = S.latched && S.live && S.live.vi === n;
+      S.latched = !already;
+      applyVariant(S.active, already ? 0 : n);
+      return;
     }
+    if (held === null) { held = n; S.latched = false; applyVariant(S.active, n); }
   });
   addEventListener("keyup", e => {
-    if (held.delete(e.key)) applyHeld();
+    if (parseInt(e.key, 10) === held) {
+      held = null;
+      if (!S.latched) applyVariant(S.active, S.ref);
+    }
   });
-  addEventListener("blur", () => { if (held.size) { held.clear(); applyHeld(); } });
+  addEventListener("blur", () => {
+    if (held !== null) { held = null; if (!S.latched) applyVariant(S.active, S.ref); }
+  });
 }
 
 // ====================================================================
@@ -1491,11 +1539,25 @@ function liveVariant() {
 
 const TRAIL_SECONDS = 1.4;
 
-/** One colour per component, so a field of several reads as several. */
-const COMP_COLOURS = [
-  [44, 95, 124], [154, 91, 45], [61, 107, 82],
-  [122, 74, 122], [163, 58, 42], [70, 90, 110],
-];
+/** The variant currently drawn, as an HSL hue, with components taking shades
+ *  of it so a field of several reads as one thing with parts. */
+function liveHue() {
+  if (!S.live) return 205;
+  const v = passageAt(S.live.pi)?.variants[S.live.vi];
+  return variantColour(v || {}, S.live.vi);
+}
+const passageAt = i => S.passages[i];
+
+function shadeRGB(hue, k, n) {
+  // hsl -> rgb, so canvas can build rgba strings with a live alpha
+  const l = (n <= 1 ? 42 : 26 + (k / (n - 1)) * 34) / 100, s = 0.42;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hp = (hue % 360) / 60, x = c * (1 - Math.abs(hp % 2 - 1));
+  const m = l - c / 2;
+  const t = hp < 1 ? [c, x, 0] : hp < 2 ? [x, c, 0] : hp < 3 ? [0, c, x]
+    : hp < 4 ? [0, x, c] : hp < 5 ? [x, 0, c] : [c, 0, x];
+  return t.map(u => Math.round((u + m) * 255));
+}
 
 /** Frames covering [t0, t1]. Used for motion trails. */
 function framesBetween(trace, t0, t1) {
@@ -1550,6 +1612,18 @@ function drawRing() {
     || Array(nSrc).fill(0);
   const baseDist = v.params.resolved_distances || Array(nSrc).fill(REFD);
   const lvlAt = frame => frame.lvl || Array(nSrc).fill(1);
+  // Shade by ring or row within the component, and by component within the
+  // variant, so depth is legible without a second colour scheme.
+  const hue = liveHue();
+  const compShades = v.params.component_shades || [1];
+  const shadeIdx = (v.params.resolved_shade_of || Array(nSrc).fill(0))
+    .map((s, i) => {
+      const ci = ringOf[i];
+      let before = 0;
+      for (let k = 0; k < ci; k++) before += compShades[k] || 1;
+      return before + s;
+    });
+  const nShades = Math.max(2, compShades.reduce((a, b) => a + b, 0));
   const distAt = frame => frame.dist || baseDist;
   const unit = d => Math.pow(Math.max(d, 0.2) / REFD, 0.7);
   const maxUnit = Math.max(1, ...baseDist.map(unit)) * 1.02;
@@ -1582,7 +1656,7 @@ function drawRing() {
         const age = k / trail.length;
         const [x0, y0] = posD(a0, distAt(trail[k - 1])[i]);
         const [x1, y1] = posD(a1, distAt(trail[k])[i]);
-        const [cr, cg, cb] = COMP_COLOURS[ringOf[i] % COMP_COLOURS.length];
+        const [cr, cg, cb] = shadeRGB(hue, shadeIdx[i], nShades);
         const lv = lvlAt(trail[k])[i];
         x.strokeStyle = `rgba(${cr},${cg},${cb},${(0.62 * age * age * lv).toFixed(3)})`;
         x.lineWidth = 1.2 + 3.4 * age;
@@ -1599,12 +1673,13 @@ function drawRing() {
         // Only closed patterns have a meaningful outline; a stream is a line
         // of sources passing through, and joining its ends would draw a shape
         // that is not there.
-        const kind = v.params.resolved_components?.[g]?.kind || "ring";
-        if (kind === "stream") continue;
+        // Only a polar lattice has a closed outline worth drawing; joining the
+        // ends of a grid would draw a shape that is not there.
+        if ((v.params.resolved_components?.[g]?.lattice || "polar") !== "polar") continue;
         const idx = [];
         for (let i = 0; i < nSrc; i++) if (ringOf[i] === g) idx.push(i);
         if (idx.length < 2) continue;
-        const [cr, cg, cb] = COMP_COLOURS[g % COMP_COLOURS.length];
+        const [cr, cg, cb] = shadeRGB(hue, g, Math.max(nRings, 2));
         x.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
         x.lineWidth = 1;
         x.setLineDash(dash);
@@ -1640,7 +1715,7 @@ function drawRing() {
     const [sx, sy] = posD(a, distAt(fr)[i]);
     const coh = 1 - (fr.amt[i] ?? 1);       // filled = coherent, hollow = decorrelated
     const lv = lvlAt(fr)[i];                // a fading source fades on screen
-    const [cr, cg, cb] = COMP_COLOURS[ringOf[i] % COMP_COLOURS.length];
+    const [cr, cg, cb] = shadeRGB(hue, shadeIdx[i], nShades);
     x.beginPath(); x.arc(sx, sy, 4.5 + 4.5 * coh, 0, Math.PI * 2);
     x.fillStyle = `rgba(${cr},${cg},${cb},${((0.10 + 0.85 * coh) * lv).toFixed(3)})`;
     x.fill();
@@ -1649,18 +1724,17 @@ function drawRing() {
   });
 
   const comps = v.params.resolved_components || [];
-  const domRate = comps.filter(c => c.kind === "ring" || c.kind === "spiral")
-    .reduce((a, c) => Math.abs(c.rotation_deg_per_sec) > Math.abs(a)
-      ? c.rotation_deg_per_sec : a, 0);
+  const domRate = comps.reduce((a, c) =>
+    Math.abs(c.rotation_deg_per_sec) > Math.abs(a) ? c.rotation_deg_per_sec : a, 0);
   drawRotationArrow(x, cx, cy, R + 17, domRate, "#2c5f7c");
   const hot = v.params.hotspot;
   if (hot?.enabled && hot.deg_per_sec) {
     drawRotationArrow(x, cx, cy, R + 31, hot.deg_per_sec, "#9a5b2d");
   }
-  // Arrow showing where a stream is heading.
+  // Arrow showing which way a drifting lattice is travelling.
   for (const c of comps) {
-    if (c.kind !== "stream" || !c.speed_mps) continue;
-    const dir = (c.heading_deg + (c.speed_mps < 0 ? 180 : 0)) * Math.PI / 180;
+    if (!c.drift_x_mps && !c.drift_y_mps) continue;
+    const dir = Math.atan2(c.drift_x_mps, c.drift_y_mps);
     const ax = cx + Math.sin(dir) * (R + 26), ay = cy - Math.cos(dir) * (R + 26);
     x.fillStyle = "#3d6b52";
     x.beginPath();
@@ -1674,11 +1748,13 @@ function drawRing() {
   x.fillText("filled = coherent, hollow = decorrelated", 6, h - 18);
   const labels = v.params.component_labels || [];
   const bits = comps.map((c, i) => {
-    const name = labels[i] || c.kind;
-    if (c.kind === "stream") return `${name}: ${fmt(c.speed_mps, 1)} m/s`;
-    if (c.kind === "radial") return `${name}: ${fmt(c.radial_speed_mps, 1)} m/s`;
-    if (c.kind === "spiral") return `${name}: ${fmt(c.rotation_deg_per_sec, 0)}°/s, ${fmt(c.radial_speed_mps, 1)} m/s`;
-    return `${name}: ${c.rotation_deg_per_sec ? fmt(c.rotation_deg_per_sec, 0) + "°/s" : "still"}`;
+    const name = labels[i] || c.lattice;
+    const parts = [];
+    if (c.rotation_deg_per_sec) parts.push(`${fmt(c.rotation_deg_per_sec, 0)}°/s`);
+    if (c.radial_speed_mps) parts.push(`${fmt(c.radial_speed_mps, 1)} m/s radial`);
+    if (c.drift_x_mps || c.drift_y_mps)
+      parts.push(`${fmt(Math.hypot(c.drift_x_mps, c.drift_y_mps), 1)} m/s drift`);
+    return `${name}: ${parts.length ? parts.join(", ") : "still"}`;
   });
   if (hot?.enabled) bits.push(hot.deg_per_sec ? `hotspot ${fmt(hot.deg_per_sec, 0)}°/s` : "hotspot frozen");
   x.fillStyle = "#4a4640";
@@ -1713,11 +1789,11 @@ function updateNow() {
   if (!S.rendered) { bar.innerHTML = '<span class="dim">Nothing rendered yet.</span>'; return; }
   const v = liveVariant();
   const p = passage();
-  const set = S.live?.set || [];
-  bar.innerHTML = set.length
-    ? set.map(i => `<span class="tag spin">${esc(S.rendered.passages[S.live.pi].variants[i]?.label || i)}</span>`).join("")
-      + `<span class="dim">${set.length > 1 ? `${set.length} applied together` : "applied"}</span>`
-    : `<span class="tag dry">untreated</span><span class="dim">hold one or more number keys to apply variants</span>`;
+  bar.innerHTML = v
+    ? `<span class="tag spin">${esc(v.label)}</span>
+       <span class="dim">${S.latched ? "latched" : "applied"}</span>`
+    : `<span class="tag dry">untreated</span>
+       <span class="dim">hold a number key, or click a variant to latch it</span>`;
 
   const host = $("#readout");
   if (!v || !v.params) {
@@ -1740,17 +1816,25 @@ function updateNow() {
     const az = fr ? idx.map(i => fmt(fr.az[i], 0)).join(" ") : "";
     const dist = fr?.dist ? idx.map(i => fmt(fr.dist[i], 1)).join(" ") : "";
     const lvl = fr?.lvl ? idx.map(i => fmt(fr.lvl[i], 2)).join(" ") : "";
-    const motion = c.kind === "stream"
-      ? `${fmt(c.speed_mps, 1)} m/s heading ${fmt(c.heading_deg, 0)}°`
-      : c.kind === "radial" ? `${fmt(c.radial_speed_mps, 1)} m/s radial`
-      : c.kind === "spiral" ? `${fmt(c.rotation_deg_per_sec, 0)}°/s, ${fmt(c.radial_speed_mps, 1)} m/s`
-      : (c.rotation_deg_per_sec ? `${fmt(c.rotation_deg_per_sec, 0)}°/s` : "stationary");
+    const motion = [];
+    if (c.rotation_deg_per_sec) {
+      motion.push(c.rotation_outer_deg_per_sec != null
+        ? `turn ${fmt(c.rotation_deg_per_sec, 0)}→${fmt(c.rotation_outer_deg_per_sec, 0)}°/s`
+        : `turn ${fmt(c.rotation_deg_per_sec, 0)}°/s`);
+    }
+    if (c.radial_speed_mps)
+      motion.push(`${c.radial_speed_mps < 0 ? "inward" : "outward"} ${fmt(Math.abs(c.radial_speed_mps), 1)} m/s`);
+    if (c.drift_x_mps || c.drift_y_mps)
+      motion.push(`drift ${fmt(c.drift_x_mps, 1)}, ${fmt(c.drift_y_mps, 1)} m/s`);
+    const shape = c.lattice === "cartesian"
+      ? `${c.cols}×${c.rows} grid`
+      : (c.rings > 1 ? `${c.rings} rings × ${c.per_ring}` : `ring of ${c.per_ring}`);
     const cd = c.decorr || d;
-    rows.push([`<b>${esc(labels[ci] || c.kind)}</b>`,
-      `${c.kind} · ${c.n_sources} src · ${motion}`]);
+    rows.push([`<b>${esc(labels[ci] || c.lattice)}</b>`,
+      `${shape} · ${idx.length} src · ${motion.length ? motion.join(", ") : "stationary"}`]);
     if (az) rows.push(["  azimuths", az]);
     if (dist) rows.push(["  distances", dist]);
-    if (lvl && c.kind !== "ring") rows.push(["  levels", lvl]);
+    if (lvl && componentMoves(c)) rows.push(["  levels", lvl]);
     if (c.random_fraction > 0)
       rows.push(["  random share", `${Math.round(c.random_fraction * 100)}%`]);
     rows.push(["  decorrelation",
@@ -1770,8 +1854,30 @@ function updateNow() {
     + "</table>";
 }
 
+/** A transport that follows you off the Bench.
+ *
+ * Audio keeps playing when another page is opened, so there has to be a way to
+ * stop it from wherever you are.
+ */
+function updateTransport() {
+  const bar = $("#globaltransport");
+  if (!bar) return;
+  const onBench = $("#bench").classList.contains("on");
+  const sounding = S.playing || !!previewSrc;
+  bar.classList.toggle("on", sounding && !onBench);
+  if (!sounding || onBench) return;
+  const p = passage();
+  const what = previewSrc
+    ? `selection ${fmt(S.sel[0], 1)}–${fmt(S.sel[1], 1)}s`
+    : `${p ? p.name : "passage"}${S.live ? " · " + esc(
+        S.rendered.passages[S.live.pi].variants[S.live.vi]?.label || "") : " · untreated"}`;
+  $("#gtwhat").innerHTML = what;
+  $("#gtclock").textContent = previewSrc ? "" : mmss(playPosition());
+}
+
 function tick() {
   drawRing();
+  updateTransport();
   if (S.rendered) {
     const t = playPosition();
     $("#clock").textContent = `${mmss(t)} / ${mmss(S.duration)}`;
@@ -1955,7 +2061,7 @@ function wireArrangement() {
     const blob = new Blob([JSON.stringify({ passages: S.passages }, null, 2)],
       { type: "application/json" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = "ringfield-passages.json"; a.click();
+    a.href = URL.createObjectURL(blob); a.download = "sonokinetic-passages.json"; a.click();
   });
   $("#aimport").addEventListener("click", () => {
     const inp = document.createElement("input");
@@ -2668,10 +2774,15 @@ async function boot() {
     $$(".page").forEach(p => p.classList.toggle("on", p.id === t.dataset.tab));
   }));
 
+  $("#gtstop").addEventListener("click", () => { stopPreview(); stopPlayback(); });
+  $("#gtbench").addEventListener("click", () => showTab("bench"));
+
   if (tracks.length) {
     await loadTrack(tracks[0].name);
-    const a = Math.min(84, Math.max(0, S.duration - 20));
-    S.sel = [a, Math.min(a + 20, S.duration)];
+    // Opens on sustained material, which decorrelates far more readily than
+    // percussive material and is the better starting stimulus.
+    const a = Math.min(105, Math.max(0, S.duration - 25));
+    S.sel = [a, Math.min(a + 22, S.duration)];
     S.passages = [newPassage(S.sel[0], S.sel[1], "Passage 1")];
     syncSel(); renderPassages(); drawWave();
   }

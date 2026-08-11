@@ -410,6 +410,24 @@ a.term:hover, a.xref:hover { border-bottom-color: var(--accent); background: var
   margin-left: 14px; color: var(--ink-3); font-size: 11.5px;
   font-family: var(--serif); font-style: italic;
 }
+
+/* transport that follows you off the bench --------------------------- */
+.gtbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  display: none; align-items: center; gap: 12px;
+  padding: 8px 18px; background: var(--card);
+  border-top: 1px solid var(--rule); box-shadow: 0 -3px 14px rgba(30,28,26,.07);
+}
+.gtbar.on { display: flex; }
+.gtwhat { font-size: 12.5px; color: var(--ink-2); }
+
+/* variant latching and colour ---------------------------------------- */
+.variant.latched { box-shadow: inset 0 0 0 1px var(--accent); }
+.lockmark {
+  font-size: 10px; color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 9px; padding: 0 6px;
+}
+.huepick { width: 44px; }
 .readpage { max-width: 780px; }
 .chapterbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
 

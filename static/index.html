@@ -10,7 +10,7 @@
 
 <header>
   <h1>Sonokinetic</h1>
-  <span class="sub">can motion in a field of sound be perceived without localizing anything in it?</span>
+  <span class="sub">Can motion in a field of sound be perceived without localizing anything in it?</span>
   <button id="starttour" class="help" title="Take a guided tour of the interface">?</button>
   <nav>
     <button class="tab on" data-tab="bench">Bench</button>
@@ -21,7 +21,7 @@
     <button class="tab" data-tab="feedback" id="feedbacktab">Feedback</button>
     <button id="openlearn">Glossary</button>
   </nav>
-  <span class="byline">Jonas</span>
+  <span class="byline">Jonas Techmanski</span>
 </header>
 
 <!-- ================================================================== -->
@@ -155,7 +155,7 @@
       <div id="atimeline" class="tlist"></div>
       <div class="hr"></div>
       <div class="row">
-        <label>Name <input id="exname" value="ringfield"></label>
+        <label>Name <input id="exname" value="sonokinetic"></label>
         <button id="doexport">Export WAV + JSON + SRT</button>
       </div>
       <div id="aexportstate" class="msg"></div>
@@ -271,6 +271,14 @@
 </div>
 
 <div class="defcard" id="card"></div>
+
+<div id="globaltransport" class="gtbar">
+  <button id="gtstop" class="sm">Stop</button>
+  <span id="gtwhat" class="gtwhat"></span>
+  <span class="grow"></span>
+  <span id="gtclock" class="clock"></span>
+  <button id="gtbench" class="sm ghost">Back to bench</button>
+</div>
 
 <script src="/tour.js"></script>
 <script src="/app.js"></script>

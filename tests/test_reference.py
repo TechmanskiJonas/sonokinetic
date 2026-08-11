@@ -399,8 +399,8 @@ def test_findings_that_constrain_the_method_are_covered(ref, purpose):
 
 @pytest.mark.parametrize("eid", [
     "matched-control", "circulating-hotspot", "front-back-confusion",
-    "level-matching", "component", "stream", "radial-flow", "spiral",
-    "motion-coherence", "translation",
+    "level-matching", "component", "polar-lattice", "grid-lattice",
+    "radial-flow", "whirlpool", "motion-coherence", "translation",
 ])
 def test_the_load_bearing_entries_exist(ref, eid):
     """These are the findings a reader has to meet to use the tool correctly.

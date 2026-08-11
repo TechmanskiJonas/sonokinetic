@@ -146,28 +146,32 @@ class RingIn(BaseModel):
 
 
 class ComponentIn(BaseModel):
-    kind: str = "ring"
-    n_sources: int = 5
+    lattice: str = "polar"
     label: str = ""
-    start_azimuths: Optional[List[float]] = None
-    spacing_deg: Optional[float] = None
+    rings: int = 1
+    per_ring: int = 5
+    r_near_m: float = 1.5
+    r_far_m: float = 4.0
     offset_deg: float = 0.0
-    distance_m: float = 2.0
-    rotation_deg_per_sec: float = 60.0
-    heading_deg: float = 180.0
-    speed_mps: float = 1.5
-    path_m: float = 9.0
-    spread_m: float = 3.0
+    ring_stagger_deg: float = 0.0
+    start_azimuths: Optional[List[float]] = None
+    cols: int = 5
+    rows: int = 5
+    extent_x_m: float = 8.0
+    extent_y_m: float = 8.0
+    rotation_deg_per_sec: float = 0.0
+    rotation_outer_deg_per_sec: Optional[float] = None
     radial_speed_mps: float = 0.0
-    r_near_m: float = 0.7
-    r_far_m: float = 6.0
+    drift_x_mps: float = 0.0
+    drift_y_mps: float = 0.0
     random_fraction: float = 0.0
     wander_deg: float = 60.0
     wander_hz: float = 0.25
     radial_wander_m: float = 0.0
     gain_db: float = 0.0
-    fade_frac: float = 0.3
-    min_distance_m: float = 0.4
+    edge_fade: float = 0.12
+    min_distance_m: float = 0.0
+    max_gain_db: float = 12.0
     decorr: Optional[DecorrIn] = None
 
     def to_cfg(self) -> rf.ComponentConfig:
@@ -322,11 +326,6 @@ def _prune_cache(keep_mb: int = 1500):
 def _load_json(name: str):
     with open(os.path.join(ROOT, name), encoding="utf-8") as f:
         return json.load(f)
-
-
-@app.get("/api/glossary")
-def glossary():
-    return _load_json("glossary.json")
 
 
 @app.get("/api/encyclopedia")
@@ -542,10 +541,12 @@ def _effective_rate(cfg_in: FieldIn) -> float:
         return cfg_in.hotspot.deg_per_sec
     if cfg_in.components:
         # Only rotation has a well-defined cyclic rate. Translation and radial
-        # flow recycle, but their period depends on path length and speed, and
-        # mixing those into one figure would misreport what is being measured.
-        rates = [c.rotation_deg_per_sec for c in cfg_in.components
-                 if c.kind in ("ring", "spiral")]
+        # flow recycle, but their period depends on extent and speed, and
+        # mixing those into one figure would misreport what is measured.
+        rates = [r for c in cfg_in.components
+                 for r in (c.rotation_deg_per_sec,
+                           c.rotation_outer_deg_per_sec or c.rotation_deg_per_sec)]
+        rates = [r for r in rates if r]
         return max(rates, key=abs) if rates else 0.0
     if cfg_in.rings:
         rates = [r.rotation_deg_per_sec for r in cfg_in.rings]
@@ -569,8 +570,10 @@ def _control_key(cfg_in: FieldIn) -> str:
         d["rings"] = [{**r, "rotation_deg_per_sec": 0.0, "wander_hz": 0.0}
                       for r in d["rings"]]
     if d.get("components"):
-        d["components"] = [{**c, "rotation_deg_per_sec": 0.0, "speed_mps": 0.0,
-                            "radial_speed_mps": 0.0, "wander_hz": 0.0}
+        d["components"] = [{**c, "rotation_deg_per_sec": 0.0,
+                            "rotation_outer_deg_per_sec": None,
+                            "radial_speed_mps": 0.0, "drift_x_mps": 0.0,
+                            "drift_y_mps": 0.0, "wander_hz": 0.0}
                            for c in d["components"]]
     return json.dumps(d, sort_keys=True, default=str)
 
@@ -879,6 +882,17 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
         out["mean_offdiagonal_range"] = [round(min(means), 4), round(max(means), 4)]
         out["sampled_at"] = [round(t, 2) for t in times]
     return out
+
+
+@app.get("/api/source/{name:path}")
+def source_audio(name: str):
+    """The original file, for auditioning a selection before rendering it.
+
+    Choosing which stretch of a track is worth studying is a listening job, and
+    waiting on a render to do it would discourage looking around.
+    """
+    path = resolve_track(name)
+    return FileResponse(path)
 
 
 @app.get("/api/audio/{name}")
