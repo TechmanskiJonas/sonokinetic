@@ -234,8 +234,47 @@ kbd {
 .bandrow { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; font-size: 11.5px; }
 .bandrow .bl { width: 44px; text-align: right; color: var(--ink-3); font-family: var(--mono); }
 .spark { width: 100%; height: 44px; display: block; }
-.cmat { border-collapse: collapse; font-size: 10.5px; font-family: var(--mono); margin-top: 5px; }
-.cmat td { width: 26px; height: 20px; text-align: center; border: 1px solid var(--card); }
+/* The matrix grows with source count and must never push the column wide. */
+.cmatwrap { max-width: 100%; overflow-x: auto; margin-top: 5px; }
+.cmat { border-collapse: collapse; font-size: 9.5px; font-family: var(--mono); }
+.cmat td {
+  width: 17px; min-width: 17px; height: 15px; text-align: center;
+  border: 1px solid var(--card); padding: 0;
+}
+
+/* passage selector, replacing the nested list ------------------------- */
+.paspicker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.paspicker select { max-width: 260px; }
+.passagebar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; background: var(--sunken);
+  border: 1px solid var(--rule); border-radius: var(--r); margin-bottom: 10px;
+}
+.passagebar .span { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+
+/* variants ------------------------------------------------------------ */
+.variant { flex-wrap: wrap; row-gap: 4px; }
+.variant .vname { min-width: 90px; max-width: 190px; }
+.variant .tag { flex: none; }
+.vlatch {
+  font-size: 11px; padding: 1px 8px; border-radius: 10px;
+  border: 1px solid var(--rule); background: var(--card); color: var(--ink-3);
+}
+.vlatch:hover { border-color: var(--accent); color: var(--accent); }
+.variant.latched .vlatch {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.huepick {
+  width: 22px; height: 22px; padding: 0; border: 1px solid var(--rule);
+  border-radius: 50%; background: none; cursor: pointer;
+}
+.huepick::-webkit-color-swatch-wrapper { padding: 2px; }
+.huepick::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+/* collapsed-by-default parameter groups ------------------------------- */
+.pgroup.folded .prow, .pgroup.folded .note { display: none; }
+.ghead { cursor: pointer; user-select: none; }
+.ghead .fold { color: var(--ink-3); font-size: 10px; width: 10px; }
 .finding {
   font-size: 12px; color: var(--ink-2); font-family: var(--serif);
   border-left: 2px solid var(--rule); padding: 2px 0 2px 10px; margin-top: 10px;

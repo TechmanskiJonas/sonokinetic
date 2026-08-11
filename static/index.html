@@ -39,6 +39,15 @@
       </div>
     </div>
 
+    <div class="row" style="margin-bottom:6px">
+      <button id="selplay" class="sm" title="play from the cursor">Play</button>
+      <button id="selloop" class="sm" title="loop the selection">Loop selection</button>
+      <button id="selstop" class="sm" title="stop">Stop</button>
+      <span id="selclock" class="clock"></span>
+      <span class="dim">left click or drag moves the cursor · right drag selects
+        · right click sets an edge</span>
+    </div>
+
     <canvas id="wave" height="92"></canvas>
 
     <div class="wavefoot">
@@ -46,7 +55,6 @@
       <label>Selection
         <input id="pstart" type="number" step="0.5" value="84"> to
         <input id="pend" type="number" step="0.5" value="104"> s</label>
-      <span class="dim">drag on the waveform to select</span>
       <span class="grow"></span>
       <span id="expbar" class="row">
         <button id="expsave" class="sm">Save experiment</button>

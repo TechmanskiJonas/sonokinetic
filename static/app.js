@@ -561,6 +561,22 @@ const defaultDecorr = () => ({
   band_amounts: null, micro_delay_ms: 0, micro_pitch_cents: 0,
   lfo_hz: 0, lfo_depth: 0, lfo_source_spread: 0, seed: 0
 });
+const defaultComponent = (lattice = "polar", preset = null) => {
+  const c = {
+    lattice, label: "",
+    rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 4,
+    offset_deg: 0, ring_stagger_deg: 0, start_azimuths: null,
+    cols: 5, rows: 5, extent_x_m: 8, extent_y_m: 8,
+    rotation_deg_per_sec: 0, rotation_outer_deg_per_sec: null,
+    radial_speed_mps: 0, drift_x_mps: 0, drift_y_mps: 0,
+    random_fraction: 0, wander_deg: 60, wander_hz: 0.25, radial_wander_m: 0,
+    gain_db: 0, edge_fade: 0.12, min_distance_m: 0, max_gain_db: 12,
+    decorr: null, collapsed: false, advanced: false,
+  };
+  if (preset) Object.assign(c, preset.set, { label: preset.label.toLowerCase() });
+  return c;
+};
+
 const defaultField = () => ({
   components: [defaultComponent("polar",
     COMPONENT_PRESETS.polar.find(p => p.label === "Turning ring"))],
@@ -584,6 +600,26 @@ const shadeOf = (hue, k, n) => {
   const l = n <= 1 ? 42 : 26 + (k / (n - 1)) * 34;
   return `hsl(${hue} 42% ${l}%)`;
 };
+
+/** The colour input speaks hex, the palette speaks hue. */
+function hslHex(hue, s = 0.42, l = 0.42) {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hp = (hue % 360) / 60, x = c * (1 - Math.abs(hp % 2 - 1));
+  const m = l - c / 2;
+  const t = hp < 1 ? [c, x, 0] : hp < 2 ? [x, c, 0] : hp < 3 ? [0, c, x]
+    : hp < 4 ? [0, x, c] : hp < 5 ? [x, 0, c] : [c, 0, x];
+  return "#" + t.map(u => Math.round((u + m) * 255)
+    .toString(16).padStart(2, "0")).join("");
+}
+
+function hueOfHex(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (d < 1e-6) return 205;
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return Math.round(((h * 60) % 360 + 360) % 360);
+}
 
 const effectiveRate = cfg => {
   if (!cfg) return 0;
@@ -803,19 +839,35 @@ function makeParamRow(row, obj, onChange, rebuild) {
   return el;
 }
 
+/** Parameter groups fold shut by default: a variant has more settings than
+ *  fit on a screen, and most sessions touch only a few of them. */
+const FOLDED = new Set(JSON.parse(localStorage.getItem("sk.folded") || "null")
+  || ["Decorrelation", "Physical model"]);
+
 function buildParams(host, cfg, onChange) {
   host.innerHTML = "";
   const rebuild = () => buildParams(host, cfg, onChange);
   for (const grp of PARAMS) {
-    if (grp.path === "decorr" && false) continue;
     const obj = grp.path ? cfg[grp.path] : cfg;
     if (!obj) continue;
     const box = document.createElement("div");
-    box.className = "pgroup";
+    const folded = FOLDED.has(grp.group);
+    box.className = "pgroup" + (folded ? " folded" : "");
+
     const gh = document.createElement("div");
     gh.className = "ghead";
-    gh.append(grp.group, infoBtn(grp.ref));
+    const caret = document.createElement("span");
+    caret.className = "fold";
+    caret.textContent = folded ? "▸" : "▾";
+    gh.append(caret, grp.group, infoBtn(grp.ref));
+    gh.addEventListener("click", e => {
+      if (e.target.closest(".i")) return;
+      FOLDED.has(grp.group) ? FOLDED.delete(grp.group) : FOLDED.add(grp.group);
+      localStorage.setItem("sk.folded", JSON.stringify([...FOLDED]));
+      rebuild();
+    });
     box.appendChild(gh);
+
     for (const row of grp.rows) {
       if (row.showIf && !row.showIf(obj)) continue;
       box.appendChild(makeParamRow(row, obj, onChange, rebuild));
@@ -964,24 +1016,66 @@ function buildComponentEditor(host, cfg, onChange, hue) {
 // Passage list
 // ====================================================================
 
+/** Only the selected passage is shown.
+ *
+ * Passages contain variants which contain components, and drawing all three
+ * levels at once put the deepest controls in a column too narrow for them.
+ * A selector keeps the hierarchy without nesting it on screen.
+ */
 function renderPassages() {
   const host = $("#passages");
   host.innerHTML = "";
 
+  const bar = document.createElement("div");
+  bar.className = "passagebar";
+  const pick = document.createElement("select");
+  pick.innerHTML = S.passages.map((p, i) =>
+    `<option value="${i}"${i === S.active ? " selected" : ""}>${esc(p.name)}` +
+    ` — ${fmt(p.start, 1)}–${fmt(p.end, 1)}s</option>`).join("")
+    || `<option>no passages yet</option>`;
+  pick.addEventListener("change", () => {
+    S.active = Number(pick.value);
+    S.live = null; S.latched = false;
+    renderPassages(); drawWave(); showMetrics();
+  });
+  bar.append(Object.assign(document.createElement("span"),
+    { className: "dim", textContent: "Passage" }), pick);
+
+  const p0 = S.passages[S.active];
+  if (p0) {
+    const rename = document.createElement("input");
+    rename.value = p0.name; rename.style.maxWidth = "160px";
+    rename.addEventListener("change", () => { p0.name = rename.value; renderPassages(); });
+    const del = document.createElement("button");
+    del.className = "sm ghost"; del.textContent = "Remove passage";
+    del.addEventListener("click", () => {
+      S.passages.splice(S.active, 1);
+      S.active = clamp(S.active, 0, S.passages.length - 1);
+      S.live = null; renderPassages(); drawWave(); markStale();
+    });
+    const only = document.createElement("button");
+    only.className = "sm"; only.textContent = "Render this passage";
+    only.title = "render only the selected passage";
+    only.addEventListener("click", () => doRender([S.active]));
+    bar.append(rename, Object.assign(document.createElement("span"),
+      { className: "grow" }), only, del);
+  }
+  host.appendChild(bar);
+
   S.passages.forEach((p, pi) => {
+    if (pi !== S.active) return;
     const el = document.createElement("div");
-    el.className = "passage" + (pi === S.active ? " sel" : "");
+    el.className = "passage sel";
 
     const head = document.createElement("div");
     head.className = "pashead";
-    const name = document.createElement("input");
-    name.className = "pname"; name.value = p.name; name.style.flex = "1";
-    name.addEventListener("click", e => e.stopPropagation());
-    name.addEventListener("change", () => { p.name = name.value; });
+    head.append(Object.assign(document.createElement("b"),
+      { textContent: "Variants" }));
     const span = document.createElement("span");
     span.className = "span";
     span.textContent = `${fmt(p.start, 1)}–${fmt(p.end, 1)}s`;
-    head.append(name, span);
+    head.append(span, Object.assign(document.createElement("span"),
+      { className: "grow" }));
 
     const mk = (label, title, fn, cls = "sm") => {
       const b = document.createElement("button");
@@ -999,17 +1093,9 @@ function renderPassages() {
       renderPassages(); markStale();
     });
     head.appendChild(add);
-    head.appendChild(mk("×", "remove passage", () => {
-      S.passages.splice(pi, 1);
-      S.active = clamp(S.active, 0, S.passages.length - 1);
-      renderPassages(); markStale();
-    }, "sm ghost"));
-    head.addEventListener("click", () => {
-      S.active = pi; p.open = !p.open; renderPassages(); showMetrics();
-    });
     el.appendChild(head);
 
-    if (p.open) {
+    {
       const body = document.createElement("div");
       body.className = "pasbody";
 
@@ -1043,21 +1129,32 @@ function renderPassages() {
         vr.appendChild(tag);
         vr.appendChild(document.createElement("span")).className = "grow";
 
-        if (latched) {
-          const lock = document.createElement("span");
-          lock.className = "lockmark"; lock.textContent = "latched";
-          vr.appendChild(lock);
-        }
-
         if (vi > 0) {
+          // An explicit control, since nothing about a row suggests that
+          // clicking it would hold the variant on.
+          const latch = document.createElement("button");
+          latch.className = "vlatch";
+          latch.textContent = latched ? "Latched" : "Latch";
+          latch.title = latched
+            ? "release; playback returns to the untreated signal"
+            : "hold this variant on until released";
+          latch.addEventListener("click", e => {
+            e.stopPropagation();
+            S.active = pi;
+            if (latched) { S.latched = false; applyVariant(pi, 0); }
+            else { S.latched = true; applyVariant(pi, vi); }
+          });
+          vr.appendChild(latch);
+
           const swatch = document.createElement("input");
-          swatch.type = "range"; swatch.min = 0; swatch.max = 359; swatch.step = 5;
-          swatch.value = hue; swatch.className = "huepick";
+          swatch.type = "color";
+          swatch.className = "huepick";
+          swatch.value = hslHex(hue);
           swatch.title = "variant colour";
-          swatch.style.accentColor = shadeOf(hue, 0, 2);
           swatch.addEventListener("click", e => e.stopPropagation());
           swatch.addEventListener("input", () => {
-            v.hue = Number(swatch.value); renderPassages();
+            v.hue = hueOfHex(swatch.value);
+            renderPassages();
           });
           vr.appendChild(swatch);
         }
@@ -1168,11 +1265,15 @@ function drawWave() {
   });
   x.stroke();
 
-  // playhead
-  if (S.rendered) {
-    const t = playPosition();
+  // cursor, and the playhead of whichever thing is sounding
+  if (S.cursor !== null && S.cursor !== undefined) {
+    x.strokeStyle = "#4a4640"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(px(S.cursor), 0); x.lineTo(px(S.cursor), h); x.stroke();
+  }
+  const head = previewSrc ? previewPosition() : (S.rendered ? playPosition() : null);
+  if (head !== null) {
     x.strokeStyle = "#a33a2a"; x.lineWidth = 1.5;
-    x.beginPath(); x.moveTo(px(t), 0); x.lineTo(px(t), h); x.stroke();
+    x.beginPath(); x.moveTo(px(head), 0); x.lineTo(px(head), h); x.stroke();
   }
 
   x.fillStyle = "#7c766c"; x.font = "10px ui-monospace, monospace";
@@ -1180,36 +1281,85 @@ function drawWave() {
   for (let t = 0; t < S.duration; t += step) x.fillText(mmss(t), px(t) + 2, h - 3);
 }
 
+/** Waveform interaction, following the conventions of an audio editor.
+ *
+ *   left click or drag   move the cursor
+ *   right drag           select an interval
+ *   right click          set the selection start or end from a menu
+ */
 function wireWave() {
   const c = $("#wave");
+  let dragging = null;      // "cursor" | "select"
   let from = null;
   const tAt = e => {
     const r = c.getBoundingClientRect();
     return clamp((e.clientX - r.left) / r.width * S.duration, 0, S.duration);
   };
-  c.addEventListener("mousedown", e => { from = tAt(e); });
-  c.addEventListener("mousemove", e => {
-    if (from === null) return;
-    const t = tAt(e);
-    S.sel = [Math.min(from, t), Math.max(from, t)];
-    syncSel(); drawWave();
-  });
-  addEventListener("mouseup", e => {
-    if (from === null) return;
-    const t = tAt(e);
-    if (Math.abs(t - from) < 0.4) {                 // a click: seek there
-      const hit = S.passages.findIndex(p => t >= p.start && t <= p.end);
-      if (hit >= 0) { S.active = hit; renderPassages(); }
-      if (S.rendered) seekTo(t);
-    } else {
-      if (S.sel[1] - S.sel[0] < 1) S.sel[1] = S.sel[0] + 1;
-      // Audition the selection straight away, so it can be adjusted before
-      // committing it to a passage.
-      previewSelection();
+
+  c.addEventListener("contextmenu", e => e.preventDefault());
+
+  c.addEventListener("mousedown", e => {
+    from = tAt(e);
+    if (e.button === 2) { dragging = "select"; }
+    else {
+      dragging = "cursor";
+      S.cursor = from;
+      const hit = S.passages.findIndex(p => from >= p.start && from <= p.end);
+      if (hit >= 0 && hit !== S.active) { S.active = hit; renderPassages(); }
+      drawWave();
     }
-    from = null; syncSel(); drawWave();
   });
+
+  c.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const t = tAt(e);
+    if (dragging === "select") {
+      S.sel = [Math.min(from, t), Math.max(from, t)];
+      syncSel();
+    } else {
+      S.cursor = t;
+    }
+    drawWave();
+  });
+
+  addEventListener("mouseup", e => {
+    if (!dragging) return;
+    const t = tAt(e);
+    const moved = Math.abs(t - from) > 0.3;
+    if (dragging === "select" && !moved) {
+      showSelectMenu(e, t);
+    } else if (dragging === "select") {
+      if (S.sel[1] - S.sel[0] < 0.5) S.sel[1] = S.sel[0] + 0.5;
+      syncSel();
+    }
+    dragging = null; from = null;
+    drawWave();
+  });
+
   addEventListener("resize", drawWave);
+}
+
+/** Right-click menu for adjusting one edge of the selection. */
+function showSelectMenu(e, t) {
+  const menu = document.createElement("div");
+  menu.className = "helpmenu on";
+  menu.style.left = e.clientX + "px";
+  menu.style.top = e.clientY + "px";
+  menu.innerHTML = `
+    <button data-a><div class="hm-title">Set selection start</div>
+      <div class="hm-sub">${fmt(t, 2)}s</div></button>
+    <button data-b><div class="hm-title">Set selection end</div>
+      <div class="hm-sub">${fmt(t, 2)}s</div></button>
+    <button data-all><div class="hm-title">Select whole track</div></button>`;
+  document.body.appendChild(menu);
+  const close = () => menu.remove();
+  menu.addEventListener("click", ev => {
+    if (ev.target.closest("[data-a]")) S.sel = [Math.min(t, S.sel[1] - 0.2), S.sel[1]];
+    else if (ev.target.closest("[data-b]")) S.sel = [S.sel[0], Math.max(t, S.sel[0] + 0.2)];
+    else if (ev.target.closest("[data-all]")) S.sel = [0, S.duration];
+    syncSel(); drawWave(); close();
+  });
+  setTimeout(() => addEventListener("click", close, { once: true }), 0);
 }
 
 const syncSel = () => {
@@ -1231,31 +1381,67 @@ function stopPreview() {
   updateTransport();
 }
 
-async function previewSelection() {
+/** Decode the source once and sum it to mono.
+ *
+ * The spatializer is fed the mono sum, so auditioning the original stereo
+ * would preview material the renderer never sees.
+ */
+async function sourceMono() {
+  if (S.sourceBuffer && S.sourceFor === S.track) return S.sourceBuffer;
+  const r = await fetch(`/api/source/${encodeURIComponent(S.track)}`);
+  const decoded = await AC.decodeAudioData(await r.arrayBuffer());
+  const n = decoded.length;
+  const mono = AC.createBuffer(1, n, decoded.sampleRate);
+  const out = mono.getChannelData(0);
+  for (let c = 0; c < decoded.numberOfChannels; c++) {
+    const src = decoded.getChannelData(c);
+    for (let i = 0; i < n; i++) out[i] += src[i];
+  }
+  if (decoded.numberOfChannels > 1) {
+    for (let i = 0; i < n; i++) out[i] /= decoded.numberOfChannels;
+  }
+  S.sourceBuffer = mono;
+  S.sourceFor = S.track;
+  return mono;
+}
+
+/** Play from the cursor, looping the selection when there is one. */
+async function previewSelection(from = null, loop = true) {
   stopPlayback();
   stopPreview();
   if (!S.track) return;
-  try {
-    if (!S.sourceBuffer || S.sourceFor !== S.track) {
-      const r = await fetch(`/api/source/${encodeURIComponent(S.track)}`);
-      S.sourceBuffer = await AC.decodeAudioData(await r.arrayBuffer());
-      S.sourceFor = S.track;
-    }
-  } catch (_) { return; }
+  let buf;
+  try { buf = await sourceMono(); } catch (_) { return; }
   if (AC.state === "suspended") AC.resume();
 
   const [a, b] = S.sel;
+  const start = from !== null ? from : (S.cursor ?? a);
   previewGain = AC.createGain();
   previewGain.connect(AC.destination);
   previewSrc = AC.createBufferSource();
-  previewSrc.buffer = S.sourceBuffer;
-  previewSrc.loop = true;
-  previewSrc.loopStart = a;
-  previewSrc.loopEnd = Math.max(b, a + 0.2);
+  previewSrc.buffer = buf;
+  if (loop && b - a > 0.2) {
+    previewSrc.loop = true;
+    previewSrc.loopStart = a;
+    previewSrc.loopEnd = b;
+  }
   previewSrc.connect(previewGain);
-  previewSrc.start(AC.currentTime + 0.02, a);
-  S.previewAt = { start: a, t0: AC.currentTime + 0.02 };
+  const t0 = AC.currentTime + 0.02;
+  previewSrc.start(t0, clamp(start, 0, S.duration - 0.05));
+  S.previewAt = { start, t0, loop: loop && b - a > 0.2, a, b };
   updateTransport();
+}
+
+/** Where the preview has reached, for drawing the playhead. */
+function previewPosition() {
+  const p = S.previewAt;
+  if (!previewSrc || !p) return S.cursor ?? 0;
+  let t = p.start + (AC.currentTime - p.t0);
+  if (p.loop) {
+    const len = p.b - p.a;
+    if (t > p.a) t = p.a + (((t - p.a) % len) + len) % len;
+  }
+  return clamp(t, 0, S.duration);
 }
 
 // ====================================================================
@@ -1266,8 +1452,14 @@ const AC = new (window.AudioContext || window.webkitAudioContext)();
 let dryGain = null, dryNode = null;
 let varNodes = [];      // {pi, vi, src, gain}
 
-async function doRender() {
+/** Render passages. Pass a list of indices to render only some of them, which
+ *  keeps a quick change to one passage from re-rendering the whole session. */
+async function doRender(only = null) {
   if (!S.passages.length) return;
+  // Guards against being wired straight to a click handler, which would pass
+  // the event in place of the index list.
+  if (!Array.isArray(only)) only = null;
+  S.renderOnly = only;
   stopPlayback();
   const btn = $("#render");
   btn.disabled = true;
@@ -1282,9 +1474,12 @@ async function doRender() {
       track: S.track, mode: "session",
       match: $("#match").value, dry_mono: $("#drymono").checked,
       with_trace: true, with_metrics: true,
-      passages: S.passages.map(p => ({
+      passages: S.passages.map((p, i) => ({
         name: p.name, start: p.start, end: p.end,
-        variants: p.variants.map(v => ({ label: v.name, config: v.config }))
+        // A passage not being rendered still needs a slot, so indices in the
+        // response keep lining up with the ones on screen.
+        variants: (only && !only.includes(i)) ? []
+          : p.variants.map(v => ({ label: v.name, config: v.config }))
       }))
     });
     S.rendered = res;
@@ -1446,22 +1641,29 @@ function wireTransport() {
   // the row, to latch it on until released the same way.
   let held = null;
   addEventListener("keydown", e => {
-    if (e.target.matches("input, select, textarea")) return;
+    if (e.target?.matches?.("input, select, textarea")) return;
     if ($("#sheet").classList.contains("on") || Tour.active) return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); return; }
-    const n = parseInt(e.key, 10);
+    // Ctrl or Cmd with a digit produces a different e.key on some layouts, so
+    // the digit is taken from the physical key instead.
+    const n = e.code && e.code.startsWith("Digit")
+      ? parseInt(e.code.slice(5), 10) : parseInt(e.key, 10);
     if (!(n >= 1 && n <= 9) || !passage() || n >= passage().variants.length) return;
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
       const already = S.latched && S.live && S.live.vi === n;
       S.latched = !already;
       applyVariant(S.active, already ? 0 : n);
+      held = null;
+      renderPassages();
       return;
     }
     if (held === null) { held = n; S.latched = false; applyVariant(S.active, n); }
   });
   addEventListener("keyup", e => {
-    if (parseInt(e.key, 10) === held) {
+    const n = e.code && e.code.startsWith("Digit")
+      ? parseInt(e.code.slice(5), 10) : parseInt(e.key, 10);
+    if (n === held) {
       held = null;
       if (!S.latched) applyVariant(S.active, S.ref);
     }
@@ -1811,6 +2013,10 @@ function updateTransport() {
 function tick() {
   drawRing();
   updateTransport();
+  if (previewSrc) {
+    $("#selclock").textContent = mmss(previewPosition());
+    drawWave();
+  }
   if (S.rendered) {
     const t = playPosition();
     $("#clock").textContent = `${mmss(t)} / ${mmss(S.duration)}`;
@@ -1850,10 +2056,10 @@ function showMetrics() {
       c.mean_offdiagonal_range
         ? `<span class="dim">varies ${fmt(c.mean_offdiagonal_range[0], 2)}–${fmt(c.mean_offdiagonal_range[1], 2)}</span>`
         : "");
-    html += '<table class="cmat">' + c.matrix.map(r => "<tr>" + r.map(x => {
+    html += '<div class="cmatwrap"><table class="cmat">' + c.matrix.map(r => "<tr>" + r.map(x => {
       const t = Math.abs(x);
       return `<td style="background:rgba(44,95,124,${(t * .8).toFixed(2)});color:${t > .55 ? "#fff" : "#7c766c"}">${x.toFixed(1)}</td>`;
-    }).join("") + "</tr>").join("") + "</table>";
+    }).join("") + "</tr>").join("") + "</table></div>";
   }
 
   if (v.paired_modulation) {
@@ -2710,12 +2916,20 @@ async function boot() {
   $("#gtstop").addEventListener("click", () => { stopPreview(); stopPlayback(); });
   $("#gtbench").addEventListener("click", () => showTab("bench"));
 
+  $("#selplay").addEventListener("click", () => previewSelection(S.cursor ?? S.sel[0], false));
+  $("#selloop").addEventListener("click", () => previewSelection(S.sel[0], true));
+  $("#selstop").addEventListener("click", () => { stopPreview(); drawWave(); });
+
   if (tracks.length) {
     await loadTrack(tracks[0].name);
     // Opens on sustained material, which decorrelates far more readily than
     // percussive material and is the better starting stimulus.
-    const a = Math.min(105, Math.max(0, S.duration - 25));
-    S.sel = [a, Math.min(a + 22, S.duration)];
+    // Sustained material decorrelates far more readily than percussive
+    // material, so the default runs from the theremin section up to the guitar
+    // entry rather than sampling a few seconds of it.
+    const a = Math.min(105, Math.max(0, S.duration - 60));
+    S.sel = [a, Math.min(180, S.duration)];
+    S.cursor = S.sel[0];
     S.passages = [newPassage(S.sel[0], S.sel[1], "Passage 1")];
     syncSel(); renderPassages(); drawWave();
   }
