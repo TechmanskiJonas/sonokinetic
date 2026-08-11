@@ -708,7 +708,6 @@ function rotatingRing(rate = 60) {
   return c;
 }
 
-/** Sources hold still while the coherence structure sweeps past them. */
 /** A share of the sources rotates together; the rest wander without a net
  *  direction, after the coherence manipulation in random-dot kinematograms. */
 /** Same configuration with every kind of motion removed: rotation, radial
@@ -1826,7 +1825,7 @@ function drawRing() {
     const nRings = Math.max(...ringOf) + 1;
     const poly = (frame, alpha, dash) => {
       for (let g = 0; g < nRings; g++) {
-        // Only closed patterns have a meaningful outline; a stream is a line
+        // Only a polar lattice has a closed outline worth drawing
         // of sources passing through, and joining its ends would draw a shape
         // that is not there.
         // Only a polar lattice has a closed outline worth drawing; joining the
@@ -2545,18 +2544,22 @@ function buildTour() {
       title: "Rings",
       body: `A treatment is built from rings: each has its own source count,
         rotation rate, distance from the head, and an optional share of sources
-        that wander instead of rotating. Rings can be duplicated, copied, and
-        pasted between variants, so two variants can share a component exactly.
-        <br><br>Distance is carried by level and by the growth of the
-        interaural level difference at close range; there is no reverberation,
-        so it is a thin cue on its own.`,
+        that wander instead of taking part in it.
+        <br><br>Two lattices are available. A <b>polar</b> one is concentric
+        rings; a <b>grid</b> is a rectangle of sources spanning an extent in
+        metres. Rotation, radial flow and drift combine freely on either, so a
+        whirlpool is one polar lattice turning while flowing inward, and driving
+        through a field of sources is a grid with a backward drift.
+        <br><br>Components can be copied and pasted between variants, so two
+        variants can share one exactly.`,
     },
     {
-      el: () => $(".pashead select"),
-      title: "Variant presets",
-      body: `The menu adds common configurations: partial coherence, the
-        degenerate coherent ring, partly random motion, two rings at different
-        distances, and partly random motion.`,
+      el: () => $(".ringbar select"),
+      title: "Component presets",
+      body: `The menu offers starting points on either lattice: a turning ring,
+        concentric rings closing in or opening out, a whirlpool, and grids
+        drifting past the listener. Each sets a few numbers and leaves
+        everything editable.`,
     },
     {
       el: "#render", interact: true,
