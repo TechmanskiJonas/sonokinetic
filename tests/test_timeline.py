@@ -203,14 +203,6 @@ def test_srt_timestamps_are_wellformed():
     assert rf._srt_time(-1) == "00:00:00,000"
 
 
-def test_srt_reports_the_hotspot_when_one_is_running(hrtf, track):
-    mono, stereo = track
-    cfg = rf.FieldConfig(n_sources=5, rotation_deg_per_sec=0.0,
-                         hotspot=rf.HotspotConfig(enabled=True, deg_per_sec=120.0))
-    _, tl = rf.render_timeline(mono, stereo, hrtf,
-                               [rf.Segment(0, 3, cfg)], FS)
-    assert "hotspot" in rf.timeline_srt(tl)
-
 
 def test_group_timeline_buckets_in_order(hrtf, track):
     mono, stereo = track

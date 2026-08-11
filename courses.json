@@ -251,16 +251,6 @@
             "q": "What is the correct static control for a field with wandering sources?",
             "a": "The same configuration with ring rates zeroed and wander frozen, which preserves the geometry while removing all motion."
           }
-        },
-        {
-          "id": "hotspot",
-          "title": "The hotspot variant",
-          "body": "A narrower probe removes source motion entirely. In the [[circulating-hotspot]] configuration the sources stand still while a region of coherence sweeps around the ring: each source's decorrelation amount depends on its angular distance from a moving centre.\n\nWith ring rates at zero and the hotspot rate audible, any rotation heard would ride on the coherence structure alone. The configuration removes the source motion that the ordinary account of [[auditory-motion]] would operate on, so a null result here carries much less weight than a null result for [[unison-rotation]], and the variant serves as a follow-up rather than a substitute.\n\nThe [[hotspot-width|width]] requires tuning. Too wide leaves every source partly coherent at once, with no structure left to circulate; too narrow makes one source at a time coherent, which is heard as a single moving source.\n\nIts matched control is the hotspot frozen in place rather than removed, preserving the coherence distribution while removing the motion.",
-          "try": "The Circulating hotspot preset and its frozen control are in the variant menu.",
-          "checkpoint": {
-            "q": "Why is the hotspot's control frozen rather than switched off?",
-            "a": "Freezing preserves the same coherence distribution and removes only the motion. Switching it off would change two things at once."
-          }
         }
       ]
     },

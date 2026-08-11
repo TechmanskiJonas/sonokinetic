@@ -2,7 +2,7 @@
 
     python app.py            then open http://127.0.0.1:8000
 
-Thin wrapper over ringfield.py. All DSP lives there; this module only turns
+Thin wrapper over ringfield.py, the DSP core. All DSP lives there; this module only turns
 JSON into dataclasses, caches renders, and serves files. If you find yourself
 writing signal processing in here, it belongs in ringfield.py instead.
 
@@ -114,19 +114,6 @@ class DecorrIn(BaseModel):
         return rf.DecorrConfig(**self.model_dump())
 
 
-class HotspotIn(BaseModel):
-    enabled: bool = False
-    deg_per_sec: float = 60.0
-    start_deg: float = 0.0
-    width_deg: float = 60.0
-    hot_amount: float = 0.0
-    bed_amount: float = 1.0
-    shape: str = "gaussian"
-
-    def to_cfg(self) -> rf.HotspotConfig:
-        return rf.HotspotConfig(**self.model_dump())
-
-
 class RingIn(BaseModel):
     n_sources: int = 5
     rotation_deg_per_sec: float = 60.0
@@ -191,7 +178,6 @@ class FieldIn(BaseModel):
     rings: Optional[List[RingIn]] = None
     components: Optional[List[ComponentIn]] = None
     decorr: DecorrIn = Field(default_factory=DecorrIn)
-    hotspot: HotspotIn = Field(default_factory=HotspotIn)
     head_radius: float = rf.HEAD_RADIUS
     speed_of_sound: float = rf.C_SOUND
     hrtf_taps: int = 128
@@ -211,7 +197,7 @@ class FieldIn(BaseModel):
             rings=[r.to_cfg() for r in self.rings] if self.rings else None,
             components=([c.to_cfg() for c in self.components]
                         if self.components else None),
-            decorr=self.decorr.to_cfg(), hotspot=self.hotspot.to_cfg(),
+            decorr=self.decorr.to_cfg(),
             head_radius=self.head_radius, speed_of_sound=self.speed_of_sound,
             hrtf_taps=self.hrtf_taps, hrtf_grid_step=self.hrtf_grid_step,
             block=self.block, seed=self.seed)
@@ -532,13 +518,9 @@ def _segment_metrics(y, tl, fs) -> List[Dict[str, Any]]:
 def _effective_rate(cfg_in: FieldIn) -> float:
     """Whichever rate is actually driving the interaural pattern.
 
-    A hotspot circulating on stationary rings has ring rates of zero, and
-    reading those alone would call that configuration static. With several
-    rings at different rates the dominant one is used; the paired measure can
-    only examine one frequency.
+    With several components at different rates the dominant one is used, since
+    the paired measure can only examine one frequency.
     """
-    if cfg_in.hotspot and cfg_in.hotspot.enabled:
-        return cfg_in.hotspot.deg_per_sec
     if cfg_in.components:
         # Only rotation has a well-defined cyclic rate. Translation and radial
         # flow recycle, but their period depends on extent and speed, and
@@ -564,8 +546,6 @@ def _control_key(cfg_in: FieldIn) -> str:
     d = cfg_in.model_dump()
     d["rotation_deg_per_sec"] = 0.0
     d["total_degrees"] = None
-    if d.get("hotspot"):
-        d["hotspot"] = {**d["hotspot"], "deg_per_sec": 0.0}
     if d.get("rings"):
         d["rings"] = [{**r, "rotation_deg_per_sec": 0.0, "wander_hz": 0.0}
                       for r in d["rings"]]
@@ -580,8 +560,6 @@ def _control_key(cfg_in: FieldIn) -> str:
 
 def _has_motion(cfg_in: FieldIn) -> bool:
     """Whether anything in the variant moves, across every motion kind."""
-    if cfg_in.hotspot and cfg_in.hotspot.enabled and cfg_in.hotspot.deg_per_sec:
-        return True
     for c in (cfg_in.components or []):
         if not c.to_cfg().is_static():
             return True
@@ -660,11 +638,7 @@ def _render_layers(req: RenderIn, mono, stereo, hrtf, fs, payload) -> Dict[str, 
             rate = 0.0
             if cfg is not None:
                 # Whichever is actually driving the interaural pattern. With a
-                # hotspot running on a still ring, the ring rate is zero and
-                # the hotspot rate is the thing to look for.
-                rate = (cfg.hotspot.deg_per_sec
-                        if (cfg.hotspot and cfg.hotspot.enabled)
-                        else cfg.rotation_deg_per_sec)
+                rate = _effective_rate(v.config)
             entry["metrics"] = rf.metrics(y, fs, rotation_deg_per_sec=rate)
             entry["effective_rate"] = rate
             if cfg is not None:
@@ -847,11 +821,7 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
     Measured on a slice rather than the whole span: the matrix is only used as
     a readout and the full-length correlation costs more than it reports.
 
-    When a hotspot is running the amounts are a function of time, so a single
-    matrix is a snapshot rather than a summary. Sampling it at several instants
-    and reporting the spread keeps that visible: reporting only the base
-    amounts would show a static structure for the one configuration whose whole
-    point is that the structure moves.
+    Sampled once, since the decorrelation amounts do not vary within a render.
     """
     take = x[: min(len(x), 6 * fs)]
     n_src = cfg.total_sources() if (cfg.components or cfg.rings) else cfg.n_sources
@@ -859,8 +829,7 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
               else cfg.resolved_decorr())
     bank = rf.SourceBank(take, n_src, decorr, fs)
     az = cfg.resolved_azimuths()
-    hot = cfg.hotspot
-    moving = hot is not None and hot.enabled
+    moving = False
 
     times = [0.0]
     if moving and duration > 0:
@@ -868,7 +837,7 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
 
     mats, means = [], []
     for t in times:
-        amts = bank.amounts_at(t, az + cfg.rotation_deg_per_sec * t, hot)
+        amts = bank.amounts_at(t, az + cfg.rotation_deg_per_sec * t)
         sigs = bank.blocks(0, len(take), amts)
         m = rf.coherence_matrix(sigs)
         off = m[~np.eye(len(m), dtype=bool)]
@@ -1092,7 +1061,7 @@ def session_csv(name: str):
                 flat[f"response.{k}"] = v
             p = r.get("params") or {}
             d = p.get("resolved_decorr") or {}
-            h = p.get("hotspot") or {}
+            comps = p.get("resolved_components") or []
             flat.update({
                 "n_sources": p.get("n_sources"),
                 "rotation_deg_per_sec": p.get("rotation_deg_per_sec"),
@@ -1101,9 +1070,6 @@ def session_csv(name: str):
                 "decorr_amount": d.get("amount"),
                 "ir_ms": d.get("ir_ms"), "density": d.get("density"),
                 "envelope": d.get("envelope"), "seed": d.get("seed"),
-                "hotspot_enabled": h.get("enabled"),
-                "hotspot_deg_per_sec": h.get("deg_per_sec"),
-                "hotspot_width_deg": h.get("width_deg"),
             })
             rows.append(flat)
 

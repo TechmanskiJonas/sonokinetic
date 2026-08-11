@@ -29,6 +29,7 @@ import soundfile as sf
 
 C_SOUND = 343.0      # m/s
 HEAD_RADIUS = 0.0875  # m, standard anthropometric mean
+REF_DISTANCE = 2.0   # m. A source at this distance renders at unity gain.
 
 
 # ----------------------------------------------------------------------
@@ -286,45 +287,6 @@ class DecorrConfig:
 
 
 @dataclass
-class HotspotConfig:
-    """Coherence as a property of a DIRECTION, not of a source.
-
-    The existing per_source_amount pins coherence to a source, so the coherent
-    thing travels with the ring. Here the hotspot sweeps at its own rate and a
-    source is coherent only while it is near it.
-
-    Set rotation_deg_per_sec=0 on the field and deg_per_sec nonzero here and
-    the sources do not move at all while the coherence structure rotates. That
-    is the sharpest form of the hypothesis: rotation carried purely by the
-    aggregate interaural statistics, with no source trajectory to track.
-    """
-    enabled: bool = False
-    deg_per_sec: float = 60.0
-    start_deg: float = 0.0
-    width_deg: float = 60.0     # angular width of the coherent region
-    hot_amount: float = 0.0     # decorrelation amount at the centre
-    bed_amount: float = 1.0     # decorrelation amount far away
-    shape: str = "gaussian"     # gaussian | cosine
-
-    def weight(self, delta_deg: np.ndarray) -> np.ndarray:
-        """Coherence weight vs angular distance from the hotspot centre."""
-        w = np.maximum(self.width_deg, 1e-6)
-        if self.shape == "cosine":
-            d = np.clip(np.abs(delta_deg) / w, 0.0, 1.0)
-            return 0.5 * (1.0 + np.cos(np.pi * d))
-        return np.exp(-0.5 * (delta_deg / (w / 2.0)) ** 2)
-
-    def amounts_at(self, azimuths_deg: np.ndarray, t: float) -> np.ndarray:
-        centre = self.start_deg + self.deg_per_sec * t
-        delta = (azimuths_deg - centre + 180.0) % 360.0 - 180.0
-        w = self.weight(delta)
-        return self.bed_amount + (self.hot_amount - self.bed_amount) * w
-
-
-REF_DISTANCE = 2.0   # m. A source at this distance renders at unity gain.
-
-
-@dataclass
 class ComponentConfig:
     """A lattice of sources with a motion field applied to it.
 
@@ -479,19 +441,11 @@ class ComponentConfig:
 
 @dataclass
 class RingConfig:
-    """One ring of sources. Retained as the shorthand for a rotating component.
+    """A single ring, kept as the shorthand earlier work was written against.
 
-    distance_m sets the ring's radius from the head. Distance is carried by
-    per-ear gains computed from the source-to-ear geometry, so nearby sources
-    are louder and their ILD grows, including at low frequency, which is the
-    near-field effect. Propagation delay, air absorption and reverberation are
-    not modelled, so this is a deliberately thin distance cue: see the
-    reference entry for what real distance hearing uses.
-
-    random_fraction assigns that share of the ring's sources to smooth, seeded
-    wandering instead of rotation, after the coherence manipulation in
-    random-dot kinematograms. Wander is bounded around each source's base
-    azimuth and reproducible from the seed.
+    Superseded by ComponentConfig with a polar lattice, into which it is
+    converted before rendering. Retained so existing configurations and the
+    regression tests that pin their output keep working unchanged.
     """
     n_sources: int = 5
     rotation_deg_per_sec: float = 60.0
@@ -504,17 +458,18 @@ class RingConfig:
     wander_deg: float = 60.0
     wander_hz: float = 0.25
     radial_wander_m: float = 0.0
-    decorr_amount: Optional[float] = None   # override the master amount
+    decorr_amount: Optional[float] = None
 
     def resolved_azimuths(self) -> np.ndarray:
-        if self.start_azimuths is not None:
+        n = max(int(self.n_sources), 1)
+        if self.start_azimuths:
             az = np.array(self.start_azimuths, dtype=float)
-            if len(az) < self.n_sources:
-                az = np.tile(az, int(np.ceil(self.n_sources / max(len(az), 1))))
-            return az[: self.n_sources]
+            if len(az) < n:
+                az = np.tile(az, int(np.ceil(n / len(az))))
+            return az[:n]
         if self.spacing_deg is not None:
-            return self.offset_deg + np.arange(self.n_sources) * self.spacing_deg
-        return self.offset_deg + np.linspace(0, 360, self.n_sources, endpoint=False)
+            return self.offset_deg + np.arange(n) * self.spacing_deg
+        return self.offset_deg + np.linspace(0, 360, n, endpoint=False)
 
 
 def _smoothstep(u: np.ndarray) -> np.ndarray:
@@ -688,6 +643,37 @@ class FieldGeometry:
         dist = np.array([o[1] for o in out])
         env = np.array([o[2] for o in out]) * self.gain
         return az, dist, env
+
+    @staticmethod
+    def effective_azimuths(az_deg: np.ndarray, dist: np.ndarray,
+                           head_radius: float,
+                           collapse_m: float = 0.35) -> np.ndarray:
+        """Azimuths to look the HRIR up at, with the cues collapsing near the head.
+
+        The stored HRIRs are far-field: each carries the full interaural delay
+        for its angle regardless of how close the source is. That is wrong near
+        the listener and audibly so. A source passing through the centre sweeps
+        its azimuth almost instantly, and with far-field cues attached the delay
+        flips sign between one block and the next, which is heard as a click.
+
+        The geometry says what should happen instead: as a source approaches the
+        centre both ears become equidistant, so the interaural difference must
+        fall to zero. Scaling the lateral component by the source's distance and
+        re-deriving an angle from it does that, leaving the source centred as it
+        passes through rather than snapping from one side to the other.
+
+        collapse_m is how far out the cues are back to full strength. Physically
+        that boundary is the head radius, but a wider one spreads the transition
+        over more travel and smooths it further; it is a rendering choice, not a
+        measurement.
+        """
+        s = np.clip(dist / max(collapse_m, 1e-6), 0.0, 1.0)
+        th = np.deg2rad(az_deg)
+        # Preserve which side, and the front-back branch, while shrinking how
+        # far off-centre the angle reads.
+        lat = np.arcsin(np.clip(s * np.sin(th), -1.0, 1.0))
+        front = np.cos(th) >= 0
+        return np.degrees(np.where(front, lat, np.pi - lat))
 
     def ear_gains(self, az_deg: np.ndarray, dist: np.ndarray,
                   head_radius: float, max_gain: float = 4.0) -> np.ndarray:
@@ -876,13 +862,9 @@ class SourceBank:
         return np.array([self.cfgs[i].amount for i in range(self.n_sources)],
                         dtype=float)
 
-    def amounts_at(self, t: float, azimuths: np.ndarray,
-                   hotspot: Optional[HotspotConfig]) -> np.ndarray:
+    def amounts_at(self, t: float, azimuths: np.ndarray) -> np.ndarray:
         """Instantaneous decorrelation amount per source."""
-        if hotspot is not None and hotspot.enabled:
-            a = hotspot.amounts_at(azimuths, t)
-        else:
-            a = self.base_amounts()
+        a = self.base_amounts()
         n = max(self.n_sources, 1)
         for i in range(self.n_sources):
             c = self.cfgs[i]
@@ -956,7 +938,6 @@ class FieldConfig:
     per_source_amount: Optional[List[float]] = None
 
     decorr: Optional[DecorrConfig] = None
-    hotspot: Optional[HotspotConfig] = None
 
     # Multi-ring geometry. When set, this replaces the scalar ring fields above
     # entirely; when None, the scalar fields behave exactly as before.
@@ -1100,8 +1081,7 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
     COLA so the crossfade is transparent; without it, moving sources click.
 
     Decorrelation amount is evaluated per block rather than once up front, so a
-    hotspot can sweep the ring independently of the sources and coherence can
-    be modulated over time.
+    coherence can be modulated over time.
 
     Pass a list as `trace` to have it filled with per-frame azimuths and
     amounts for display. The renderer already knows these; recomputing them in
@@ -1125,7 +1105,6 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
     bank = SourceBank(x, n_src, decorr, fs)
 
     trace_every = max(1, int(round(fs / (hop * 60.0))))   # about 60 frames/sec
-    hot = cfg.hotspot
 
     out = np.zeros((n + hrtf.n_taps + cfg.block, 2))
     for k, start in enumerate(range(0, n - cfg.block, hop)):
@@ -1135,11 +1114,15 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
         else:
             az = az0 + cfg.rotation_deg_per_sec * t_c
             dist, lvl = None, gains
-        amt = bank.amounts_at(t_c, az, hot)
+        amt = bank.amounts_at(t_c, az)
 
         blocks = bank.blocks(start, start + cfg.block, amt)      # (S, block)
         blocks = blocks * win * lvl[:, None]
-        h = np.stack([hrtf.hrir(a) for a in az])                 # (S, 2, taps)
+        # Near the head the stored far-field cues are wrong and discontinuous,
+        # so the lookup angle collapses toward centre as a source approaches.
+        az_look = (geom.effective_azimuths(az, dist, cfg.head_radius)
+                   if (geom is not None and geom.uses_distance) else az)
+        h = np.stack([hrtf.hrir(a) for a in az_look])            # (S, 2, taps)
         # one batched convolution for all sources and both ears
         seg = fftconvolve(blocks[:, None, :], h, mode="full", axes=-1)
         if geom is not None and geom.uses_distance:
@@ -1153,8 +1136,6 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
                 "t": round(t_c, 4),
                 "az": [round(float(v) % 360.0, 2) for v in az],
                 "amt": [round(float(v), 4) for v in amt],
-                "hot": (round((hot.start_deg + hot.deg_per_sec * t_c) % 360.0, 2)
-                        if hot is not None and hot.enabled else None),
             }
             if dist is not None:
                 frame["dist"] = [round(float(v), 2) for v in dist]
@@ -1330,10 +1311,6 @@ def _seg_label(seg: "Segment", index: int) -> str:
     bits = [f"n={c.n_sources}"]
     if c.rotation_deg_per_sec:
         bits.append(f"ring {c.rotation_deg_per_sec * dur:.0f}deg")
-    # A stationary ring under a moving hotspot would otherwise read as "0deg",
-    # which is the opposite of what that configuration is doing.
-    if c.hotspot is not None and c.hotspot.enabled:
-        bits.append(f"hotspot {c.hotspot.deg_per_sec * dur:.0f}deg")
     if len(bits) == 1:
         bits.append("still")
     return "spin " + " ".join(bits)
@@ -1747,17 +1724,23 @@ def timeline_srt(timeline: List[TimelineEntry], verbose: bool = True) -> str:
         p = e.params
         if verbose and p:
             d = p.get("resolved_decorr", {})
-            parts.append(
-                f"n={p['n_sources']}  rot={p['rotation_deg_per_sec']:.0f} deg/s  "
-                f"az={p['resolved_azimuths']}")
+            for label, c in zip(p.get("component_labels") or [],
+                                p.get("resolved_components") or []):
+                shape = (f"{c['cols']}x{c['rows']} grid"
+                         if c.get("lattice") == "cartesian"
+                         else f"{c['rings']} ring(s) x {c['per_ring']}")
+                motion = []
+                if c.get("rotation_deg_per_sec"):
+                    motion.append(f"turn {c['rotation_deg_per_sec']:.0f} deg/s")
+                if c.get("radial_speed_mps"):
+                    motion.append(f"radial {c['radial_speed_mps']:.1f} m/s")
+                if c.get("drift_x_mps") or c.get("drift_y_mps"):
+                    motion.append(f"drift {c['drift_x_mps']:.1f},{c['drift_y_mps']:.1f} m/s")
+                parts.append(f"{label}: {shape}, "
+                             + (", ".join(motion) if motion else "still"))
             parts.append(
                 f"{d.get('family')} amount={d.get('amount'):.2f} "
                 f"ir={d.get('ir_ms'):.0f}ms density={d.get('density'):.0f}")
-            hot = p.get("hotspot")
-            if hot and hot.get("enabled"):
-                parts.append(f"hotspot {hot['deg_per_sec']:.0f} deg/s "
-                             f"width={hot['width_deg']:.0f} "
-                             f"hot={hot['hot_amount']:.2f} bed={hot['bed_amount']:.2f}")
         lines.append(f"{i}\n{_srt_time(e.out_start)} --> {_srt_time(e.out_end)}\n"
                      + "\n".join(parts) + "\n")
     return "\n".join(lines)

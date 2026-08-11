@@ -801,7 +801,7 @@
       "section": "decorr",
       "status": "implementation",
       "short": "Measured pairwise correlation between every pair of sources: what was achieved, as opposed to what was requested.",
-      "body": "An N×N table with 1.0 on the diagonal. Off-diagonal entries near 0 mean the sources are mutually independent; near 1 means they are still effectively copies.\n\nWhen a [[circulating-hotspot]] is running the matrix varies with time, so a single snapshot is not a summary; it is sampled at several instants and the range reported.",
+      "body": "An N×N table with 1.0 on the diagonal. Off-diagonal entries near 0 mean the sources are mutually independent; near 1 means they are still effectively copies.\n\nWhen a the coherence hotspot is running the matrix varies with time, so a single snapshot is not a summary; it is sampled at several instants and the range reported.",
       "prereq": [
         "coherence",
         "correlation-coefficient"
@@ -974,12 +974,12 @@
       "section": "decorr",
       "status": "implementation",
       "short": "Varying the decorrelation amount over time, so the field alternates between focused and diffuse.",
-      "body": "A low-frequency oscillator on the [[decorrelation-amount]].\n\nDistinct from the [[circulating-hotspot]]: this pulses coherence everywhere at once, while the hotspot moves it around the ring. With the source-spread control raised, the modulation phase is offset progressively across sources, which begins to approximate a hotspot travelling at the modulation rate.",
+      "body": "A low-frequency oscillator on the [[decorrelation-amount]].",
       "prereq": [
         "decorrelation-amount"
       ],
       "see": [
-        "circulating-hotspot",
+        "decorrelation-amount",
         "binaural-sluggishness"
       ]
     },
@@ -1382,14 +1382,13 @@
       "section": "metrics",
       "status": "established",
       "short": "A condition identical in every respect except the one variable under test.",
-      "body": "The general principle is standard experimental design. Its specific form here: for a rotation claim, the control is the identical configuration with every rate set to zero and the same [[seed]]. Whatever the music itself contributes then appears in both and subtracts out.\n\nFor a [[circulating-hotspot]] the right control is the hotspot **frozen** in place rather than switched off, since that preserves the same coherence distribution and removes only the motion.\n\nThe instrument detects these pairs automatically. A difference near zero means no measurable signature, which given [[metric-vs-percept]] is not the same as inaudible.",
+      "body": "The general principle is standard experimental design. Its specific form here: for a rotation claim, the control is the identical configuration with every rate set to zero and the same [[seed]]. Whatever the music itself contributes then appears in both and subtracts out.\n\nFor a the coherence hotspot the right control is the hotspot **frozen** in place rather than switched off, since that preserves the same coherence distribution and removes only the motion.\n\nThe instrument detects these pairs automatically. A difference near zero means no measurable signature, which given [[metric-vs-percept]] is not the same as inaudible.",
       "prereq": [
         "confound"
       ],
       "see": [
         "rotation-signature",
-        "seed",
-        "circulating-hotspot"
+        "seed"
       ]
     },
     "seed": {
@@ -1481,7 +1480,7 @@
       "section": "p-motion",
       "status": "project",
       "short": "The share of a component's sources taking part in its motion, the rest wandering with no net direction.",
-      "body": "**Vocabulary invented here**, after the coherence manipulation in the [[random-dot-kinematogram]], where the proportion of coherently moving dots sets the strength of the global motion signal and the threshold on that proportion is a standard measure.\n\nA share of the sources is excluded from the component's motion entirely, whatever that motion is: they neither turn, nor flow, nor drift. They wander instead, on a bounded path generated from the [[seed]], so the setting renders identically every time.\n\nIt applies to any lattice, so a drifting [[grid-lattice]] can be made partly incoherent exactly as a turning [[polar-lattice]] can. Sweeping the share asks how much coherent motion the ensemble needs before it reads as moving.",
+      "body": "**Named in this project**, after the coherence manipulation in the [[random-dot-kinematogram]], where the proportion of coherently moving dots sets the strength of the global motion signal and the threshold on that proportion is a standard measure.\n\nA share of the sources is excluded from the component's motion entirely, whatever that motion is: they neither turn, nor flow, nor drift. They wander instead, on a bounded path generated from the [[seed]], so the setting renders identically every time.\n\nIt applies to any lattice, so a drifting [[grid-lattice]] can be made partly incoherent exactly as a turning [[polar-lattice]] can. Sweeping the share asks how much coherent motion the ensemble needs before it reads as moving.",
       "prereq": [
         "random-dot-kinematogram",
         "component"
@@ -1498,7 +1497,7 @@
       "section": "p-motion",
       "status": "project",
       "short": "This project's name for a group of decorrelated sources moving together as one. Not a term of art.",
-      "body": "**Vocabulary invented here.** No one outside this project will recognise the phrase; describe the configuration rather than naming it when writing for others.\n\nA [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. Named for rotation because that was the first case studied, but the idea applies to any motion a lattice can carry: a drifting grid and an inward flow are the same arrangement with a different motion field.\n\nThe design point is that two properties come from two separate controls. **Motion** comes from the component's rates. **Unlocalizability** comes from the decorrelation amount. Turning decorrelation down yields trackable objects; turning it up dissolves them into a diffuse field. Whether that field still audibly moves is [[the-question]].\n\nWatch for the failure at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]].",
+      "body": "**Named in this project.** Describe the configuration rather than the name when writing for others.\n\nA [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. Named for rotation because that was the first case studied, but the idea applies to any motion a lattice can carry: a drifting grid and an inward flow are the same arrangement with a different motion field.\n\nThe design point is that two properties come from two separate controls. **Motion** comes from the component's rates. **Unlocalizability** comes from the decorrelation amount. Turning decorrelation down yields trackable objects; turning it up dissolves them into a diffuse field. Whether that field still audibly moves is [[the-question]].\n\nWatch for the failure at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]].",
       "prereq": [
         "ring",
         "decorrelation"
@@ -1507,53 +1506,7 @@
         "the-question",
         "component",
         "motion-coherence",
-        "degenerate-ring",
-        "circulating-hotspot"
-      ]
-    },
-    "circulating-hotspot": {
-      "title": "Circulating coherence hotspot",
-      "section": "p-motion",
-      "status": "project",
-      "short": "This project's name for a variant in which coherence sweeps the ring while the sources stay still. Not a term of art.",
-      "body": "**Vocabulary invented here.**\n\nA region of the circle where sources are coherent, travelling at its own rate independent of the ring's. Each source's decorrelation amount becomes a function of its angular distance from that moving centre. With the ring rate set to zero, nothing moves while the coherence structure rotates.\n\nIt is a narrower probe than [[unison-rotation]], not a replacement for it. It removes the source motion that the ordinary account of [[auditory-motion]] would work with, so a negative result says considerably less.\n\n[[hotspot-width|Width]] needs tuning by ear: too wide and everything is partly coherent at once, too narrow and one source at a time becomes coherent, which is simply audible as a moving source.",
-      "prereq": [
-        "unison-rotation",
-        "decorrelation"
-      ],
-      "see": [
-        "unison-rotation",
-        "hotspot-width",
-        "matched-control",
-        "coherence-hotspot"
-      ]
-    },
-    "coherence-hotspot": {
-      "title": "Coherence hotspot (per-source)",
-      "section": "p-motion",
-      "status": "project",
-      "short": "One coherent source inside an otherwise decorrelated bed.",
-      "body": "Set one source's amount to 0 and the rest to 1. The coherent source keeps interaural cues that survive the sum, so it is audible as a location while the bed around it is diffuse.\n\nThe limitation: coherence is pinned to a *source*, so the coherent thing travels with the ring and there is still a trajectory to follow. That makes it a moving-source percept. The [[circulating-hotspot]] is the version that removes this.",
-      "prereq": [
-        "decorrelation",
-        "source"
-      ],
-      "see": [
-        "circulating-hotspot",
-        "symmetry-breaking"
-      ]
-    },
-    "hotspot-width": {
-      "title": "Hotspot width",
-      "section": "p-motion",
-      "status": "project",
-      "short": "The angular size of the coherent region.",
-      "body": "Too wide and every source is partly coherent at once, so there is no localised structure to circulate. Too narrow and only one source at a time is affected, collapsing to the [[coherence-hotspot|per-source case]].\n\nShape matters too: a cosine falloff reaches the bed value exactly at the stated width, while a gaussian never quite does, so its effective width is wider than the number suggests.",
-      "prereq": [
-        "circulating-hotspot"
-      ],
-      "see": [
-        "circulating-hotspot"
+        "degenerate-ring"
       ]
     },
     "field": {
@@ -1592,7 +1545,7 @@
       "section": "p-components",
       "status": "project",
       "short": "A single circle of sources: the simplest polar lattice, and the configuration this project began with.",
-      "body": "**Vocabulary specific to this instrument.**\n\nOne ring of a [[polar-lattice]], at a single radius. Sources sit at [[azimuth|azimuths]] around the head, evenly spaced, unevenly spaced, or listed explicitly.\n\nGeometry is not cosmetic: an evenly spaced ring of identical sources cancels to a centred mono image, and odd counts avoid the exact opposition that causes it; see [[antipodal-cancellation]].\n\nRotation was the first motion studied here, and a turning ring remains the clearest case. It is one configuration among many rather than the subject of the project.",
+      "body": "One ring of a [[polar-lattice]], at a single radius. Sources sit at [[azimuth|azimuths]] around the head, evenly spaced, unevenly spaced, or listed explicitly.\n\nGeometry is not cosmetic: an evenly spaced ring of identical sources cancels to a centred mono image, and odd counts avoid the exact opposition that causes it; see [[antipodal-cancellation]].\n\nRotation was the first motion studied here, and a turning ring remains the clearest case. It is one configuration among many rather than the subject of the project.",
       "prereq": [
         "polar-lattice"
       ],
@@ -1611,8 +1564,7 @@
       "body": "Defined by a start and end in seconds. A passage holds one or more [[variant|variants]]: the untreated original, and any number of treatments to compare against it.\n\nPassages are the unit of comparison. Everything inside one is identical material, so any difference heard between its variants comes from the treatment.",
       "prereq": [],
       "see": [
-        "variant",
-        "live-apply"
+        "variant"
       ]
     },
     "variant": {
@@ -1620,44 +1572,14 @@
       "section": "p-structure",
       "status": "project",
       "short": "One treatment of one passage: either the untreated original, or a configured field.",
-      "body": "Variants of a [[passage]] are rendered over exactly the same span, sample aligned, and [[level-matching|level matched]]. That is what makes switching between them a fair comparison.\n\nSwitch between them mid-playback with the number keys, because [[auditory-memory]] for spatial quality is short.",
+      "body": "Variants of a [[passage]] are rendered over exactly the same span, sample aligned, and [[level-matching|level matched]]. That is what makes switching between them a fair comparison.\n\nSwitch between them during playback, because [[auditory-memory]] for spatial quality is short and a comparison made across a gap is far weaker.",
       "prereq": [
         "passage"
       ],
       "see": [
-        "live-apply",
         "level-matching",
         "auditory-memory",
-        "spin-function"
-      ]
-    },
-    "live-apply": {
-      "title": "Applying a variant during playback",
-      "section": "p-structure",
-      "status": "implementation",
-      "short": "Bringing a treated variant forward while the untreated track continues, without interrupting playback.",
-      "body": "In live mode the track runs untreated from end to end while every [[variant]] runs alongside it, silent and in step. Holding a number key brings one forward; releasing returns to the untreated signal.\n\nBecause everything is already rendered and aligned, only gains change, using an [[equal-power-crossfade]]. The switch happens mid-note with no gap and no risk of processing failing to keep up.\n\nThe alternative mode plays each passage's chosen variant automatically, as a fixed arrangement.",
-      "prereq": [
-        "variant"
-      ],
-      "see": [
-        "equal-power-crossfade",
-        "passage"
-      ]
-    },
-    "spin-function": {
-      "title": "Spin function",
-      "section": "p-structure",
-      "status": "project",
-      "short": "A named, reusable configuration: ring geometry, rotation and the whole decorrelation control set.",
-      "body": "The unit you design and save: how many [[source|sources]], where they start, how fast the [[ring]] turns, how the sources are [[decorrelation|decorrelated]], and whether a [[circulating-hotspot]] is running.\n\nApply one to a [[passage]] to hear it on real material.",
-      "prereq": [
-        "ring",
-        "decorrelation"
-      ],
-      "see": [
-        "passage",
-        "variant"
+        "component"
       ]
     },
     "mono-dry": {
@@ -1677,14 +1599,15 @@
       "section": "p-structure",
       "status": "implementation",
       "short": "Anything that stops a ring from cancelling to mono. Necessary for rotation to be perceptible at all.",
-      "body": "Four ways, all available:\n\n1. **[[decorrelation]]** above 0, the main control. Sources stop being identical copies, so they stop cancelling.\n2. **Uneven [[azimuth|azimuths]]**, removing the exact [[antipodal-cancellation|antipodal pairs]].\n3. **Per-source gain**, unbalancing the ring even with identical signals.\n4. **Per-source coherence**, one coherent source in a diffuse bed. See [[coherence-hotspot]].",
+      "body": "Four ways, all available:\n\n1. **[[decorrelation]]** above 0, the main control. Sources stop being identical copies, so they stop cancelling. This is also what makes them individually unlocalizable, so it does both jobs at once.\n2. **Uneven [[azimuth|azimuths]]**, removing the exact [[antipodal-cancellation|antipodal pairs]].\n3. **Per-source gain**, unbalancing the field even with identical signals.\n4. **Per-component decorrelation**, letting one group stay coherent inside a diffuse one.",
       "prereq": [
         "degenerate-ring"
       ],
       "see": [
         "decorrelation",
         "antipodal-cancellation",
-        "unison-rotation"
+        "unison-rotation",
+        "degenerate-ring"
       ]
     },
     "antipodal-cancellation": {
@@ -1725,7 +1648,7 @@
       "section": "p-components",
       "status": "project",
       "short": "A lattice of sources with a motion field applied to it. A variant is a list of components.",
-      "body": "**Vocabulary specific to this instrument.**\n\nA component has two parts: a **lattice** that places its sources, and a **motion field** that moves them. Two lattices are available.\n\nA [[polar-lattice|polar lattice]] is concentric rings: so many rings deep, so many sources around each. A [[grid-lattice|grid]] is a rectangle of sources spanning an extent in metres.\n\nMotion combines freely on either. [[rotation-rate|Rotation]] turns the lattice about the head, [[radial-flow]] moves sources inward or outward, and [[translation|drift]] carries the whole lattice in a direction. Setting more than one at a time is the point: a [[whirlpool]] is a polar lattice turning and flowing inward together.\n\nSources **wrap** within the lattice, so one leaving the far edge reappears at the near edge and the count never changes.\n\nEach component carries its own [[decorrelation]] or inherits the variant's, so a near group and a far group can differ in coherence as well as in motion. Components can be copied and pasted between variants.",
+      "body": "A component has two parts: a **lattice** that places its sources, and a **motion field** that moves them. Two lattices are available.\n\nA [[polar-lattice|polar lattice]] is concentric rings: so many rings deep, so many sources around each. A [[grid-lattice|grid]] is a rectangle of sources spanning an extent in metres.\n\nMotion combines freely on either. [[rotation-rate|Rotation]] turns the lattice about the head, [[radial-flow]] moves sources inward or outward, and [[translation|drift]] carries the whole lattice in a direction. Setting more than one at a time is the point: a [[whirlpool]] is a polar lattice turning and flowing inward together.\n\nSources **wrap** within the lattice, so one leaving the far edge reappears at the near edge and the count never changes.\n\nEach component carries its own [[decorrelation]] or inherits the variant's, so a near group and a far group can differ in coherence as well as in motion. Components can be copied and pasted between variants.",
       "prereq": [
         "variant",
         "source"
@@ -1761,7 +1684,7 @@
       "section": "p-components",
       "status": "project",
       "short": "Concentric rings of sources: a number of rings across a radial band, with a number of sources around each.",
-      "body": "**Vocabulary specific to this instrument.**\n\nRings are spaced evenly across the band between the inner and outer radius, at half-steps rather than at the endpoints so that the outermost ring does not sit where the innermost one wraps to.\n\nOne ring with a single radius is the simplest case and was the original configuration this project studied. Several rings make a field with depth, and give [[radial-flow]] something to carry.\n\nRing stagger rotates each successive ring, which breaks the alignment that would otherwise put sources on shared radial spokes.",
+      "body": "Rings are spaced evenly across the band between the inner and outer radius, at half-steps rather than at the endpoints so that the outermost ring does not sit where the innermost one wraps to.\n\nOne ring with a single radius is the simplest case and was the original configuration this project studied. Several rings make a field with depth, and give [[radial-flow]] something to carry.\n\nRing stagger rotates each successive ring, which breaks the alignment that would otherwise put sources on shared radial spokes.",
       "prereq": [
         "component",
         "azimuth"
@@ -1779,7 +1702,7 @@
       "section": "p-components",
       "status": "project",
       "short": "A rectangle of sources spanning an extent in metres, which wraps as it drifts.",
-      "body": "**Vocabulary specific to this instrument.**\n\nSources sit on a rectangular grid centred on the listener, so many columns across and rows deep, spanning a stated extent. Giving the grid a drift velocity carries the whole lattice past the listener, and because it wraps, the field is endless: a source leaving the back edge reappears at the front.\n\nThe motivating image is driving through a space with sources placed at regular intervals. It is the configuration for asking whether [[translation]] can be perceived without localization, in the same way a turning [[polar-lattice]] asks it of rotation.\n\nRotation and [[radial-flow]] still apply to a grid, about the listener, so a drifting grid can also turn.",
+      "body": "Sources sit on a rectangular grid centred on the listener, so many columns across and rows deep, spanning a stated extent. Giving the grid a drift velocity carries the whole lattice past the listener, and because it wraps, the field is endless: a source leaving the back edge reappears at the front.\n\nThe motivating image is driving through a space with sources placed at regular intervals. It is the configuration for asking whether [[translation]] can be perceived without localization, in the same way a turning [[polar-lattice]] asks it of rotation.\n\nRotation and [[radial-flow]] still apply to a grid, about the listener, so a drifting grid can also turn.",
       "prereq": [
         "component",
         "translation"
@@ -1796,7 +1719,7 @@
       "section": "p-motion",
       "status": "project",
       "short": "A polar lattice turning and flowing inward at once, with inner rings turning faster than outer ones.",
-      "body": "**Vocabulary specific to this instrument.**\n\nNot a separate pattern but a combination: set a [[polar-lattice]] rotating, give it an inward [[radial-flow]], and set the outer rotation rate lower than the inner one. Rings then wind inward while the inner ones outrun the outer ones.\n\nEach source keeps the angular rate of the radius it started at rather than picking up the local rate as it travels. That is a simplification: a real vortex conserves angular momentum, so a particle spun faster as it fell inward. The stateless version is reproducible and adequate for asking whether the pattern is perceived as one motion or as two.\n\nIt is the clearest case of the general point that motions compose within a single component.",
+      "body": "Not a separate pattern but a combination: set a [[polar-lattice]] rotating, give it an inward [[radial-flow]], and set the outer rotation rate lower than the inner one. Rings then wind inward while the inner ones outrun the outer ones.\n\nEach source keeps the angular rate of the radius it started at rather than picking up the local rate as it travels. That is a simplification: a real vortex conserves angular momentum, so a particle spun faster as it fell inward. The stateless version is reproducible and adequate for asking whether the pattern is perceived as one motion or as two.\n\nIt is the clearest case of the general point that motions compose within a single component.",
       "prereq": [
         "polar-lattice",
         "radial-flow"
@@ -1813,7 +1736,7 @@
       "section": "p-motion",
       "status": "project",
       "short": "Sources travelling inward or outward, wrapping at the limits of the band.",
-      "body": "**Vocabulary specific to this instrument.**\n\nOn a [[polar-lattice]] this moves whole rings inward or outward together, so a ring reaching the inner limit reappears at the outer one and the flow is endless rather than emptying out. Sources fade briefly at each limit, which prevents the wrap being heard as a click while keeping every source present.\n\nDistance is carried by level and by the near-field growth of the [[ild]]: see [[source-distance]]. With no reverberation the cue is thin, so radial motion is a weaker percept than lateral motion.\n\nInward and outward are worth treating as separate conditions, since approach and recession are not symmetric in perception.",
+      "body": "On a [[polar-lattice]] this moves whole rings inward or outward together, so a ring reaching the inner limit reappears at the outer one and the flow is endless rather than emptying out. Sources fade briefly at each limit, which prevents the wrap being heard as a click while keeping every source present.\n\nDistance is carried by level and by the near-field growth of the [[ild]]: see [[source-distance]]. With no reverberation the cue is thin, so radial motion is a weaker percept than lateral motion.\n\nInward and outward are worth treating as separate conditions, since approach and recession are not symmetric in perception.",
       "prereq": [
         "component",
         "source-distance"

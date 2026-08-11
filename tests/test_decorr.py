@@ -1,4 +1,4 @@
-"""Tests for the decomposed decorrelation controls and the circulating hotspot.
+"""Tests for the decomposed decorrelation controls.
 
 The binding constraint from the handoff: every control must preserve per-source
 level. A knob that changes loudness as well as coherence makes every comparison
@@ -242,61 +242,8 @@ def test_crude_families_do_decorrelate(signal, cfg, label):
 # The circulating coherence hotspot
 # ----------------------------------------------------------------------
 
-def test_hotspot_amount_is_lowest_at_its_centre():
-    hot = rf.HotspotConfig(enabled=True, deg_per_sec=0.0, start_deg=90.0,
-                           width_deg=60.0, hot_amount=0.0, bed_amount=1.0)
-    az = np.array([90.0, 120.0, 180.0, 270.0])
-    a = hot.amounts_at(az, t=0.0)
-    assert a[0] == pytest.approx(0.0, abs=1e-6)     # dead centre: coherent
-    assert a[0] < a[1] < a[2]                       # rises with distance
-    assert a[3] == pytest.approx(1.0, abs=0.05)     # far away: full bed
 
 
-def test_hotspot_travels_at_its_own_rate():
-    hot = rf.HotspotConfig(enabled=True, deg_per_sec=90.0, start_deg=0.0)
-    az = np.array([90.0])
-    assert hot.amounts_at(az, t=0.0)[0] > hot.amounts_at(az, t=1.0)[0]
-
-
-def test_hotspot_rotates_coherence_while_sources_stand_still(hrtf, signal):
-    """The sharpest form of the hypothesis: rotation_deg_per_sec=0, so no
-    source moves, while the coherence structure sweeps the ring.
-
-    What has to be true is that the binaural output is nonetheless
-    time-varying. If it were static, there would be nothing for a listener to
-    hear as motion and the configuration would be pointless.
-    """
-    cfg = rf.FieldConfig(
-        n_sources=5, rotation_deg_per_sec=0.0,
-        start_azimuths=[-90, -18, 54, 126, 198],
-        hotspot=rf.HotspotConfig(enabled=True, deg_per_sec=180.0,
-                                 width_deg=80.0, hot_amount=0.0, bed_amount=1.0))
-    trace = []
-    y = rf.render(signal, hrtf, cfg, FS, trace=trace)
-
-    # sources really are stationary
-    assert trace[0]["az"] == trace[-1]["az"]
-    # coherence structure really is moving
-    first = np.array(trace[0]["amt"])
-    later = np.array(trace[len(trace) // 3]["amt"])
-    assert np.max(np.abs(first - later)) > 0.1
-
-    # and the interaural statistics vary over time as a result
-    series = rf.iacc_over_time(y, FS, win_s=0.25)
-    assert np.std(series) > 0.01, "static output would carry no motion cue"
-
-
-def test_hotspot_can_be_decoupled_from_ring_rotation(hrtf, signal):
-    """Hotspot rate and ring rate are independent axes, including opposite
-    signs, which is not expressible with per_source_amount."""
-    cfg = rf.FieldConfig(
-        n_sources=5, rotation_deg_per_sec=60.0,
-        hotspot=rf.HotspotConfig(enabled=True, deg_per_sec=-240.0))
-    trace = []
-    rf.render(signal[: 2 * FS], hrtf, cfg, FS, trace=trace)
-    az_moved = trace[0]["az"] != trace[-1]["az"]
-    hot_moved = trace[0]["hot"] != trace[-1]["hot"]
-    assert az_moved and hot_moved
 
 
 def test_lfo_modulates_coherence_over_time(hrtf, signal):

@@ -505,7 +505,7 @@ const PARAMS = [
       { k: "phase_depth", ref: "phase-depth", type: "range", min: 0, max: 1, step: 0.01, showIf: c => c.family === "allpass" },
       { k: "envelope", ref: "ir-envelope", type: "sel", opts: ["auto", "flat", "hann", "decay"] },
       { k: "decay_db", ref: "ir-envelope", type: "range", min: 6, max: 120, step: 2, unit: "dB", showIf: c => c.envelope === "decay" },
-      { k: "per_source_amount", ref: "coherence-hotspot", type: "list", placeholder: "all the same" },
+      { k: "per_source_amount", ref: "decorrelation-amount", type: "list", placeholder: "all the same" },
       { k: "crossovers", ref: "crossover", type: "list", placeholder: "off, or 200" },
       { k: "band_amounts", ref: "bass-coherence", type: "list", placeholder: "0, 1", showIf: c => !!(c.crossovers || []).length },
       { k: "micro_delay_ms", ref: "micro-delay", type: "range", min: 0, max: 40, step: 0.5, unit: "ms" },
@@ -525,17 +525,6 @@ const PARAMS = [
       { k: "block", ref: "block-size", type: "sel", opts: [128, 256, 512, 1024] },
     ]
   },
-  {
-    group: "Coherence hotspot", ref: "circulating-hotspot", path: "hotspot", rows: [
-      { k: "enabled", ref: "circulating-hotspot", type: "bool" },
-      { k: "deg_per_sec", ref: "circulating-hotspot", type: "range", min: -720, max: 720, step: 5, unit: "°/s", showIf: c => c.enabled },
-      { k: "width_deg", ref: "hotspot-width", type: "range", min: 5, max: 180, step: 5, unit: "°", showIf: c => c.enabled },
-      { k: "start_deg", ref: "hotspot-width", type: "range", min: 0, max: 360, step: 5, unit: "°", showIf: c => c.enabled },
-      { k: "hot_amount", ref: "circulating-hotspot", type: "range", min: 0, max: 1, step: 0.01, showIf: c => c.enabled },
-      { k: "bed_amount", ref: "circulating-hotspot", type: "range", min: 0, max: 1, step: 0.01, showIf: c => c.enabled },
-      { k: "shape", ref: "hotspot-width", type: "sel", opts: ["gaussian", "cosine"], showIf: c => c.enabled },
-    ]
-  },
 ];
 
 const LABELS = {
@@ -546,9 +535,7 @@ const LABELS = {
   decay_db: "decay", per_source_amount: "per-source amount", crossovers: "crossovers",
   band_amounts: "band amounts", micro_delay_ms: "micro delay",
   micro_pitch_cents: "micro pitch", lfo_hz: "LFO rate", lfo_depth: "LFO depth",
-  lfo_source_spread: "LFO spread", enabled: "enabled", deg_per_sec: "hotspot rate",
-  width_deg: "width", start_deg: "start angle", hot_amount: "hot amount",
-  bed_amount: "bed amount", shape: "falloff",
+  lfo_source_spread: "LFO spread",
   head_radius: "head radius", speed_of_sound: "speed of sound",
   hrtf_taps: "HRIR taps", hrtf_grid_step: "azimuth grid", block: "block size",
   distance_m: "distance", gain_db: "gain", random_fraction: "random share",
@@ -574,30 +561,10 @@ const defaultDecorr = () => ({
   band_amounts: null, micro_delay_ms: 0, micro_pitch_cents: 0,
   lfo_hz: 0, lfo_depth: 0, lfo_source_spread: 0, seed: 0
 });
-const defaultHotspot = () => ({
-  enabled: false, deg_per_sec: 90, start_deg: 0, width_deg: 80,
-  hot_amount: 0, bed_amount: 1, shape: "gaussian"
-});
-const defaultComponent = (lattice = "polar", preset = null) => {
-  const c = {
-    lattice, label: "",
-    rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 4,
-    offset_deg: 0, ring_stagger_deg: 0, start_azimuths: null,
-    cols: 5, rows: 5, extent_x_m: 8, extent_y_m: 8,
-    rotation_deg_per_sec: 0, rotation_outer_deg_per_sec: null,
-    radial_speed_mps: 0, drift_x_mps: 0, drift_y_mps: 0,
-    random_fraction: 0, wander_deg: 60, wander_hz: 0.25, radial_wander_m: 0,
-    gain_db: 0, edge_fade: 0.12, min_distance_m: 0, max_gain_db: 12,
-    decorr: null, collapsed: false, advanced: false,
-  };
-  if (preset) Object.assign(c, preset.set, { label: preset.label.toLowerCase() });
-  return c;
-};
-
 const defaultField = () => ({
   components: [defaultComponent("polar",
     COMPONENT_PRESETS.polar.find(p => p.label === "Turning ring"))],
-  decorr: defaultDecorr(), hotspot: defaultHotspot(),
+  decorr: defaultDecorr(),
   head_radius: 0.0875, speed_of_sound: 343, hrtf_taps: 128, hrtf_grid_step: 1,
   block: 256, seed: 0
 });
@@ -620,7 +587,6 @@ const shadeOf = (hue, k, n) => {
 
 const effectiveRate = cfg => {
   if (!cfg) return 0;
-  if (cfg.hotspot?.enabled) return cfg.hotspot.deg_per_sec || 0;
   // Only rotation has a well-defined cyclic rate; drift and radial flow
   // recycle at a period set by extent and speed instead.
   let r = 0;
@@ -637,9 +603,7 @@ const componentMoves = c =>
   !!c.radial_speed_mps || !!c.drift_x_mps || !!c.drift_y_mps ||
   (c.wander_hz > 0 && (c.random_fraction > 0 || c.radial_wander_m > 0));
 
-const hasMotion = cfg => !!cfg && (
-  (cfg.hotspot?.enabled && cfg.hotspot.deg_per_sec !== 0) ||
-  (cfg.components || []).some(componentMoves));
+const hasMotion = cfg => !!cfg && (cfg.components || []).some(componentMoves);
 
 function summarize(cfg) {
   if (!cfg) return "original, untreated";
@@ -654,9 +618,6 @@ function summarize(cfg) {
       .join(" + ").toLowerCase());
   } else {
     bits.push(componentSummary(comps[0]));
-  }
-  if (cfg.hotspot?.enabled) {
-    bits.push(cfg.hotspot.deg_per_sec ? `hotspot ${cfg.hotspot.deg_per_sec}°/s` : "hotspot frozen");
   }
   bits.push(`${cfg.decorr.family} ${fmt(cfg.decorr.amount, 2)}`);
   return bits.join(" · ");
@@ -712,12 +673,6 @@ function rotatingRing(rate = 60) {
 }
 
 /** Sources hold still while the coherence structure sweeps past them. */
-function hotspotField(rate = 90) {
-  const c = rotatingRing(0);
-  c.hotspot = { ...defaultHotspot(), enabled: true, deg_per_sec: rate, width_deg: 80 };
-  return c;
-}
-
 /** A share of the sources rotates together; the rest wander without a net
  *  direction, after the coherence manipulation in random-dot kinematograms. */
 /** Same configuration with every kind of motion removed: rotation, radial
@@ -726,7 +681,6 @@ function controlOf(cfg) {
   const c = JSON.parse(JSON.stringify(cfg));
   c.rotation_deg_per_sec = 0;
   c.total_degrees = null;
-  if (c.hotspot) c.hotspot.deg_per_sec = 0;
   for (const k of (c.components || [])) {
     k.rotation_deg_per_sec = 0;
     k.rotation_outer_deg_per_sec = null;
@@ -1696,20 +1650,6 @@ function drawRing() {
     poly(fr, 0.42, []);
   }
 
-  // Hotspot, only when one is actually running.
-  if (fr.hot !== null && fr.hot !== undefined) {
-    const width = v.params.hotspot?.width_deg || 60;
-    const [hx, hy] = posD(fr.hot, REFD);
-    const rad = Math.max(R * width / 120, 12);
-    const grd = x.createRadialGradient(hx, hy, 0, hx, hy, rad);
-    grd.addColorStop(0, "rgba(154,91,45,.28)");
-    grd.addColorStop(1, "rgba(154,91,45,0)");
-    x.fillStyle = grd;
-    x.beginPath(); x.arc(hx, hy, rad, 0, Math.PI * 2); x.fill();
-    x.strokeStyle = "#9a5b2d"; x.setLineDash([2, 3]);
-    x.beginPath(); x.moveTo(cx, cy); x.lineTo(hx, hy); x.stroke();
-    x.setLineDash([]);
-  }
 
   fr.az.forEach((a, i) => {
     const [sx, sy] = posD(a, distAt(fr)[i]);
@@ -1727,10 +1667,6 @@ function drawRing() {
   const domRate = comps.reduce((a, c) =>
     Math.abs(c.rotation_deg_per_sec) > Math.abs(a) ? c.rotation_deg_per_sec : a, 0);
   drawRotationArrow(x, cx, cy, R + 17, domRate, "#2c5f7c");
-  const hot = v.params.hotspot;
-  if (hot?.enabled && hot.deg_per_sec) {
-    drawRotationArrow(x, cx, cy, R + 31, hot.deg_per_sec, "#9a5b2d");
-  }
   // Arrow showing which way a drifting lattice is travelling.
   for (const c of comps) {
     if (!c.drift_x_mps && !c.drift_y_mps) continue;
@@ -1756,7 +1692,6 @@ function drawRing() {
       parts.push(`${fmt(Math.hypot(c.drift_x_mps, c.drift_y_mps), 1)} m/s drift`);
     return `${name}: ${parts.length ? parts.join(", ") : "still"}`;
   });
-  if (hot?.enabled) bits.push(hot.deg_per_sec ? `hotspot ${fmt(hot.deg_per_sec, 0)}°/s` : "hotspot frozen");
   x.fillStyle = "#4a4640";
   x.fillText(bits.join("   ·   ").slice(0, 90), 6, h - 5);
 }
@@ -1802,7 +1737,7 @@ function updateNow() {
       : "";
     return;
   }
-  const pr = v.params, d = pr.resolved_decorr, hs = pr.hotspot;
+  const pr = v.params, d = pr.resolved_decorr;
   const rp = S.rendered.passages[S.live.pi];
   const fr = frameAt(v.trace, playPosition() - rp.start);
   const comps = pr.resolved_components || [];
@@ -1844,8 +1779,6 @@ function updateNow() {
   rows.push(
     ["amounts now", fr ? fr.amt.map(a => fmt(a, 2)).join(" ") : fmt(d.amount, 2)],
     ["bands", d.crossovers ? `${d.crossovers.join("/")} Hz × ${(d.band_amounts || []).join(", ")}` : "full band"],
-    ["hotspot", hs?.enabled
-      ? `${fmt(hs.deg_per_sec, 0)} °/s, ${fmt(hs.width_deg, 0)}° wide` : "off"],
     ["head radius", `${fmt(pr.head_radius * 100, 1)} cm`],
     ["seed", pr.seed],
   );
@@ -2417,7 +2350,7 @@ function buildTour() {
       title: "Variant presets",
       body: `The menu adds common configurations: partial coherence, the
         degenerate coherent ring, partly random motion, two rings at different
-        distances, and the circulating hotspot with its control.`,
+        distances, and partly random motion.`,
     },
     {
       el: "#render", interact: true,

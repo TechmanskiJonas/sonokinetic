@@ -91,9 +91,9 @@ def test_established_entries_cite_something(ref):
         f"{sorted(missing)[:12]}")
 
 
-@pytest.mark.parametrize("eid", ["unison-rotation", "circulating-hotspot",
-                                 "spin-function", "field", "source", "ring",
-                                 "passage", "variant", "coherence-hotspot"])
+@pytest.mark.parametrize("eid", ["unison-rotation", "field", "source",
+                                 "ring", "passage", "variant",
+                                 "motion-coherence", "polar-lattice"])
 def test_project_coinages_are_labelled_as_such(ref, eid):
     """These names were invented here. Presenting them beside ITD and IACC
     without a marker would let a reader carry them into a conversation where
@@ -398,9 +398,10 @@ def test_findings_that_constrain_the_method_are_covered(ref, purpose):
 
 
 @pytest.mark.parametrize("eid", [
-    "matched-control", "circulating-hotspot", "front-back-confusion",
+    "matched-control", "front-back-confusion",
     "level-matching", "component", "polar-lattice", "grid-lattice",
     "radial-flow", "whirlpool", "motion-coherence", "translation",
+    "source-distance",
 ])
 def test_the_load_bearing_entries_exist(ref, eid):
     """These are the findings a reader has to meet to use the tool correctly.
