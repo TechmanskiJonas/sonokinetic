@@ -20,6 +20,8 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const fmt = (v, d = 2) =>
   (v === null || v === undefined || Number.isNaN(v)) ? "–" : Number(v).toFixed(d);
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+/** Minutes, seconds and milliseconds, for setting passage edges precisely. */
+const mmssms = t => `${mmss(t)}.${String(Math.floor((t % 1) * 1000)).padStart(3, "0")}`;
 const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -450,16 +452,21 @@ const COMPONENT_PRESETS = {
   polar: [
     { label: "Ring", set: { rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 2 } },
     { label: "Turning ring", set: { rings: 1, per_ring: 6, r_near_m: 2, r_far_m: 2, rotation_deg_per_sec: 60 } },
-    { label: "Concentric rings", set: { rings: 3, per_ring: 6, r_near_m: 1, r_far_m: 5 } },
-    { label: "Closing in", set: { rings: 4, per_ring: 6, r_near_m: 0.4, r_far_m: 6, radial_speed_mps: -0.8 } },
-    { label: "Opening out", set: { rings: 4, per_ring: 6, r_near_m: 0.4, r_far_m: 6, radial_speed_mps: 0.8 } },
-    { label: "Whirlpool", set: { rings: 4, per_ring: 6, r_near_m: 0.4, r_far_m: 6, radial_speed_mps: -0.5, rotation_deg_per_sec: 160, rotation_outer_deg_per_sec: 40 } },
+    { label: "Concentric rings", set: { rings: 3, per_ring: 6, r_near_m: 1, r_far_m: 5, ring_stagger_deg: 20 } },
+    { label: "Closing in", set: { rings: 4, per_ring: 6, r_near_m: 0.8, r_far_m: 6, ring_stagger_deg: 15, radial_speed_mps: -0.8, edge_fade: 0.35 } },
+    { label: "Opening out", set: { rings: 4, per_ring: 6, r_near_m: 0.8, r_far_m: 6, ring_stagger_deg: 15, radial_speed_mps: 0.8, edge_fade: 0.35 } },
+    { label: "Whirlpool", set: { rings: 4, per_ring: 6, r_near_m: 0.8, r_far_m: 6, ring_stagger_deg: 15, radial_speed_mps: -0.5, rotation_deg_per_sec: 160, rotation_outer_deg_per_sec: 40, edge_fade: 0.35 } },
+    { label: "Random ring", set: { rings: 1, per_ring: 8, r_near_m: 2, r_far_m: 2, random_fraction: 1, wander_deg: 70 } },
   ],
   cartesian: [
     { label: "Still grid", set: { cols: 5, rows: 5 } },
     { label: "Driving forward", set: { cols: 5, rows: 5, extent_y_m: 10, drift_y_mps: -2 } },
     { label: "Passing left to right", set: { cols: 5, rows: 5, extent_x_m: 10, drift_x_mps: 1.5 } },
     { label: "Diagonal drift", set: { cols: 5, rows: 5, drift_x_mps: 1, drift_y_mps: -1 } },
+    // Fully incoherent populations. The same control as partial coherence
+    // within a moving component, taken to the end of its range, which makes a
+    // separate group of sources going nowhere in particular.
+    { label: "Random grid", set: { cols: 5, rows: 5, random_fraction: 1, wander_deg: 70 } },
   ],
 };
 
@@ -570,7 +577,7 @@ const defaultComponent = (lattice = "polar", preset = null) => {
     rotation_deg_per_sec: 0, rotation_outer_deg_per_sec: null,
     radial_speed_mps: 0, drift_x_mps: 0, drift_y_mps: 0,
     random_fraction: 0, wander_deg: 60, wander_hz: 0.25, radial_wander_m: 0,
-    gain_db: 0, edge_fade: 0.12, min_distance_m: 0, max_gain_db: 12,
+    gain_db: 0, edge_fade: 0.3, min_distance_m: 0, max_gain_db: 12, time_scale: 1,
     decorr: null, collapsed: false, advanced: false,
   };
   if (preset) Object.assign(c, preset.set, { label: preset.label.toLowerCase() });
@@ -612,6 +619,40 @@ function hslHex(hue, s = 0.42, l = 0.42) {
     .toString(16).padStart(2, "0")).join("");
 }
 
+/** A row of hues, opened from a swatch and closed by clicking it again. */
+let huePop = null;
+function toggleHuePicker(anchor, current, onPick) {
+  if (huePop && huePop.anchor === anchor) { closeHuePicker(); return; }
+  closeHuePicker();
+  const el = document.createElement("div");
+  el.className = "huepop";
+  el.innerHTML = VARIANT_HUES.map(h =>
+    `<button data-h="${h}" style="background:${shadeOf(h, 0, 2)}"
+       class="${h === current ? "on" : ""}"></button>`).join("");
+  document.body.appendChild(el);
+  const r = anchor.getBoundingClientRect();
+  el.style.left = clamp(r.left - 4, 6, innerWidth - el.offsetWidth - 6) + "px";
+  el.style.top = (r.bottom + 6) + "px";
+  el.addEventListener("click", e => {
+    const b = e.target.closest("[data-h]");
+    if (!b) return;
+    onPick(Number(b.dataset.h));
+    closeHuePicker();
+  });
+  huePop = { el, anchor };
+  setTimeout(() => addEventListener("click", outsideHueClick), 0);
+}
+
+function closeHuePicker() {
+  huePop?.el.remove();
+  huePop = null;
+  removeEventListener("click", outsideHueClick);
+}
+
+function outsideHueClick(e) {
+  if (!e.target.closest(".huepop, .huepick")) closeHuePicker();
+}
+
 function hueOfHex(hex) {
   const n = parseInt(hex.slice(1), 16);
   const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
@@ -635,9 +676,9 @@ const effectiveRate = cfg => {
 };
 
 const componentMoves = c =>
-  !!c.rotation_deg_per_sec || !!c.rotation_outer_deg_per_sec ||
+  c.time_scale !== 0 && (!!c.rotation_deg_per_sec || !!c.rotation_outer_deg_per_sec ||
   !!c.radial_speed_mps || !!c.drift_x_mps || !!c.drift_y_mps ||
-  (c.wander_hz > 0 && (c.random_fraction > 0 || c.radial_wander_m > 0));
+  (c.wander_hz > 0 && (c.random_fraction > 0 || c.radial_wander_m > 0)));
 
 const hasMotion = cfg => !!cfg && (cfg.components || []).some(componentMoves);
 
@@ -686,16 +727,30 @@ function emptyField() {
 }
 
 function newPassage(start, end, name) {
-  const first = rotatingRing(60);
   return {
     name: name || `Passage ${S.passages.length + 1}`,
-    start, end, open: true, selected: 1,
-    variants: [
-      { name: "untreated", config: null },
-      { name: "turning ring", config: first, hue: VARIANT_HUES[0] },
-      { name: "turning ring · control", config: controlOf(first), hue: VARIANT_HUES[1] },
-    ]
+    start, end, open: true, selected: 0,
+    // Nothing is assumed about what the passage is for: the untreated signal
+    // is the only thing every session needs.
+    variants: [{ name: "untreated", config: null }],
   };
+}
+
+/** A variant built from a single component takes that component's name, with
+ *  a number appended when the passage already has one of the same kind. */
+function autoName(passage, cfg) {
+  const comps = cfg?.components || [];
+  if (comps.length !== 1) return null;
+  const base = comps[0].label || LATTICES[comps[0].lattice]?.label || "component";
+  const taken = passage.variants.filter(v =>
+    v.name === base || v.name.startsWith(base + " ")).length;
+  return taken ? `${base} ${taken + 1}` : base;
+}
+
+function renameFromComponents(passage, variant) {
+  if (variant.renamed) return;
+  const auto = autoName(passage, variant.config);
+  if (auto) variant.name = auto;
 }
 
 /** A ring of mutually decorrelated sources rotating together: the main
@@ -716,14 +771,9 @@ function controlOf(cfg) {
   const c = JSON.parse(JSON.stringify(cfg));
   c.rotation_deg_per_sec = 0;
   c.total_degrees = null;
-  for (const k of (c.components || [])) {
-    k.rotation_deg_per_sec = 0;
-    k.rotation_outer_deg_per_sec = null;
-    k.radial_speed_mps = 0;
-    k.drift_x_mps = 0;
-    k.drift_y_mps = 0;
-    k.wander_hz = 0;
-  }
+  // Stop the clock rather than the rates: the control then keeps the same
+  // spatial and level distribution, including any edge fade.
+  for (const k of (c.components || [])) k.time_scale = 0;
   return c;
 }
 
@@ -1050,7 +1100,14 @@ function renderPassages() {
     del.addEventListener("click", () => {
       S.passages.splice(S.active, 1);
       S.active = clamp(S.active, 0, S.passages.length - 1);
-      S.live = null; renderPassages(); drawWave(); markStale();
+      S.live = null; S.latched = false;
+      // Any render still in flight was for the old set of passages.
+      S.renderToken = (S.renderToken || 0) + 1;
+      S.rendered = null; S.buffers = {};
+      stopPlayback();
+      const btn = $("#render");
+      btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "Render";
+      renderPassages(); drawWave(); markStale();
     });
     const only = document.createElement("button");
     only.className = "sm"; only.textContent = "Render this passage";
@@ -1112,7 +1169,10 @@ function renderPassages() {
 
         const vn = document.createElement("input");
         vn.className = "vname"; vn.value = v.name;
-        vn.addEventListener("change", () => { v.name = vn.value; });
+        vn.addEventListener("change", () => {
+          v.name = vn.value;
+          v.renamed = true;          // stop tracking the component name
+        });
         vr.appendChild(vn);
 
         const tag = document.createElement("span");
@@ -1145,15 +1205,15 @@ function renderPassages() {
           });
           vr.appendChild(latch);
 
-          const swatch = document.createElement("input");
-          swatch.type = "color";
+          // Hue only: components take shades of the variant's colour, so
+          // saturation and lightness are not the variant's to set.
+          const swatch = document.createElement("button");
           swatch.className = "huepick";
-          swatch.value = hslHex(hue);
+          swatch.style.background = shadeOf(hue, 0, 2);
           swatch.title = "variant colour";
-          swatch.addEventListener("click", e => e.stopPropagation());
-          swatch.addEventListener("input", () => {
-            v.hue = hueOfHex(swatch.value);
-            renderPassages();
+          swatch.addEventListener("click", e => {
+            e.stopPropagation();
+            toggleHuePicker(swatch, hue, h => { v.hue = h; renderPassages(); });
           });
           vr.appendChild(swatch);
         }
@@ -1167,9 +1227,11 @@ function renderPassages() {
             renderPassages(); markStale();
           }));
         }
-        vr.appendChild(mk(v.open ? "close" : "edit", "show parameters", () => {
-          v.open = !v.open; renderPassages();
-        }));
+        const chev = mk(v.open ? "▾" : "▸",
+          v.open ? "hide settings" : "show settings", () => {
+            v.open = !v.open; renderPassages();
+          }, "sm ghost twist");
+        vr.appendChild(chev);
         if (vi > 0) vr.appendChild(mk("×", "remove variant", () => {
           p.variants.splice(vi, 1); renderPassages(); markStale();
         }, "sm ghost"));
@@ -1191,6 +1253,8 @@ function renderPassages() {
             const src = comps.reduce((n, c) => n + componentSources(c), 0);
             tag.textContent = `${comps.length} comp · ${src} src`;
             tag.title = summarize(v.config);
+            renameFromComponents(p, v);
+            vn.value = v.name;
             markStale();
           };
           const compHost = document.createElement("div");
@@ -1295,7 +1359,11 @@ function wireWave() {
     return clamp((e.clientX - r.left) / r.width * S.duration, 0, S.duration);
   };
 
-  c.addEventListener("contextmenu", e => e.preventDefault());
+  // The browser's own menu would cover the one below, so it is suppressed
+  // across the whole waveform card rather than only on the canvas.
+  const card = c.closest(".wavecard") || c;
+  card.addEventListener("contextmenu", e => e.preventDefault());
+  c.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); });
 
   c.addEventListener("mousedown", e => {
     from = tAt(e);
@@ -1459,6 +1527,10 @@ async function doRender(only = null) {
   // the event in place of the index list.
   if (!Array.isArray(only)) only = null;
   S.renderOnly = only;
+  // A render in flight describes the passages as they were when it started.
+  // If they change underneath it, its result no longer matches what is on
+  // screen, so it is discarded rather than applied.
+  const token = (S.renderToken = (S.renderToken || 0) + 1);
   stopPlayback();
   const btn = $("#render");
   btn.disabled = true;
@@ -1481,6 +1553,7 @@ async function doRender(only = null) {
           : p.variants.map(v => ({ label: v.name, config: v.config }))
       }))
     });
+    if (token !== S.renderToken) return;      // superseded while in flight
     S.rendered = res;
 
     msg.textContent = "Decoding…";
@@ -1491,13 +1564,17 @@ async function doRender(only = null) {
         if (v.url) S.buffers[`${pi}:${vi}`] = await decode(v.url);
       })));
 
+    if (token !== S.renderToken) return;
     msg.textContent = `Rendered in ${res.render_seconds}s.`;
     showMetrics();
     startPlayback(passage()?.start ?? 0);
   } catch (e) {
-    msg.className = "msg err";
-    msg.textContent = "Render failed: " + e.message;
+    if (token === S.renderToken) {
+      msg.className = "msg err";
+      msg.textContent = "Render failed: " + e.message;
+    }
   } finally {
+    if (token !== S.renderToken) return;
     btn.disabled = false;
     btn.classList.remove("busy");
     btn.textContent = prevLabel;
@@ -2006,19 +2083,20 @@ function updateTransport() {
     : `${p ? p.name : "passage"}${S.live ? " · " + esc(
         S.rendered.passages[S.live.pi].variants[S.live.vi]?.label || "") : " · untreated"}`;
   $("#gtwhat").innerHTML = what;
-  $("#gtclock").textContent = previewSrc ? "" : mmss(playPosition());
+  $("#gtclock").textContent = previewSrc
+    ? mmssms(previewPosition()) : mmssms(playPosition());
 }
 
 function tick() {
   drawRing();
   updateTransport();
   if (previewSrc) {
-    $("#selclock").textContent = mmss(previewPosition());
+    $("#selclock").textContent = mmssms(previewPosition());
     drawWave();
   }
   if (S.rendered) {
     const t = playPosition();
-    $("#clock").textContent = `${mmss(t)} / ${mmss(S.duration)}`;
+    $("#clock").textContent = `${mmssms(t)} / ${mmss(S.duration)}`;
     if (!$("#seek").matches(":active")) $("#seek").value = t / (S.duration || 1);
     drawWave();
     updateNow();
@@ -2930,8 +3008,9 @@ async function boot() {
     // Sustained material decorrelates far more readily than percussive
     // material, so the default runs from the theremin section up to the guitar
     // entry rather than sampling a few seconds of it.
-    const a = Math.min(105, Math.max(0, S.duration - 60));
-    S.sel = [a, Math.min(180, S.duration)];
+    // Sustained material from the theremin section up to where the drums
+    // return, which is the longest stretch of the track without hard onsets.
+    S.sel = [Math.min(141, Math.max(0, S.duration - 10)), Math.min(185, S.duration)];
     S.cursor = S.sel[0];
     S.passages = [newPassage(S.sel[0], S.sel[1], "Passage 1")];
     syncSel(); renderPassages(); drawWave();

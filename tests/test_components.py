@@ -277,12 +277,34 @@ def test_frozen_components_do_not_move(comp):
     assert np.allclose(a0, a1) and np.allclose(d0, d1) and np.allclose(l0, l1)
 
 
-def test_freezing_preserves_the_spatial_and_level_distribution():
-    moving = C(lattice="cartesian", cols=4, rows=4, drift_y_mps=-2.0)
+@pytest.mark.parametrize("moving", [
+    C(lattice="cartesian", cols=4, rows=4, drift_y_mps=-2.0),
+    C(lattice="polar", rings=4, per_ring=5, r_near_m=0.5, r_far_m=6.0,
+      radial_speed_mps=-0.8),
+    C(lattice="polar", rings=3, per_ring=4, rotation_deg_per_sec=90.0),
+])
+def test_freezing_preserves_the_spatial_and_level_distribution(moving):
+    """A control that differed in level distribution would not be a control.
+
+    This is why freezing stops the clock instead of the rates: zeroing the
+    drift would also remove the edge fade that a wrapping lattice carries, and
+    the control would come out louder at the edges than the thing it controls
+    for.
+    """
     a = rf.FieldGeometry(rf.FieldConfig(components=[moving])).state(0.0)
     b = rf.FieldGeometry(rf.FieldConfig(components=[moving.frozen()])).state(0.0)
     for x, y in zip(a, b):
         assert np.allclose(x, y)
+
+
+def test_freezing_leaves_the_configured_motion_readable():
+    """The rates stay on the config so the interface can still show what the
+    control is a control for."""
+    moving = C(lattice="cartesian", cols=2, rows=2, drift_y_mps=-2.0)
+    frozen = moving.frozen()
+    assert frozen.drift_y_mps == -2.0
+    assert frozen.time_scale == 0.0
+    assert frozen.is_static()
 
 
 @pytest.mark.parametrize("comp,static", [

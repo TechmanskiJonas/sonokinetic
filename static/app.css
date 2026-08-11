@@ -265,11 +265,19 @@ kbd {
   background: var(--accent); border-color: var(--accent); color: #fff;
 }
 .huepick {
-  width: 22px; height: 22px; padding: 0; border: 1px solid var(--rule);
-  border-radius: 50%; background: none; cursor: pointer;
+  width: 20px; height: 20px; padding: 0; flex: none;
+  border: 1px solid var(--rule); border-radius: 50%; cursor: pointer;
 }
-.huepick::-webkit-color-swatch-wrapper { padding: 2px; }
-.huepick::-webkit-color-swatch { border: none; border-radius: 50%; }
+.huepop {
+  position: fixed; z-index: 140; display: flex; gap: 4px; padding: 6px;
+  background: var(--card); border: 1px solid var(--rule); border-radius: var(--r);
+  box-shadow: 0 6px 20px rgba(30,28,26,.2);
+}
+.huepop button {
+  width: 20px; height: 20px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--rule); cursor: pointer;
+}
+.huepop button.on { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 /* collapsed-by-default parameter groups ------------------------------- */
 .pgroup.folded .prow, .pgroup.folded .note { display: none; }
@@ -519,8 +527,11 @@ a.term:hover, a.xref:hover { border-bottom-color: var(--accent); background: var
 }
 .tour-foot { display: flex; align-items: center; gap: 7px; margin-top: 14px; }
 
-/* Interactive steps let clicks reach the page; the popover stays clickable. */
+/* Interactive steps let clicks reach the page; the popover stays clickable.
+   The root fills the viewport, so it has to opt out of events too, otherwise
+   it swallows everything before the mask is ever consulted. */
 .tour .tour-mask { pointer-events: auto; }
+.tour.interact { pointer-events: none; }
 .tour.interact .tour-mask { pointer-events: none; }
 .tour .tour-pop { pointer-events: auto; }
 

@@ -344,9 +344,21 @@ class ComponentConfig:
 
     # level
     gain_db: float = 0.0
-    edge_fade: float = 0.12       # share of the extent spent fading at a wrap
+    # Share of the extent spent fading at a wrap. Generous by default because
+    # the inverse-distance gain rises steeply near the head, so a source
+    # entering at a small inner radius arrives loud: a short fade there is
+    # heard as a swell rather than as an entrance.
+    edge_fade: float = 0.3
     min_distance_m: float = 0.0   # 0 allows a source to reach the head centre
     max_gain_db: float = 12.0     # ceiling on the inverse-distance gain
+
+    # Multiplier on time. Freezing a component for a matched control sets this
+    # to zero rather than zeroing the rates, so the configured motion is still
+    # visible to everything that derives from it. In particular the edge fade
+    # keys off whether the lattice wraps, and zeroing the drift would remove
+    # the fade and leave the control with a different level distribution from
+    # the thing it is supposed to be a control for.
+    time_scale: float = 1.0
 
     # Decorrelation for this component's sources. None inherits the variant's,
     # so two components can carry different coherence in one field.
@@ -418,6 +430,8 @@ class ComponentConfig:
         return (1 - u) * self.rotation_deg_per_sec + u * self.rotation_outer_deg_per_sec
 
     def is_static(self) -> bool:
+        if abs(self.time_scale) < 1e-12:
+            return True
         moving = any(abs(v) > 1e-9 for v in (
             self.rotation_deg_per_sec,
             self.rotation_outer_deg_per_sec or 0.0,
@@ -427,16 +441,13 @@ class ComponentConfig:
         return not (moving or wandering)
 
     def frozen(self) -> "ComponentConfig":
-        """The same component with every motion removed.
+        """The same component with time stopped.
 
-        A matched control holds the spatial and level distribution while
-        removing movement, so every rate goes to zero and the oscillators stop.
-        Sources stay exactly where they are.
+        A matched control must hold the spatial and level distribution while
+        removing movement. Stopping time does that exactly: every source stays
+        where it was and keeps the level it had, including any edge fade.
         """
-        return replace(self, rotation_deg_per_sec=0.0,
-                       rotation_outer_deg_per_sec=None,
-                       radial_speed_mps=0.0, drift_x_mps=0.0, drift_y_mps=0.0,
-                       wander_hz=0.0)
+        return replace(self, time_scale=0.0)
 
 
 @dataclass
@@ -565,6 +576,10 @@ class FieldGeometry:
         """(azimuth, distance, envelope) for one source at time t."""
         c: ComponentConfig = s["c"]
         env = 1.0
+        # Freezing stops the clock rather than the rates, so everything below
+        # still sees the configured motion and the level distribution is
+        # preserved exactly.
+        t = t * c.time_scale
 
         moves = not s["random"]
         if c.lattice == "cartesian":

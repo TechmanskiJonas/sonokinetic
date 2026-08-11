@@ -156,9 +156,10 @@ class ComponentIn(BaseModel):
     wander_hz: float = 0.25
     radial_wander_m: float = 0.0
     gain_db: float = 0.0
-    edge_fade: float = 0.12
+    edge_fade: float = 0.3
     min_distance_m: float = 0.0
     max_gain_db: float = 12.0
+    time_scale: float = 1.0
     decorr: Optional[DecorrIn] = None
 
     def to_cfg(self) -> rf.ComponentConfig:

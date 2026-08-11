@@ -53,18 +53,47 @@ def test_side_is_preserved_while_collapsing():
 
 def test_a_source_crossing_the_centre_does_not_flip_abruptly():
     """The failure this guards against: azimuth swinging 180 degrees between
-    adjacent blocks with full cues attached."""
+    adjacent blocks with full cues attached.
+
+    A source drifting straight along the median plane crosses the centre at
+    t=0, so the window here brackets that. Note the crossing must be checked in
+    a coordinate that can see it: sin(azimuth) is zero at both 0 and 180
+    degrees, so it registers no change across a front-back flip at all.
+    """
     g = G(rf.FieldConfig(components=[C(
         lattice="cartesian", cols=1, rows=1, extent_x_m=0.001, extent_y_m=8.0,
         drift_y_mps=-2.0, min_distance_m=0.0)]))
-    ts = np.linspace(1.9, 2.1, 400)           # straight through the centre
-    eff = []
+    ts = np.linspace(-0.1, 0.1, 400)
+    pos = []
     for t in ts:
         az, dist, _ = g.state(t)
-        eff.append(G.effective_azimuths(az, dist, 0.0875)[0])
-    eff = np.array(eff)
-    lateral = np.sin(np.deg2rad(eff))         # what the interaural cue follows
+        eff = G.effective_azimuths(az, dist, 0.0875)[0]
+        # the full direction, not just its lateral projection
+        pos.append((np.sin(np.deg2rad(eff)), np.cos(np.deg2rad(eff))))
+    pos = np.array(pos)
+    lateral = pos[:, 0]
     assert np.max(np.abs(np.diff(lateral))) < 0.25
+    assert np.min(np.abs(np.hypot(*pos.T))) > 0.5     # a direction, not a hole
+
+
+def test_a_wrapping_source_is_silent_at_the_moment_it_jumps():
+    """A lattice wraps by moving a source from one edge to the other, which is
+    a large jump in position. It is inaudible only because the envelope has
+    taken the source to silence by then, so that is what gets asserted."""
+    g = G(rf.FieldConfig(components=[C(
+        lattice="cartesian", cols=1, rows=1, extent_x_m=0.001, extent_y_m=8.0,
+        drift_y_mps=-2.0, edge_fade=0.12)]))
+    worst = 0.0
+    prev = None
+    for t in np.linspace(1.5, 2.5, 800):
+        az, dist, lvl = g.state(t)
+        xy = (dist[0] * np.sin(np.deg2rad(az[0])), dist[0] * np.cos(np.deg2rad(az[0])))
+        if prev is not None:
+            jump = np.hypot(xy[0] - prev[0], xy[1] - prev[1])
+            if jump > 0.5:                     # this is the wrap
+                worst = max(worst, lvl[0])
+        prev = xy
+    assert worst < 0.02, f"source was still audible at the wrap: level {worst:.3f}"
 
 
 def test_the_raw_azimuth_really_does_swing_without_the_correction():
