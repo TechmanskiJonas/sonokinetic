@@ -29,8 +29,19 @@ def ref():
 
 
 @pytest.fixture(scope="module")
-def guide():
-    return load("guide.json")
+def purpose():
+    return load("purpose.json")
+
+
+@pytest.fixture(scope="module")
+def targets(ref, purpose):
+    """Everything a [[link]] may resolve to: a glossary entry or a section of
+    the research programme, which carries ids for exactly this reason."""
+    ids = set(ref["entries"])
+    for c in purpose["chapters"]:
+        for s in c["sections"]:
+            ids.add(s["id"])
+    return ids
 
 
 @pytest.fixture(scope="module")
@@ -91,30 +102,47 @@ def test_project_coinages_are_labelled_as_such(ref, eid):
         f"{eid} is this project's own vocabulary and must be labelled 'project'")
 
 
-@pytest.mark.parametrize("eid", ["the-question", "the-analogy",
-                                 "interaural-statistics"])
-def test_conjectures_are_labelled_as_conjectures(ref, eid):
-    assert ref["entries"][eid]["status"] == "open", (
-        f"{eid} is a hypothesis and must not be presented as settled")
+def test_conjectures_are_labelled_as_conjectures(ref):
+    assert ref["entries"]["interaural-statistics"]["status"] == "open"
 
 
-@pytest.mark.parametrize("eid", ["noise-floor", "density-saturation",
+@pytest.mark.parametrize("sid", ["noise-floor", "density-saturation",
                                  "envelope-confound", "degenerate-ring",
                                  "rotation-signature", "transient-material",
-                                 "level-preserved", "front-back-measured"])
-def test_measured_results_are_labelled_as_measured(ref, eid):
-    assert ref["entries"][eid]["status"] == "measured"
+                                 "level-preserved", "front-back-measured",
+                                 "metric-vs-percept"])
+def test_measured_results_live_in_the_research_programme(purpose, sid):
+    """These are results, not terms, so they belong in Purpose rather than in
+    a glossary of things to look up."""
+    ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
+    assert sid in ids
 
 
-def test_the_kinematogram_is_not_presented_as_this_projects_idea(ref):
+@pytest.mark.parametrize("sid", ["blind-testing", "experimenter-bias",
+                                 "catch-trial", "randomization", "n-of-1",
+                                 "statistical-power", "forced-choice"])
+def test_method_material_lives_in_the_research_programme(purpose, sid):
+    ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
+    assert sid in ids
+
+
+def test_no_glossary_entry_duplicates_a_purpose_section(ref, purpose):
+    """A term and a narrative section sharing an id would make links ambiguous."""
+    ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
+    clash = ids & set(ref["entries"])
+    assert not clash, f"ids in both: {sorted(clash)}"
+
+
+def test_the_kinematogram_is_not_presented_as_this_projects_idea(ref, purpose):
     """It is established vision science. The auditory analogy is the project's
     own move, and the two must not be blurred together."""
     e = ref["entries"]["random-dot-kinematogram"]
     assert e["status"] == "established"
     assert e.get("grounding"), "must cite the vision literature"
     assert "the-analogy" in (e.get("see") or []), (
-        "must point at the entry that owns the analogical claim")
-    assert ref["entries"]["the-analogy"]["status"] == "open"
+        "must point at the section that owns the analogical claim")
+    ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
+    assert "the-analogy" in ids, "the analogy is a conjecture and belongs in Purpose"
 
 
 def test_every_entry_belongs_to_a_declared_section(ref):
@@ -123,14 +151,29 @@ def test_every_entry_belongs_to_a_declared_section(ref):
         assert e["section"] in sections, f"{eid} is in unknown section {e['section']!r}"
 
 
+def test_every_section_declares_a_family(ref):
+    families = {f["id"] for f in ref["families"]}
+    for s in ref["sections"]:
+        assert s.get("family") in families, f"{s['id']} has no valid family"
+
+
+def test_both_glossary_families_are_populated(ref):
+    counts = {}
+    by = {s["id"]: s["family"] for s in ref["sections"]}
+    for e in ref["entries"].values():
+        counts[by[e["section"]]] = counts.get(by[e["section"]], 0) + 1
+    for f in ref["families"]:
+        assert counts.get(f["id"], 0) > 3, f"{f['id']} glossary is nearly empty"
+
+
 def test_every_section_has_at_least_one_entry(ref):
     used = {e["section"] for e in ref["entries"].values()}
     for s in ref["sections"]:
         assert s["id"] in used, f"section {s['id']!r} is empty"
 
 
-def test_every_body_link_resolves(ref):
-    ids = set(ref["entries"])
+def test_every_body_link_resolves(ref, targets):
+    ids = targets
     broken = []
     for eid, e in ref["entries"].items():
         for target in links_in(e["body"]):
@@ -139,8 +182,8 @@ def test_every_body_link_resolves(ref):
     assert not broken, "dead links: " + ", ".join(sorted(broken))
 
 
-def test_every_prereq_and_see_also_resolves(ref):
-    ids = set(ref["entries"])
+def test_every_prereq_and_see_also_resolves(ref, targets):
+    ids = targets
     broken = []
     for eid, e in ref["entries"].items():
         for key in ("prereq", "see"):
@@ -200,22 +243,24 @@ def test_short_definitions_are_actually_short(ref):
 # Guide
 # ----------------------------------------------------------------------
 
-def test_guide_chapters_are_wellformed(guide):
-    assert guide["chapters"]
-    for c in guide["chapters"]:
+def test_purpose_chapters_are_wellformed(purpose):
+    seen = set()
+    assert purpose["chapters"]
+    for c in purpose["chapters"]:
         assert c.get("id") and c.get("title") and c.get("sections")
         for s in c["sections"]:
-            assert s.get("heading") and s.get("body")
+            assert s.get("id") and s.get("heading") and s.get("body")
+            assert s["id"] not in seen, f"duplicate section id {s['id']}"
+            seen.add(s["id"])
 
 
-def test_every_guide_link_resolves(ref, guide):
-    ids = set(ref["entries"])
+def test_every_purpose_link_resolves(targets, purpose):
     broken = []
-    for c in guide["chapters"]:
+    for c in purpose["chapters"]:
         for s in c["sections"]:
             for target in links_in(s["body"]):
-                if target not in ids:
-                    broken.append(f"{c['id']}/{s['heading']} -> {target}")
+                if target not in targets:
+                    broken.append(f"{c['id']}/{s['id']} -> {target}")
     assert not broken, "dead links: " + ", ".join(sorted(broken))
 
 
@@ -242,8 +287,8 @@ def test_lesson_ids_are_unique_across_all_courses(courses):
     assert len(ids) == len(set(ids)), "duplicate lesson ids"
 
 
-def test_every_course_link_resolves(ref, courses):
-    ids = set(ref["entries"])
+def test_every_course_link_resolves(targets, courses):
+    ids = targets
     broken = []
     for c in courses["courses"]:
         for lesson in c["lessons"]:
@@ -280,7 +325,7 @@ def test_each_later_course_names_its_prerequisite(courses):
             f"{c['id']} assumes {assumes!r}, which is not an earlier course title")
 
 
-def test_the_curriculum_covers_the_load_bearing_material(ref, courses):
+def test_the_curriculum_covers_the_load_bearing_material(targets, courses):
     """Reading every lesson in order should expose the reader to the findings
     that constrain how the instrument must be used."""
     linked = set()
@@ -293,7 +338,7 @@ def test_the_curriculum_covers_the_load_bearing_material(ref, courses):
         assert required in linked, f"no lesson ever links to {required}"
 
 
-def test_courses_reach_the_conjectures_and_label_the_route(ref, courses):
+def test_courses_reach_the_conjectures_and_label_the_route(targets, courses):
     """The curriculum should introduce the project's own question rather than
     leaving it only in the reference."""
     linked = set()
@@ -308,8 +353,8 @@ def test_courses_reach_the_conjectures_and_label_the_route(ref, courses):
 # The interface points at the reference, so those ids have to exist too
 # ----------------------------------------------------------------------
 
-def test_every_info_button_in_the_ui_resolves(ref):
-    ids = set(ref["entries"])
+def test_every_info_button_in_the_ui_resolves(ref, targets):
+    ids = targets
     broken = []
 
     js = open(os.path.join(ROOT, "static", "app.js"), encoding="utf-8").read()
@@ -339,21 +384,23 @@ def test_every_parameter_in_the_schema_has_an_info_target(ref):
         assert 'ref: "' in rest, f"parameter {key} has no info target"
 
 
-def test_findings_that_constrain_the_method_are_covered(ref):
+def test_findings_that_constrain_the_method_are_covered(ref, purpose):
     """The measured results that change how the tool has to be used should be
     reachable from the reference, not only from the glossary file."""
     text = " ".join(
         f"{e['title']} {e['short']} {e['body']}" for e in ref["entries"].values()
-    ).lower()
+    ).lower() + " " + " ".join(
+        f"{s['heading']} {s['body']}"
+        for c in purpose["chapters"] for s in c["sections"]).lower()
     for phrase in ("noise floor", "matched control", "saturat",
                    "front-back", "level"):
         assert phrase in text, f"reference never covers {phrase!r}"
 
 
 @pytest.mark.parametrize("eid", [
-    "noise-floor", "matched-control", "rotation-signature", "degenerate-ring",
-    "circulating-hotspot", "front-back-confusion", "level-matching",
-    "blind-testing", "transient-material",
+    "matched-control", "circulating-hotspot", "front-back-confusion",
+    "level-matching", "component", "stream", "radial-flow", "spiral",
+    "motion-coherence", "translation",
 ])
 def test_the_load_bearing_entries_exist(ref, eid):
     """These are the findings a reader has to meet to use the tool correctly.

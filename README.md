@@ -1,10 +1,30 @@
-# ringfield
+# Sonokinetic
 
-Binaural renderer for rotating fields of decorrelated sources. Built to test
-one question: **can a listener perceive a field as rotating without localizing
-any source in it?**
+Binaural renderer and listening-test bench for fields of decorrelated sources in
+motion. Built to test one question: **can motion in a field of sound be
+perceived without localizing anything in it?**
 
 By Jonas (jonas030405@gmail.com).
+
+A variant is built from **components**, each giving its sources a trajectory:
+
+| Component | Motion |
+|---|---|
+| `ring` | sources on a circle, turning |
+| `stream` | straight-line travel across the space, fading in and out |
+| `radial` | travel inward or outward along radii |
+| `spiral` | turning and travelling at once |
+
+Components carry their own decorrelation, so a near ring at partial coherence
+can sit inside a far crossing stream at full coherence. Any component can give a
+share of its sources over to wandering, after the coherence manipulation in
+random-dot kinematograms.
+
+**What the head model carries.** Left-right motion moves both interaural cues
+strongly. Front-back motion moves neither: the model is front-back symmetric and
+a source crossing the median plane keeps both ears equidistant, so such a stream
+is heard through level alone. Distance is carried by level and near-field ILD
+only, with no reverberation. Elevation is not modelled.
 
 ## Setup
 
@@ -34,18 +54,21 @@ runs alongside it in sync: hold <kbd>1</kbd>..<kbd>9</kbd> to punch one in
 mid-playback and release to return to dry. Everything shares one amplitude
 scale, so switching changes the spatial treatment and nothing else.
 
-The `?` beside the title runs a guided tour of the whole interface.
+The `?` beside the title offers four guided tours: an overview, a hands-on build,
+arrangements, and blind testing.
 
-**Learn** opens a curriculum: six short courses in order, from how two ears
-produce a sense of direction through to running a listening test that counts as
-evidence. Terms inside a lesson open a definition without leaving the lesson.
+Learning material is split four ways. **Courses** is a curriculum of six courses
+in order. **Purpose** holds the research programme: the question, the literature,
+what has been measured here, and how it is tested. **Glossary** opens two
+reference sets, one for this instrument's own vocabulary and one for established
+audio and hearing terms with citations.
 
-Every reference entry is labelled with its status: established literature with a
+Every glossary entry is labelled with its status: established literature with a
 citation, an implementation choice in this codebase, vocabulary invented for
-this project, a result measured here, or an open conjecture. That distinction is
-enforced by the test suite. **Unison rotation** and **circulating coherence
-hotspot** are this project's own coinages, not terms of art; describe the
-configuration rather than naming it when writing for anyone else.
+this project, or an open conjecture. That distinction is enforced by the test
+suite. **Unison rotation**, **motion coherence share** and **circulating
+coherence hotspot** are this project's own coinages, not terms of art; describe
+the configuration rather than naming it when writing for anyone else.
 
 The command line tools still work and are the faster path for batch renders:
 

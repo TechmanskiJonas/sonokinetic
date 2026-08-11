@@ -325,8 +325,104 @@ REF_DISTANCE = 2.0   # m. A source at this distance renders at unity gain.
 
 
 @dataclass
+class ComponentConfig:
+    """One group of sources sharing a motion pattern. A variant is a list.
+
+    Every kind is a trajectory in polar coordinates around the head, giving each
+    source an azimuth, a distance, and a gain at every instant. Writing them as
+    one mechanism rather than four means a component can combine motions:
+    `spiral` is rotation and radial drift at once, and any kind can hand a share
+    of its sources over to wandering.
+
+        ring    sources on a circle, rotating at rotation_deg_per_sec
+        stream  straight-line travel across the space along heading_deg,
+                fading in and out at the ends of the path and recycling
+        radial  travel along radii, inward or outward, fading at both ends
+        spiral  rotation and radial travel together
+
+    A stationary component is any kind with its rates at zero.
+
+    Note what the head model can and cannot carry. Left-right motion moves both
+    interaural cues strongly. Front-back motion moves neither: the model is
+    front-back symmetric, and a source crossing the median plane keeps both ears
+    equidistant throughout, so such a stream is heard through distance alone.
+    See the reference entry on translation for what that implies for design.
+    """
+    kind: str = "ring"
+    n_sources: int = 5
+    label: str = ""
+
+    # placement
+    start_azimuths: Optional[List[float]] = None
+    spacing_deg: Optional[float] = None
+    offset_deg: float = 0.0
+    distance_m: float = 2.0
+
+    # rotation, used by ring and spiral
+    rotation_deg_per_sec: float = 60.0
+
+    # translation, used by stream
+    heading_deg: float = 180.0       # direction of travel, 0 ahead, 90 right
+    speed_mps: float = 1.5
+    path_m: float = 9.0              # length of the run before recycling
+    spread_m: float = 3.0            # lateral width of the flow
+
+    # radial travel, used by radial and spiral
+    radial_speed_mps: float = 0.0    # positive outward, negative inward
+    r_near_m: float = 0.7
+    r_far_m: float = 6.0
+
+    # random motion, available to every kind
+    random_fraction: float = 0.0
+    wander_deg: float = 60.0
+    wander_hz: float = 0.25
+    radial_wander_m: float = 0.0
+
+    # level
+    gain_db: float = 0.0
+    fade_frac: float = 0.3           # share of the path spent fading
+    min_distance_m: float = 0.4      # keeps a passing source out of the head
+
+    # Decorrelation for this component's sources. None inherits the variant's,
+    # so two components can carry different coherence in one field.
+    decorr: Optional["DecorrConfig"] = None
+
+    def resolved_azimuths(self) -> np.ndarray:
+        n = max(int(self.n_sources), 1)
+        if self.start_azimuths:
+            az = np.array(self.start_azimuths, dtype=float)
+            if len(az) < n:
+                az = np.tile(az, int(np.ceil(n / len(az))))
+            return az[:n]
+        if self.spacing_deg is not None:
+            return self.offset_deg + np.arange(n) * self.spacing_deg
+        return self.offset_deg + np.linspace(0, 360, n, endpoint=False)
+
+    def is_static(self) -> bool:
+        moving = abs(self.rotation_deg_per_sec) > 1e-9
+        if self.kind in ("stream",):
+            moving = moving or abs(self.speed_mps) > 1e-9
+        if self.kind in ("radial", "spiral"):
+            moving = moving or abs(self.radial_speed_mps) > 1e-9
+        wandering = self.random_fraction > 0 and self.wander_hz > 0
+        radial_wandering = self.radial_wander_m > 0 and self.wander_hz > 0
+        return not (moving or wandering or radial_wandering)
+
+    def frozen(self) -> "ComponentConfig":
+        """The same component with every motion removed.
+
+        A matched control has to hold the spatial and level distribution while
+        removing movement, so rates go to zero and the oscillators stop rather
+        than the component being deleted. Sources stay wherever their offsets
+        place them, including partway through a fade.
+        """
+        return replace(self, rotation_deg_per_sec=0.0, speed_mps=0.0,
+                       radial_speed_mps=0.0, wander_hz=0.0)
+
+
+@dataclass
 class RingConfig:
-    """One ring of sources. A field is a list of these.
+    """One ring of sources. Retained as the shorthand for a rotating component.
 
     distance_m sets the ring's radius from the head. Distance is carried by
     per-ear gains computed from the source-to-ear geometry, so nearby sources
@@ -364,48 +460,65 @@ class RingConfig:
         return self.offset_deg + np.linspace(0, 360, self.n_sources, endpoint=False)
 
 
-class FieldGeometry:
-    """Per-source trajectories for a multi-ring field, resolved once per render.
+def _smoothstep(u: np.ndarray) -> np.ndarray:
+    u = np.clip(u, 0.0, 1.0)
+    return u * u * (3.0 - 2.0 * u)
 
-    Wander uses a sum of three incommensurate sinusoids with seeded frequencies
-    and phases rather than filtered noise: it is smooth (binaural sluggishness
-    makes fast jitter useless anyway), bounded, and exactly reproducible from
-    the seed, so a wandering condition renders identically every time.
+
+class FieldGeometry:
+    """Per-source trajectories for a whole variant, resolved once per render.
+
+    Every component contributes a block of sources; this concatenates them and
+    answers azimuth, distance and gain for all of them at any instant.
+
+    Wander is a sum of three incommensurate sinusoids with seeded frequencies
+    and phases rather than filtered noise: smooth, since binaural sluggishness
+    makes fast jitter useless, bounded, and reproducible from the seed.
     """
 
     def __init__(self, cfg: "FieldConfig"):
-        rings = cfg.resolved_rings()
+        comps = cfg.resolved_components()
         rng = np.random.default_rng(cfg.seed + 7919)
-        base_az, rates, dist0, gains, ring_of = [], [], [], [], []
-        self._wander, self._radial = [], []
-        for ri, r in enumerate(rings):
-            az = r.resolved_azimuths()
-            n = max(int(r.n_sources), 1)
-            n_rand = int(round(np.clip(r.random_fraction, 0.0, 1.0) * n))
+        self.comps = comps
+        self.comp_of: List[int] = []
+        self._src: List[Dict[str, Any]] = []
+        gains = []
+
+        for ci, c in enumerate(comps):
+            n = max(int(c.n_sources), 1)
+            az = c.resolved_azimuths()
+            n_rand = int(round(np.clip(c.random_fraction, 0.0, 1.0) * n))
             idx_rand = set(rng.choice(n, size=n_rand, replace=False).tolist()) \
                 if n_rand else set()
             for i in range(n):
-                base_az.append(float(az[i % len(az)]))
-                ring_of.append(ri)
-                dist0.append(max(float(r.distance_m), 0.2))
-                gains.append(10 ** (r.gain_db / 20.0))
-                if i in idx_rand:
-                    rates.append(0.0)
-                    self._wander.append(self._osc(rng, r.wander_deg, r.wander_hz))
-                else:
-                    rates.append(r.rotation_deg_per_sec)
-                    self._wander.append(None)
-                self._radial.append(self._osc(rng, r.radial_wander_m, r.wander_hz)
-                                    if r.radial_wander_m > 0 else None)
-        self.base_az = np.array(base_az)
-        self.rates = np.array(rates)
-        self.dist0 = np.array(dist0)
-        self.gain = np.array(gains)
-        self.ring_of = ring_of
-        self.n = len(base_az)
-        self.uses_distance = (
-            any(abs(d - REF_DISTANCE) > 1e-9 for d in dist0)
-            or any(o is not None for o in self._radial))
+                s: Dict[str, Any] = {
+                    "c": c, "ci": ci, "i": i, "n": n,
+                    "az0": float(az[i % len(az)]),
+                    "random": i in idx_rand,
+                    "wander": None, "radial_wander": None,
+                    # even stagger along a path so a flow is continuous rather
+                    # than every source arriving at once
+                    "phase": (i + 0.5) / n,
+                }
+                if s["random"]:
+                    s["wander"] = self._osc(rng, c.wander_deg, c.wander_hz)
+                if c.radial_wander_m > 0:
+                    s["radial_wander"] = self._osc(rng, c.radial_wander_m, c.wander_hz)
+                # lateral placement across a stream's width
+                s["lateral"] = (((i + 0.5) / n) - 0.5) * c.spread_m
+                self._src.append(s)
+                self.comp_of.append(ci)
+                gains.append(10 ** (c.gain_db / 20.0))
+
+        self.gain = np.array(gains) if gains else np.zeros(0)
+        self.n = len(self._src)
+        self.uses_distance = any(
+            c.kind in ("stream", "radial", "spiral")
+            or abs(c.distance_m - REF_DISTANCE) > 1e-9
+            or c.radial_wander_m > 0
+            for c in comps)
+        self.uses_envelope = any(c.kind in ("stream", "radial", "spiral")
+                                 for c in comps)
 
     @staticmethod
     def _osc(rng, amp: float, hz: float):
@@ -421,19 +534,76 @@ class FieldGeometry:
         f, ph, w = osc
         return float(np.sum(w * np.sin(2 * np.pi * f * t + ph)))
 
+    def _state(self, s, t: float):
+        """(azimuth, distance, envelope) for one source at time t."""
+        c: ComponentConfig = s["c"]
+        env = 1.0
+        az = s["az0"]
+        dist = max(c.distance_m, 0.2)
+
+        if c.kind == "stream":
+            # Travel along heading, staggered along the path, spread across it.
+            h = np.deg2rad(c.heading_deg)
+            fwd = np.array([np.sin(h), np.cos(h)])       # x right, y forward
+            side = np.array([np.cos(h), -np.sin(h)])
+            path = max(c.path_m, 0.1)
+            u = (s["phase"] + (c.speed_mps * t) / path) % 1.0
+            along = (u - 0.5) * path
+            p = fwd * along + side * s["lateral"]
+            dist = float(np.hypot(p[0], p[1]))
+            az = float(np.degrees(np.arctan2(p[0], p[1])))
+            env = self._fade(u, c.fade_frac)
+
+        elif c.kind in ("radial", "spiral"):
+            near, far = min(c.r_near_m, c.r_far_m), max(c.r_near_m, c.r_far_m)
+            span = max(far - near, 0.05)
+            if abs(c.radial_speed_mps) > 1e-9:
+                u = (s["phase"] + (c.radial_speed_mps * t) / span) % 1.0
+                dist = near + u * span
+                env = self._fade(u, c.fade_frac)
+            else:
+                dist = near + s["phase"] * span
+            if c.kind == "spiral":
+                az = s["az0"] + c.rotation_deg_per_sec * t
+            else:
+                az = s["az0"]
+
+        else:                                            # ring
+            if not s["random"]:
+                az = s["az0"] + c.rotation_deg_per_sec * t
+
+        if s["wander"] is not None:
+            az += self._eval(s["wander"], t)
+        if s["radial_wander"] is not None:
+            dist += self._eval(s["radial_wander"], t)
+
+        return az, max(dist, c.min_distance_m), env
+
+    @staticmethod
+    def _fade(u: float, frac: float) -> float:
+        """Fade in at the start of a run and out at the end.
+
+        Without it a recycling source would appear and vanish abruptly, which
+        is heard as a click and read as an event rather than as flow.
+        """
+        f = float(np.clip(frac, 0.001, 0.5))
+        return float(_smoothstep(np.array(u / f)) * _smoothstep(np.array((1.0 - u) / f)))
+
     def azimuths(self, t: float) -> np.ndarray:
-        az = self.base_az + self.rates * t
-        for i, o in enumerate(self._wander):
-            if o is not None:
-                az[i] += self._eval(o, t)
-        return az
+        return np.array([self._state(s, t)[0] for s in self._src])
 
     def distances(self, t: float) -> np.ndarray:
-        d = self.dist0.copy()
-        for i, o in enumerate(self._radial):
-            if o is not None:
-                d[i] += self._eval(o, t)
-        return np.maximum(d, 0.2)
+        return np.array([self._state(s, t)[1] for s in self._src])
+
+    def state(self, t: float):
+        """(azimuths, distances, gains) for every source."""
+        if not self.n:
+            return np.zeros(0), np.zeros(0), np.zeros(0)
+        out = [self._state(s, t) for s in self._src]
+        az = np.array([o[0] for o in out])
+        dist = np.array([o[1] for o in out])
+        env = np.array([o[2] for o in out]) * self.gain
+        return az, dist, env
 
     def ear_gains(self, az_deg: np.ndarray, dist: np.ndarray,
                   head_radius: float) -> np.ndarray:
@@ -526,24 +696,33 @@ class SourceBank:
     (1-a)x + a*wet is recovered exactly when the band gains are uniform.
     """
 
-    def __init__(self, x: np.ndarray, n_sources: int, dcfg: DecorrConfig,
-                 fs: int = 44100):
+    def __init__(self, x: np.ndarray, n_sources: int, dcfg, fs: int = 44100):
+        """dcfg is one DecorrConfig for every source, or a list of one per
+        source so components can carry different coherence in one field.
+
+        The random draws come from a single stream in source order regardless,
+        so a uniform list reproduces the single-config render exactly.
+        """
         self.x = x
         self.fs = fs
         self.n_sources = n_sources
-        self.cfg = dcfg
+        cfgs = list(dcfg) if isinstance(dcfg, (list, tuple)) else [dcfg] * n_sources
+        if len(cfgs) < n_sources:
+            cfgs = cfgs + [cfgs[-1]] * (n_sources - len(cfgs))
+        self.cfgs = cfgs[:n_sources]
+        self.cfg = self.cfgs[0] if self.cfgs else DecorrConfig()
         self.Pd = float(np.mean(x ** 2)) + 1e-20
 
-        bands = dcfg.resolved_band_amounts()
-        rng = np.random.default_rng(dcfg.seed)
+        rng = np.random.default_rng(self.cfg.seed)
 
         diffs, stats = [], []
         for i in range(n_sources):
-            wet = self._wet(x, dcfg, rng, i, n_sources, fs)
+            c = self.cfgs[i]
+            wet = self._wet(x, c, rng, i, n_sources, fs)
             # RMS-match wet to dry BEFORE differencing, so `amount` is a
             # coherence control and not a level control.
             wet = wet * np.sqrt(self.Pd / (np.mean(wet ** 2) + 1e-20))
-            d = band_shape(wet - x, dcfg.crossovers, bands, fs)
+            d = band_shape(wet - x, c.crossovers, c.resolved_band_amounts(), fs)
             diffs.append(d)
             stats.append((float(np.mean(x * d)), float(np.mean(d ** 2))))
 
@@ -596,7 +775,8 @@ class SourceBank:
             if len(a) < self.n_sources:
                 a = np.pad(a, (0, self.n_sources - len(a)), constant_values=c.amount)
             return a[: self.n_sources]
-        return np.full(self.n_sources, float(c.amount))
+        return np.array([self.cfgs[i].amount for i in range(self.n_sources)],
+                        dtype=float)
 
     def amounts_at(self, t: float, azimuths: np.ndarray,
                    hotspot: Optional[HotspotConfig]) -> np.ndarray:
@@ -605,13 +785,14 @@ class SourceBank:
             a = hotspot.amounts_at(azimuths, t)
         else:
             a = self.base_amounts()
-        c = self.cfg
-        if c.lfo_hz and c.lfo_depth:
-            phase = 2 * np.pi * c.lfo_hz * t
-            if c.lfo_source_spread:
-                phase = phase + c.lfo_source_spread * 2 * np.pi * (
-                    np.arange(self.n_sources) / max(self.n_sources, 1))
-            a = a + c.lfo_depth * np.sin(phase)
+        n = max(self.n_sources, 1)
+        for i in range(self.n_sources):
+            c = self.cfgs[i]
+            if c.lfo_hz and c.lfo_depth:
+                phase = 2 * np.pi * c.lfo_hz * t
+                if c.lfo_source_spread:
+                    phase += c.lfo_source_spread * 2 * np.pi * (i / n)
+                a[i] = a[i] + c.lfo_depth * np.sin(phase)
         return np.clip(a, 0.0, 1.0)
 
     def blocks(self, start: int, stop: int, a: np.ndarray) -> np.ndarray:
@@ -683,6 +864,10 @@ class FieldConfig:
     # entirely; when None, the scalar fields behave exactly as before.
     rings: Optional[List[RingConfig]] = None
 
+    # The general form: any mix of motion patterns, each with its own
+    # decorrelation. Takes precedence over both of the above.
+    components: Optional[List[ComponentConfig]] = None
+
     # Per-source gain is the third documented way to break the ring's symmetry,
     # alongside decorrelation and uneven spacing.
     per_source_gain_db: Optional[List[float]] = None
@@ -700,39 +885,73 @@ class FieldConfig:
     block: int = 256
     seed: int = 0
 
-    def resolved_rings(self) -> List[RingConfig]:
+    def resolved_components(self) -> List[ComponentConfig]:
+        """The variant as a flat list of components.
+
+        Three ways in, one way out: an explicit component list, the ring
+        shorthand, or the scalar single-ring fields.
+        """
+        if self.components:
+            return list(self.components)
         if self.rings:
-            return list(self.rings)
-        return [RingConfig(
-            n_sources=self.n_sources,
+            return [ComponentConfig(
+                kind="ring", n_sources=r.n_sources,
+                rotation_deg_per_sec=r.rotation_deg_per_sec,
+                start_azimuths=r.start_azimuths, spacing_deg=r.spacing_deg,
+                offset_deg=r.offset_deg, distance_m=r.distance_m,
+                gain_db=r.gain_db, random_fraction=r.random_fraction,
+                wander_deg=r.wander_deg, wander_hz=r.wander_hz,
+                radial_wander_m=r.radial_wander_m,
+                decorr=(replace(self.resolved_decorr_base(),
+                                amount=r.decorr_amount)
+                        if r.decorr_amount is not None else None))
+                for r in self.rings]
+        return [ComponentConfig(
+            kind="ring", n_sources=self.n_sources,
             rotation_deg_per_sec=self.rotation_deg_per_sec,
             start_azimuths=self.start_azimuths, spacing_deg=self.spacing_deg,
             offset_deg=self.offset_deg)]
 
+    def resolved_rings(self) -> List[ComponentConfig]:
+        return self.resolved_components()
+
     def total_sources(self) -> int:
-        return sum(max(int(r.n_sources), 1) for r in self.resolved_rings())
+        return sum(max(int(c.n_sources), 1) for c in self.resolved_components())
+
+    def per_source_decorr(self) -> List[DecorrConfig]:
+        """One DecorrConfig per source, taking each component's override."""
+        base = self.resolved_decorr()
+        out: List[DecorrConfig] = []
+        for c in self.resolved_components():
+            d = c.decorr if c.decorr is not None else base
+            out.extend([d] * max(int(c.n_sources), 1))
+        return out
 
     def resolved_azimuths(self) -> np.ndarray:
-        if self.rings:
-            return np.concatenate([r.resolved_azimuths() for r in self.rings])
+        if self.components or self.rings:
+            return np.concatenate([c.resolved_azimuths()
+                                   for c in self.resolved_components()])
         if self.start_azimuths is not None:
             return np.array(self.start_azimuths, dtype=float)
         if self.spacing_deg is not None:
             return self.offset_deg + np.arange(self.n_sources) * self.spacing_deg
         return self.offset_deg + np.linspace(0, 360, self.n_sources, endpoint=False)
 
-    def resolved_decorr(self) -> DecorrConfig:
+    def resolved_decorr_base(self) -> DecorrConfig:
         if self.decorr is not None:
             d = replace(self.decorr)
             if d.per_source_amount is None and self.per_source_amount is not None:
                 d.per_source_amount = list(self.per_source_amount)
-        else:
-            d = DecorrConfig(amount=self.decorr_amount, family=self.decorr_method,
-                             per_source_amount=(list(self.per_source_amount)
-                                                if self.per_source_amount else None),
-                             seed=self.seed)
+            return d
+        return DecorrConfig(amount=self.decorr_amount, family=self.decorr_method,
+                            per_source_amount=(list(self.per_source_amount)
+                                               if self.per_source_amount else None),
+                            seed=self.seed)
+
+    def resolved_decorr(self) -> DecorrConfig:
+        d = self.resolved_decorr_base()
         # Ring-level amount overrides expand into a per-source list.
-        if (self.rings and d.per_source_amount is None
+        if (self.rings and not self.components and d.per_source_amount is None
                 and any(r.decorr_amount is not None for r in self.rings)):
             d.per_source_amount = [
                 (r.decorr_amount if r.decorr_amount is not None else d.amount)
@@ -791,15 +1010,18 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
     hop = cfg.block // 2
     win = hann(cfg.block, sym=False)   # periodic Hann: exact COLA at 50% overlap
 
-    geom = FieldGeometry(cfg) if cfg.rings else None
+    use_geom = bool(cfg.rings or cfg.components)
+    geom = FieldGeometry(cfg) if use_geom else None
     if geom is not None:
         n_src = geom.n
         gains = geom.gain
+        decorr = cfg.per_source_decorr()
     else:
         n_src = cfg.n_sources
         az0 = cfg.resolved_azimuths()
         gains = cfg.resolved_gains()
-    bank = SourceBank(x, n_src, cfg.resolved_decorr(), fs)
+        decorr = cfg.resolved_decorr()
+    bank = SourceBank(x, n_src, decorr, fs)
 
     trace_every = max(1, int(round(fs / (hop * 60.0))))   # about 60 frames/sec
     hot = cfg.hotspot
@@ -808,15 +1030,14 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
     for k, start in enumerate(range(0, n - cfg.block, hop)):
         t_c = (start + cfg.block / 2) / fs
         if geom is not None:
-            az = geom.azimuths(t_c)
-            dist = geom.distances(t_c)
+            az, dist, lvl = geom.state(t_c)
         else:
             az = az0 + cfg.rotation_deg_per_sec * t_c
-            dist = None
+            dist, lvl = None, gains
         amt = bank.amounts_at(t_c, az, hot)
 
         blocks = bank.blocks(start, start + cfg.block, amt)      # (S, block)
-        blocks = blocks * win * gains[:, None]
+        blocks = blocks * win * lvl[:, None]
         h = np.stack([hrtf.hrir(a) for a in az])                 # (S, 2, taps)
         # one batched convolution for all sources and both ears
         seg = fftconvolve(blocks[:, None, :], h, mode="full", axes=-1)
@@ -835,6 +1056,7 @@ def render(x: np.ndarray, hrtf, cfg: FieldConfig, fs: int = 44100,
             }
             if dist is not None:
                 frame["dist"] = [round(float(v), 2) for v in dist]
+                frame["lvl"] = [round(float(v), 3) for v in lvl]
             trace.append(frame)
 
     out = out[:n]
@@ -952,12 +1174,18 @@ def config_dict(cfg: Optional["FieldConfig"]) -> Optional[Dict[str, Any]]:
     d = _jsonable(asdict(cfg))
     d["resolved_azimuths"] = [round(float(a), 2) for a in cfg.resolved_azimuths()]
     d["resolved_decorr"] = _jsonable(asdict(cfg.resolved_decorr()))
-    if cfg.rings:
+    if cfg.rings or cfg.components:
         geom = FieldGeometry(cfg)
+        az0, dist0, lvl0 = geom.state(0.0)
         d["resolved_gains_db"] = [round(float(20 * np.log10(max(g, 1e-9))), 2)
                                   for g in geom.gain]
-        d["resolved_ring_of"] = list(geom.ring_of)
-        d["resolved_distances"] = [round(float(v), 2) for v in geom.dist0]
+        d["resolved_ring_of"] = list(geom.comp_of)
+        d["resolved_component_of"] = list(geom.comp_of)
+        d["resolved_distances"] = [round(float(v), 2) for v in dist0]
+        d["resolved_components"] = [_jsonable(asdict(c))
+                                    for c in geom.comps]
+        d["component_labels"] = [c.label or f"{c.kind} {i + 1}"
+                                 for i, c in enumerate(geom.comps)]
     else:
         d["resolved_gains_db"] = [round(float(20 * np.log10(max(g, 1e-9))), 2)
                                   for g in cfg.resolved_gains()]

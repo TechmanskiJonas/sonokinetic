@@ -1,0 +1,170 @@
+{
+  "_note": "The research programme: what is being asked, what has been measured, how it is tested, and what the instrument cannot do. Sections carry ids so [[links]] from courses and glossaries resolve here. Term definitions belong in the glossaries, not here.",
+
+  "chapters": [
+    {
+      "id": "question",
+      "title": "The question",
+      "sections": [
+        {
+          "id": "the-question",
+          "heading": "What is being asked",
+          "body": "Can a listener perceive motion in a field of sound without localizing anything in it?\n\nMotion here is a global property of the ensemble; localizability is a local property of its parts. The two are controlled separately in this instrument, which is what makes the question testable: motion comes from the trajectories given to components, and localizability from how strongly the sources are [[decorrelation|decorrelated]] from one another.\n\nThe standard account of [[auditory-motion]] holds that motion is inferred by comparing successive position estimates. Under it, a field with nothing localizable provides no estimates to compare and should not be heard as moving. A listener who hears the motion anyway would indicate that the account is incomplete.\n\nRotation was the first case examined. The question generalises to any motion the ensemble can carry: translation across the space, radial flow inward or outward, spirals, and mixtures of these.\n\nNothing here demonstrates that the percept exists. What exists is an instrument able to produce the stimulus and test for it."
+        },
+        {
+          "id": "the-analogy",
+          "heading": "The analogy that motivates it",
+          "body": "In vision the corresponding question is settled. A [[random-dot-kinematogram]] shows a field of dots in which some proportion move together while the rest move randomly. Observers report the global motion well below the proportion at which any single dot can be tracked, and motion there is computed by pooling across elements; see [[global-motion]].\n\nTwo features of that stimulus carry over. The dots move, with coherence lying in a shared direction of travel. Individual dots stay visible and are simply uninformative alone.\n\nThe auditory counterpart is a group of sources travelling together while each is made too diffuse to locate. The proportion moving coherently is adjustable here as well; see [[motion-coherence]].\n\n**The analogy is this project's own and is not established by the literature.** It has a known limit: vision resolves many independent spatial channels, while hearing reconstructs space from a comparison between two ear signals, so any auditory pooling must operate on interaural statistics rather than on a spatial map. Treat it as motivation for the design rather than as an argument that the effect exists."
+        },
+        {
+          "id": "what-can-move",
+          "heading": "Which motions this instrument can present",
+          "body": "The head model determines what is available, and it is worth being exact about it.\n\n**Left and right** are carried strongly. Both [[itd]] and [[ild]] change with lateral angle, and the model reproduces both.\n\n**Front and back** are not carried at all. The model is front-back symmetric, so azimuth 0° and 180° produce identical signals; see [[front-back-measured]]. A source crossing the median plane from front to back also keeps both ears equidistant throughout, so nothing interaural changes during the crossing. A front-to-back stream is therefore heard only as a change of level and near-field balance, not as a change of direction. It remains worth presenting, since it asks whether level-modulated approach and recession reads as motion, but it should not be described as a front-back percept.\n\n**Distance** is carried weakly, through level and the near-field growth of the [[ild]]; see [[source-distance]] and [[distance-hearing]]. There is no reverberation, so the strongest natural distance cue is absent.\n\n**Elevation** is not modelled at all. A sphere has no [[pinna]], so there are no [[spectral-cues]] to carry it.\n\nMeasured [[sofa|HRTFs]] would supply front-back discrimination and elevation, and are the single upgrade that would most expand what can be asked."
+        }
+      ]
+    },
+
+    {
+      "id": "literature",
+      "title": "Where this sits",
+      "sections": [
+        {
+          "id": "lit-caution",
+          "heading": "What this chapter is",
+          "body": "Orientation rather than a review. It names areas and standard entry points so the relevant literature can be found and the right vocabulary searched. Verify specifics against sources before citing.\n\nThe glossaries separate established material from this project's own vocabulary for the same reason. Terms such as unison rotation, motion coherence share, and circulating coherence hotspot were coined here; describing the configuration is safer than naming it when writing for others."
+        },
+        {
+          "id": "lit-spatial",
+          "heading": "Spatial hearing",
+          "body": "Blauert's *Spatial Hearing* is the standard reference and covers [[itd]], [[ild]], [[spectral-cues]], the [[cone-of-confusion]] and [[externalization]]. Middlebrooks and Green (1991, Annual Review of Psychology) is a shorter review.\n\nThe [[duplex-theory]] framing traces to Rayleigh (1907) and remains the right first approximation, with Macpherson and Middlebrooks (2002, JASA) showing the two cues are weighted by reliability rather than switched between."
+        },
+        {
+          "id": "lit-motion",
+          "heading": "Auditory motion",
+          "body": "Grantham (1986, JASA) is the usual starting point, along with the [[snapshot-hypothesis|snapshot]] account and [[binaural-sluggishness]], which sets a real ceiling on how fast a field can move and still read as moving. Carlile and Leung (2016, Trends in Hearing) review the area including the snapshot debate.\n\n[[mama|Minimum audible movement angle]] work, associated with Perrott and colleagues, establishes that motion detection is coarser than static localization.\n\nAn auditory [[motion-aftereffect]] has been reported (Grantham, 1989), which is difficult to explain with snapshots alone, though it is weaker and less consistently replicated than the visual version. **The unsettled state of this question is the opening the project aims at.**"
+        },
+        {
+          "id": "lit-coherence",
+          "heading": "Coherence, width and envelopment",
+          "body": "[[iacc]] as an objective correlate of spatial impression comes from room acoustics: Hidaka, Beranek and Okano (1995, JASA), Ando's work on subjective preference, and Beranek's hall assessments. The separation of [[apparent-source-width]] from [[envelopment]] comes from the same tradition, with Bradley and Soulodre (1995, JASA) on late lateral energy.\n\nThese measures were developed for halls and steady sources and have not been validated on moving decorrelated fields, which is why their disagreements with listening here are treated as informative; see [[metric-vs-percept]]."
+        },
+        {
+          "id": "lit-technique",
+          "heading": "Decorrelation and rendering",
+          "body": "Kendall (1995, Computer Music Journal) is the standard reference for decorrelation and its effect on spatial imagery. [[velvet-noise]] as a near-colourless sparse decorrelator is associated with Karjalainen and Järveläinen (2007) and Välimäki and colleagues (2012, 2017). Allpass structures for this purpose go back to Schroeder (1962).\n\nThe head model follows the structural approach: [[woodworth-model|Woodworth's]] ITD formula with the [[brown-duda-shadow|Brown and Duda]] (1998) shadow filter. [[fractional-delay]] technique is surveyed by Laakso and colleagues (1996)."
+        },
+        {
+          "id": "lit-gap",
+          "heading": "The apparent gap, and how confident to be",
+          "body": "The combination occupied here is a field of mutually decorrelated sources given global motion, examined for ensemble motion percepts rather than for source localization.\n\nThe adjacent literatures each cover part of it: motion studies mostly use single sources, decorrelation work targets width and envelopment rather than motion, and room acoustics measures static fields.\n\n**Treat that as a hypothesis about the literature rather than a finding.** An apparent gap is more often an unsearched corner than an unexplored question. Before describing this as new, search deliberately for auditory global motion, spatial coherence and motion, moving diffuse fields, and rotating sound fields, and check the spatial audio production and ambisonics literature as well as the psychoacoustic one."
+        }
+      ]
+    },
+
+    {
+      "id": "findings",
+      "title": "What has been measured",
+      "sections": [
+        {
+          "id": "degenerate-ring",
+          "heading": "A coherent even ring cancels to mono",
+          "body": "An evenly spaced ring in which every source carries the same signal renders with left and right identical to machine precision. The result is a centred mono image carrying no interaural information, and rotating it changes nothing beyond faint timbral shimmer from shifting [[comb-filtering]].\n\nThe cancellation is a symmetry property: summing identical copies over a symmetric arrangement removes exactly the differences that would carry direction. Motion becomes audible only once the symmetry is broken, through [[decorrelation]], uneven spacing, per-source gain, or per-source coherence; see [[symmetry-breaking]].\n\n**A field that seems to do nothing is most often this configuration.** It is the first thing to check."
+        },
+        {
+          "id": "noise-floor",
+          "heading": "The measurement noise floor",
+          "body": "Decorrelating filters are built from random draws, so identical settings measure differently under different [[seed|seeds]].\n\nAcross twelve seeds at full decorrelation, [[iacc]] has a standard deviation near **0.038**, spanning 0.166 to 0.283. Inter-source coherence carries about 0.05 per draw.\n\nSome effects under study are smaller than this. Ring geometry moves IACC by roughly 0.04 to 0.05, entirely inside the floor and not resolvable from one render per condition.\n\nHold the seed fixed when comparing two settings, average across seeds when characterising one, and treat any difference smaller than the floor as unresolved."
+        },
+        {
+          "id": "rotation-signature",
+          "heading": "No single render can demonstrate motion",
+          "body": "[[iacc]] describes how diffuse a field is and cannot distinguish a moving field from a static one, since both can produce the same value.\n\nThe alternative is to look for cyclic modulation of the [[iacc-over-time]] series at the [[interaural-pattern-rate]]. On music that is confounded by the material's own periodicity. Measured over a 20-second passage, a **completely static** field scored a modulation ratio of 2.04 at 0.5 Hz where genuinely rotating fields scored 2.65 to 3.14. Read alone, the static field appears to be rotating.\n\nOnly the difference against a [[matched-control]] is interpretable: the identical configuration, same seed, with every motion frozen. The instrument pairs such controls automatically.\n\nThe paired figure remains noisy on short passages, giving +0.61 over 20 seconds and −0.91 over 12 for the same comparison, and +4.74 on a synthetic drone with no competing periodicity. Use long passages, check on synthetic material first, and repeat across seeds.\n\nNote also that only rotation has a well-defined cyclic rate. Translation and radial flow recycle at a period set by path length and speed, and the instrument reports no rotation figure for them; those are judged by listening against a frozen control."
+        },
+        {
+          "id": "density-saturation",
+          "heading": "Impulse density saturates",
+          "body": "Measured inter-source coherence, averaged over seeds: about 0.50 at 60 impulses per second, 0.16 at 150, 0.07 at 400, and flat thereafter, with 1500, 20000 and 44100 indistinguishable.\n\nSweeping the upper range of [[impulse-density]] is therefore wasted effort. [[ir-length]] is the axis with real headroom, running about 0.19 at 5 ms to 0.04 at 120 ms.\n\nAt high density velvet and [[allpass-filter|allpass]] converge, which is what makes them two points on one axis rather than two categories."
+        },
+        {
+          "id": "envelope-confound",
+          "heading": "IR envelope was a hidden variable",
+          "body": "The velvet preset used a flat envelope and the allpass preset a Hann window, so comparing the two on density was partly measuring the window.\n\nEnvelope dominates in the sparse regime: at 60 impulses per second, flat gives inter-source coherence around 0.50 where Hann gives 0.08, because a flat envelope leaves the forced direct impulse at full amplitude and keeps each source coherent with its own untreated signal. Once the filter is dense the envelope barely matters.\n\n[[ir-envelope]] is now a separate control and should be pinned explicitly when comparing filter families."
+        },
+        {
+          "id": "transient-material",
+          "heading": "Sustained material decorrelates far more readily",
+          "body": "Under identical treatment, sustained theremin passages reach [[iacc]] around 0.04 to 0.05 where guitar sits between 0.38 and 0.62.\n\nA transient is a sharp, precisely timed event, and such events give the auditory system discrete snapshots from which positions are fixed. Those snapshots are the localization the experiment is designed to remove.\n\nSuitable material is sustained and nearly transient-free: pads, drones, bowed strings, organ, held voice, cymbal wash. **When the percept fails to appear, change the passage before the parameters.**"
+        },
+        {
+          "id": "front-back-measured",
+          "heading": "The model has no front-back discrimination",
+          "body": "Azimuth 0° and 180° produce bit-identical impulse responses, as do 45°/135° and 225°/315°. This is asserted in the test suite rather than assumed, and follows from the [[woodworth-model]] being front-back symmetric and the sphere having no [[pinna]].\n\nA full rotation therefore produces an interaural pattern completing twice, so rotation is not distinguishable from side-to-side oscillation at double the rate and its direction cannot be recovered. The blind test asks no direction question for this reason.\n\nFront-to-back translation is affected more severely still: a source crossing the median plane keeps both ears equidistant, so such a stream carries no interaural change at all and is heard only through level.\n\nWhen measured HRTFs land, this test should be inverted."
+        },
+        {
+          "id": "level-preserved",
+          "heading": "Every decorrelation control preserves level",
+          "body": "A plain blend between untreated and filtered signal dipped about 5.4 dB at its midpoint, because the components partially cancel, while both ends sat at full level. A control shaped like that changes loudness as well as coherence, and loudness dominates subjective comparison.\n\nThe correction is now in closed form rather than measured, so it holds when the amount varies within a passage, and it is asserted per control axis in the test suite."
+        },
+        {
+          "id": "metric-vs-percept",
+          "heading": "Where the measures and the ear disagree",
+          "body": "Velvet decorrelation measures slightly **louder** than allpass in [[lufs]] yet is reported as quieter, and its [[iacc]] is much lower, around 0.12 against 0.33. Ring geometry barely moves IACC in conditions where it may be plainly audible.\n\nThese measures were developed for concert halls and steady sources and were never validated on moving decorrelated fields, so the disagreements are informative about what the measures omit.\n\nThe practice here is to record both and let neither overrule the other. A heard difference the measures deny is worth keeping, provided it survives blind testing."
+        }
+      ]
+    },
+
+    {
+      "id": "method",
+      "title": "Testing without fooling yourself",
+      "sections": [
+        {
+          "id": "blind-testing",
+          "heading": "Why blinding is required",
+          "body": "The person who designed a stimulus knows what it should do, and that knowledge shapes perception below the level of deliberate judgement. Listening unblinded, by the person holding the hypothesis, is exploration rather than evidence.\n\nThe remedy is procedural. The blind test hides the condition during judgement, shuffles presentation order within each repeat, uses fixed response formats so answers can be counted, and includes the untreated signal among the conditions.\n\nThe bench and the blind test have different standing. Use the bench freely to find candidates; use the blind test to decide whether they are real."
+        },
+        {
+          "id": "experimenter-bias",
+          "heading": "Experimenter bias and demand characteristics",
+          "body": "Expectation effects are documented across every field that measures human response, and are not defeated by intending to be objective. Audio is particularly exposed: differences are small, judgements subjective, and memory for spatial quality short enough that expectation fills the gaps.\n\nA related hazard is the task itself signalling the wanted answer. Asking \"is it rotating?\" on every trial suggests that rotation is present and that noticing it is the goal; participants are cooperative and oblige. Orne (1962) named this demand characteristics.\n\nMitigations built into the blind test: conditions where the correct answer is that nothing is happening, neutrally worded items, graded scales rather than yes-or-no where the quality is graded, and \"cannot say\" offered as a real option."
+        },
+        {
+          "id": "catch-trial",
+          "heading": "Catch trials",
+          "body": "Including the untreated signal among the blind conditions measures how often an effect is reported when none is present. That rate calibrates the remaining responses against expectation, and it is the cheapest single safeguard available."
+        },
+        {
+          "id": "randomization",
+          "heading": "Randomisation and repeats",
+          "body": "Without shuffling, order effects contaminate everything: listeners adapt, fatigue, and learn the sequence, and any condition that always comes last inherits all of it. Shuffle within each repeat rather than once, so each condition appears at different points across a session.\n\nDecide how many repeats constitute a test before running it rather than after looking at the results."
+        },
+        {
+          "id": "statistical-power",
+          "heading": "Power, and what a null result means",
+          "body": "Power is the chance of detecting a real effect when one exists, driven by effect size, trial count and measurement noise. Small effects need many trials.\n\nA handful of trials per condition cannot support \"there is no difference\": absence of evidence at low power is not evidence of absence. On the objective side the [[noise-floor]] plays the same role.\n\nA null result for one configuration is also narrower than it appears. It is consistent with the standard account, and equally consistent with the head model being too impoverished, the material being wrong, the rate falling outside the usable window, or one listener's head being unrepresentative."
+        },
+        {
+          "id": "forced-choice",
+          "heading": "Response formats",
+          "body": "Free description is rich but unanalysable and lets a listener avoid committing. Fixed formats yield countable data with a defined chance level.\n\nThe items in use separate localization of individual sources from whether the sound is centred in the head, since a mono image is centred yet has a pointable position and a single question would not discriminate between them. Graded qualities use 0 to 6 scales. The movement-type item appears only after a nonzero movement rating.\n\nA discrimination format such as **ABX**, in which a listener says which of two labelled options an unlabelled third matches, answers the prior question of whether two settings are distinguishable at all. Chance is 50%, which gives a clean statistical test. It is not currently implemented here."
+        },
+        {
+          "id": "n-of-1",
+          "heading": "One listener",
+          "body": "Everything measured so far comes from a single listener who designed the stimuli and knows the hypothesis. Blinding within that listener is a real improvement but does not address individuality: [[hrtf|HRTFs]] are personal, and a percept obtained on one non-[[individualization|individualized]] model may not generalise.\n\nResponses log per trial with the full parameter set attached and export as CSV, so adding listeners requires no rebuilding. A participant link presents only the listening test, with the software assigning presentation order, so the person running the session need not be present."
+        }
+      ]
+    },
+
+    {
+      "id": "next",
+      "title": "What would move this forward",
+      "sections": [
+        {
+          "id": "next-steps",
+          "heading": "In rough order of value",
+          "body": "**Measured [[sofa|HRTFs]].** The highest-value upgrade. Pinna [[spectral-cues]] bring real front-back discrimination and elevation, which would make direction answerable and would make front-to-back translation a genuine spatial condition rather than a level ramp. The class exists with an identical interface; the substantive work is [[hrtf-interpolation]].\n\n**Other listeners**, ideally naive to the hypothesis. Addresses both [[n-of-1]] and the individuality of HRTFs, and requires only sitting people down with a participant link.\n\n**Head tracking.** Resolves front-back robustly and improves [[externalization]], at the cost of giving the listener an active strategy that may change the percept under study.\n\n**A motion aftereffect experiment.** If prolonged exposure biases the perceived direction of a subsequent static field, that indicates direction-selective adaptation and would be far stronger evidence than a description task, since it does not depend on reporting a subtle quality.\n\n**Reverberation.** The strongest natural distance cue is absent, which limits how convincingly radial motion can be presented.\n\n**A target coherence matrix** as a first-class control, generalising the hotspot to arbitrary coherence structures."
+        }
+      ]
+    }
+  ]
+}

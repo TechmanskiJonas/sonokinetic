@@ -37,10 +37,19 @@ const post = (path, body) => api(path, {
 // Reference sheet: encyclopedia and theory guide
 // ====================================================================
 
-let REF = { entries: {}, sections: [], statuses: {} };
-let GUIDE = { chapters: [] };
+let REF = { entries: {}, sections: [], statuses: {}, families: [] };
+let PURPOSE = { chapters: [] };
 let COURSES = { courses: [] };
 const nav = { stack: [], at: -1 };
+
+/** Section id -> the purpose chapter and section it lives in, so a [[link]]
+ *  can resolve to narrative as well as to a term. */
+const purposeIndex = () => {
+  const map = {};
+  for (const c of PURPOSE.chapters || [])
+    for (const s of c.sections || []) map[s.id] = { chapter: c, section: s };
+  return map;
+};
 
 const PROGRESS_KEY = "ringfield.progress";
 const progress = {
@@ -53,11 +62,16 @@ const progress = {
 /** [[id]] and [[id|label]] become term links; **bold** and paragraph breaks
  *  are the only other markup. */
 function linkify(text) {
+  const pi = purposeIndex();
+  const anchor = (id, label) => REF.entries[id]
+    ? `<a class="term" data-term="${id}">${label}</a>`
+    : (pi[id]
+      ? `<a class="term" data-purpose="${id}">${label}</a>`
+      : `<span>${label}</span>`);
   return esc(text)
-    .replace(/\[\[([a-z0-9-]+)\|([^\]]+)\]\]/g,
-      (_, id, label) => `<a class="term" data-term="${id}">${label}</a>`)
-    .replace(/\[\[([a-z0-9-]+)\]\]/g,
-      (_, id) => `<a class="term" data-term="${id}">${REF.entries[id]?.title || id}</a>`)
+    .replace(/\[\[([a-z0-9-]+)\|([^\]]+)\]\]/g, (_, id, label) => anchor(id, label))
+    .replace(/\[\[([a-z0-9-]+)\]\]/g, (_, id) =>
+      anchor(id, REF.entries[id]?.title || pi[id]?.section.heading || id))
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
 }
@@ -80,14 +94,12 @@ function go(view, push = true) {
   $("#sheetback").disabled = nav.at <= 0;
   openSheet();
   closeCard();
-  ({ entry: renderEntry, guide: renderGuide, search: renderSearch,
-     lesson: renderLesson, courses: renderCourseIndex }[view.kind] || (() => {}))(view);
+  ({ entry: renderEntry, search: renderSearch,
+     glossary: renderGlossaryIndex }[view.kind] || (() => {}))(view);
 }
 
 const openRef = id => go({ kind: "entry", id });
-const openGuide = id => go({ kind: "guide", id: id || GUIDE.chapters[0]?.id });
-const openCourses = () => go({ kind: "courses" });
-const openLesson = (course, lesson) => go({ kind: "lesson", course, lesson });
+const openGlossary = family => go({ kind: "glossary", family: family || "project" });
 
 // ---- definition card -------------------------------------------------
 // A term inside a lesson opens a card anchored to it rather than navigating,
@@ -117,83 +129,104 @@ function openCard(anchor, id) {
 
 // ---- navigation panel ------------------------------------------------
 
+/** Which topic groups are open in the sidebar. Collapsed by default beyond the
+ *  one being read, since the full list of terms is long. */
+const openGroups = new Set(["p-components"]);
+
 function buildNav(mode, current) {
   const el = $("#sheetnav");
-  let html = `<div class="sect">Courses</div>`;
-  html += `<a data-courses class="${mode === "courses" ? "on" : ""}">All courses</a>`;
-  for (const c of COURSES.courses) {
-    const done = c.lessons.filter(l => progress.done.has(l.id)).length;
-    html += `<a data-course="${c.id}" class="${mode === "lesson" && current === c.id ? "on" : ""}">
-      ${esc(c.title)} <span class="pct">${done}/${c.lessons.length}</span></a>`;
-  }
-  html += `<div class="sect">Theory</div>` +
-    GUIDE.chapters.map(c =>
-      `<a data-guide="${c.id}" class="${mode === "guide" && current === c.id ? "on" : ""}">${esc(c.title)}</a>`).join("");
-
   const bySection = {};
   for (const [id, e] of Object.entries(REF.entries)) (bySection[e.section] ||= []).push([id, e]);
-  html += `<div class="sect">Reference</div>`;
-  for (const s of REF.sections) {
-    const items = (bySection[s.id] || []).sort((a, b) => a[1].title.localeCompare(b[1].title));
-    if (!items.length) continue;
-    html += `<div class="subsect">${esc(s.title)}${s.status !== "established" ? " " + statusTag(s.status) : ""}</div>`;
-    html += items.map(([id, e]) =>
-      `<a data-ref="${id}" class="${mode === "entry" && current === id ? "on" : ""}">${esc(e.title)}</a>`).join("");
+  const currentSection = mode === "entry" ? REF.entries[current]?.section : null;
+  if (currentSection) openGroups.add(currentSection);
+
+  let html = "";
+  for (const fam of REF.families) {
+    html += `<div class="sect">${esc(fam.title)}</div>`;
+    for (const s of REF.sections.filter(x => x.family === fam.id)) {
+      const items = (bySection[s.id] || []).sort((a, b) => a[1].title.localeCompare(b[1].title));
+      if (!items.length) continue;
+      const open = openGroups.has(s.id);
+      html += `<div class="subsect grp ${open ? "open" : ""}" data-group="${s.id}">
+        <span class="tw">${open ? "▾" : "▸"}</span>${esc(s.title)}
+        <span class="pct">${items.length}</span></div>`;
+      if (open) {
+        html += items.map(([id, e]) =>
+          `<a data-ref="${id}" class="${mode === "entry" && current === id ? "on" : ""}">${esc(e.title)}</a>`).join("");
+      }
+    }
   }
   el.innerHTML = html;
   el.querySelector(".on")?.scrollIntoView({ block: "center" });
 }
 
-// ---- views -----------------------------------------------------------
-
-function renderCourseIndex() {
-  $("#sheettitle").textContent = "Learn";
-  $("#crumbs").textContent = "";
-  buildNav("courses");
-  const total = COURSES.courses.reduce((n, c) => n + c.lessons.length, 0);
-  const done = COURSES.courses.reduce(
-    (n, c) => n + c.lessons.filter(l => progress.done.has(l.id)).length, 0);
+function renderGlossaryIndex(view) {
+  const fam = REF.families.find(f => f.id === view.family) || REF.families[0];
+  $("#sheettitle").textContent = "Glossary";
+  $("#crumbs").textContent = fam.title;
+  buildNav("glossary");
+  const bySection = {};
+  for (const [id, e] of Object.entries(REF.entries)) (bySection[e.section] ||= []).push([id, e]);
 
   $("#sheetmain").innerHTML = `<div class="guide">
-    <h1>A route through the material</h1>
-    <p>Six short courses, in order. Each assumes the one before it. Technical
-    terms are linked: click one for a definition without leaving the lesson.</p>
-    <p class="dim">${done} of ${total} lessons read.</p>
-    ${COURSES.courses.map((c, i) => {
-      const d = c.lessons.filter(l => progress.done.has(l.id)).length;
-      return `<div class="coursecard">
-        <div class="coursehd">
-          <span class="cnum">${i + 1}</span>
-          <b>${esc(c.title)}</b>
-          <span class="grow"></span>
-          <span class="dim">${c.minutes} min · ${d}/${c.lessons.length}</span>
-        </div>
-        <div class="csummary">${esc(c.summary)}</div>
-        <div class="cassumes">Assumes: ${esc(c.assumes)}</div>
-        <div class="clessons">${c.lessons.map(l =>
-          `<a data-lesson="${c.id}:${l.id}" class="${progress.done.has(l.id) ? "read" : ""}">${esc(l.title)}</a>`
-        ).join("")}</div>
-      </div>`;
+    <h1>${esc(fam.title)}</h1>
+    <p>${esc(fam.note)}</p>
+    ${REF.families.map(f => `<button class="sm ${f.id === fam.id ? "on" : ""}" data-family="${f.id}">${esc(f.title)}</button>`).join(" ")}
+    ${REF.sections.filter(s => s.family === fam.id).map(s => {
+      const items = (bySection[s.id] || []).sort((a, b) => a[1].title.localeCompare(b[1].title));
+      if (!items.length) return "";
+      return `<h2>${esc(s.title)}</h2><div class="results">` + items.map(([id, e]) =>
+        `<a data-term="${id}"><b>${esc(e.title)}</b> ${statusTag(e.status)}
+          <div class="rs">${esc(e.short)}</div></a>`).join("") + `</div>`;
     }).join("")}
   </div>`;
   $("#sheetmain").scrollTop = 0;
 }
 
-function renderLesson(view) {
-  const c = COURSES.courses.find(x => x.id === view.course);
-  if (!c) return renderCourseIndex();
-  const idx = Math.max(0, c.lessons.findIndex(l => l.id === view.lesson));
-  const l = c.lessons[idx];
-  $("#sheettitle").textContent = "Learn";
-  $("#crumbs").textContent = `${c.title}  ·  ${idx + 1} of ${c.lessons.length}`;
-  buildNav("lesson", c.id);
+// ---- views -----------------------------------------------------------
 
+// ---- Courses and Purpose, rendered into their own pages ---------------
+
+const courseState = { course: null, lesson: null };
+
+function renderCoursesPage() {
+  const host = $("#coursebody");
+  if (!host) return;
+  if (!courseState.course) {
+    const total = COURSES.courses.reduce((n, c) => n + c.lessons.length, 0);
+    const done = COURSES.courses.reduce(
+      (n, c) => n + c.lessons.filter(l => progress.done.has(l.id)).length, 0);
+    host.innerHTML = `<div class="guide">
+      <h1>A route through the material</h1>
+      <p>Six courses in order, each assuming the one before it. Technical terms
+      are linked: selecting one shows its definition without leaving the page.</p>
+      <p class="dim">${done} of ${total} lessons read.</p>
+      ${COURSES.courses.map((c, i) => {
+        const d = c.lessons.filter(l => progress.done.has(l.id)).length;
+        return `<div class="coursecard">
+          <div class="coursehd"><span class="cnum">${i + 1}</span><b>${esc(c.title)}</b>
+            <span class="grow"></span>
+            <span class="dim">${c.minutes} min · ${d}/${c.lessons.length}</span></div>
+          <div class="csummary">${esc(c.summary)}</div>
+          <div class="cassumes">Assumes: ${esc(c.assumes)}</div>
+          <div class="clessons">${c.lessons.map(l =>
+            `<a data-lesson="${c.id}:${l.id}" class="${progress.done.has(l.id) ? "read" : ""}">${esc(l.title)}</a>`
+          ).join("")}</div>
+        </div>`;
+      }).join("")}</div>`;
+    return;
+  }
+
+  const c = COURSES.courses.find(x => x.id === courseState.course);
+  const idx = Math.max(0, c.lessons.findIndex(l => l.id === courseState.lesson));
+  const l = c.lessons[idx];
   const prev = c.lessons[idx - 1];
   const next = c.lessons[idx + 1];
   const nextCourse = COURSES.courses[COURSES.courses.indexOf(c) + 1];
 
-  $("#sheetmain").innerHTML = `<article class="lesson">
-    <div class="lessonhd"><a data-courses>All courses</a> / ${esc(c.title)}</div>
+  host.innerHTML = `<article class="lesson">
+    <div class="lessonhd"><a data-lesson="">All courses</a> / ${esc(c.title)}
+      · ${idx + 1} of ${c.lessons.length}</div>
     <h1>${esc(l.title)}</h1>
     ${linkify(l.body)}
     ${l.try ? `<div class="tryit"><b>Try it</b><div>${linkify(l.try)}</div></div>` : ""}
@@ -207,9 +240,34 @@ function renderLesson(view) {
       <span class="grow"></span>
       <button class="primary" data-next="${next ? c.id + ":" + next.id : (nextCourse ? nextCourse.id + ":" + nextCourse.lessons[0].id : "")}"
         data-mark="${l.id}">${next ? "Next lesson" : (nextCourse ? "Next course" : "Finish")}</button>
-    </div>
-  </article>`;
-  $("#sheetmain").scrollTop = 0;
+    </div></article>`;
+  host.scrollTop = 0;
+}
+
+function renderPurposePage(chapterId) {
+  const host = $("#purposebody");
+  const nav = $("#purposenav");
+  if (!host) return;
+  const c = PURPOSE.chapters.find(x => x.id === chapterId) || PURPOSE.chapters[0];
+  if (!c) return;
+  nav.innerHTML = PURPOSE.chapters.map(x =>
+    `<button class="sm ${x.id === c.id ? "on" : ""}" data-chapter="${x.id}">${esc(x.title)}</button>`).join("");
+  host.innerHTML = `<article class="guide"><h1>${esc(c.title)}</h1>` +
+    c.sections.map(s =>
+      `<h2 id="pp-${s.id}">${esc(s.heading)}</h2>${linkify(s.body)}`).join("") +
+    `</article>`;
+  host.scrollTop = 0;
+}
+
+function openPurpose(sectionId) {
+  const pi = purposeIndex();
+  const hit = pi[sectionId];
+  closeSheet();
+  $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === "purpose"));
+  $$(".page").forEach(p => p.classList.toggle("on", p.id === "purpose"));
+  renderPurposePage(hit?.chapter.id);
+  if (hit) setTimeout(() =>
+    $(`#pp-${sectionId}`)?.scrollIntoView({ block: "start", behavior: "smooth" }), 40);
 }
 
 function renderEntry(view) {
@@ -222,8 +280,13 @@ function renderEntry(view) {
     return;
   }
   buildNav("entry", id);
-  const links = ids => (ids || []).map(x =>
-    `<a class="term" data-term="${x}">${esc(REF.entries[x]?.title || x)}</a>`).join(", ");
+  // A prerequisite may be a term or a section of the research programme, so
+  // the link has to be built the same way body links are.
+  const pi = purposeIndex();
+  const links = ids => (ids || []).map(x => REF.entries[x]
+    ? `<a class="term" data-term="${x}">${esc(REF.entries[x].title)}</a>`
+    : (pi[x] ? `<a class="term" data-purpose="${x}">${esc(pi[x].section.heading)}</a>`
+      : esc(x))).join(", ");
   const st = REF.statuses[e.status];
   $("#sheetmain").innerHTML = `<article class="entry">
     <div class="entryhd">${statusTag(e.status)}</div>
@@ -240,18 +303,6 @@ function renderEntry(view) {
   $("#crumbs").textContent = REF.sections.find(s => s.id === e.section)?.title || "";
 }
 
-function renderGuide(view) {
-  const c = GUIDE.chapters.find(x => x.id === view.id) || GUIDE.chapters[0];
-  if (!c) return;
-  $("#sheettitle").textContent = "Theory";
-  buildNav("guide", c.id);
-  $("#sheetmain").innerHTML = `<article class="guide"><h1>${esc(c.title)}</h1>` +
-    c.sections.map(s => `<h2>${esc(s.heading)}</h2>${linkify(s.body)}`).join("") +
-    `</article>`;
-  $("#sheetmain").scrollTop = 0;
-  $("#crumbs").textContent = "";
-}
-
 function renderSearch(view) {
   const needle = view.q.toLowerCase();
   const hits = Object.entries(REF.entries).filter(([id, e]) =>
@@ -260,16 +311,23 @@ function renderSearch(view) {
   const lessons = COURSES.courses.flatMap(c => c.lessons
     .filter(l => (l.title + l.body).toLowerCase().includes(needle))
     .map(l => [c, l]));
+  const purp = (PURPOSE.chapters || []).flatMap(c => c.sections
+    .filter(s => (s.heading + s.body).toLowerCase().includes(needle))
+    .map(s => [c, s]));
+  const n = hits.length + lessons.length + purp.length;
   $("#sheettitle").textContent = "Search";
   $("#sheetmain").innerHTML = `<div class="entry">
-    <h1>${hits.length + lessons.length} result${hits.length + lessons.length === 1 ? "" : "s"}</h1>
+    <h1>${n} result${n === 1 ? "" : "s"}</h1>
     <div class="results">
-    ${lessons.map(([c, l]) =>
-      `<a data-lesson="${c.id}:${l.id}"><b>${esc(l.title)}</b>
-        <div class="rs">Lesson in ${esc(c.title)}</div></a>`).join("")}
     ${hits.map(([id, e]) =>
       `<a data-term="${id}"><b>${esc(e.title)}</b> ${statusTag(e.status)}
         <div class="rs">${esc(e.short)}</div></a>`).join("")}
+    ${lessons.map(([c, l]) =>
+      `<a data-lesson="${c.id}:${l.id}"><b>${esc(l.title)}</b>
+        <div class="rs">Lesson in ${esc(c.title)}</div></a>`).join("")}
+    ${purp.map(([c, s]) =>
+      `<a data-purpose="${s.id}"><b>${esc(s.heading)}</b>
+        <div class="rs">${esc(c.title)}</div></a>`).join("")}
     </div></div>`;
 }
 
@@ -283,7 +341,7 @@ function infoBtn(id) {
 }
 
 function wireSheet() {
-  $("#openlearn").addEventListener("click", openCourses);
+  $("#openlearn").addEventListener("click", () => openGlossary("project"));
   $("#sheetclose").addEventListener("click", closeSheet);
   $("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") closeSheet(); });
   $("#sheetback").addEventListener("click", () => {
@@ -313,11 +371,33 @@ function wireSheet() {
     const ref = e.target.closest("[data-ref]");
     if (ref) { e.preventDefault(); e.stopPropagation(); openRef(ref.dataset.ref); return; }
 
+    const purp = e.target.closest("[data-purpose]");
+    if (purp) { e.preventDefault(); openPurpose(purp.dataset.purpose); return; }
+
+    const fam = e.target.closest("[data-family]");
+    if (fam) { e.preventDefault(); openGlossary(fam.dataset.family); return; }
+
+    const grp = e.target.closest("[data-group]");
+    if (grp) {
+      e.preventDefault();
+      const id = grp.dataset.group;
+      openGroups.has(id) ? openGroups.delete(id) : openGroups.add(id);
+      const v = nav.stack[nav.at];
+      buildNav(v?.kind === "entry" ? "entry" : "glossary",
+        v?.kind === "entry" ? v.id : null);
+      return;
+    }
+
     const lesson = e.target.closest("[data-lesson]");
     if (lesson) {
       e.preventDefault();
-      const [c, l] = lesson.dataset.lesson.split(":");
-      openLesson(c, l);
+      const val = lesson.dataset.lesson;
+      if (!val) { courseState.course = null; courseState.lesson = null; }
+      else { const [c, l] = val.split(":"); courseState.course = c; courseState.lesson = l; }
+      closeSheet();
+      $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === "courses"));
+      $$(".page").forEach(p => p.classList.toggle("on", p.id === "courses"));
+      renderCoursesPage();
       return;
     }
     const nxt = e.target.closest("[data-next]");
@@ -325,20 +405,13 @@ function wireSheet() {
       e.preventDefault();
       if (nxt.dataset.mark) progress.mark(nxt.dataset.mark);
       const target = nxt.dataset.next;
-      if (target) { const [c, l] = target.split(":"); openLesson(c, l); }
-      else openCourses();
+      if (target) { const [c, l] = target.split(":"); courseState.course = c; courseState.lesson = l; }
+      else { courseState.course = null; courseState.lesson = null; }
+      renderCoursesPage();
       return;
     }
-    const course = e.target.closest("[data-course]");
-    if (course) {
-      e.preventDefault();
-      const c = COURSES.courses.find(x => x.id === course.dataset.course);
-      if (c) openLesson(c.id, c.lessons[0].id);
-      return;
-    }
-    if (e.target.closest("[data-courses]")) { e.preventDefault(); openCourses(); return; }
-    const g = e.target.closest("[data-guide]");
-    if (g) { e.preventDefault(); openGuide(g.dataset.guide); return; }
+    const chap = e.target.closest("[data-chapter]");
+    if (chap) { e.preventDefault(); renderPurposePage(chap.dataset.chapter); return; }
     const rev = e.target.closest("[data-reveal]");
     if (rev) {
       e.preventDefault();
@@ -362,19 +435,38 @@ function wireSheet() {
 // Parameter schema
 // ====================================================================
 
-const RING_ROWS = [
-  { k: "n_sources", ref: "source", type: "int", min: 1, max: 12, step: 1 },
-  { k: "rotation_deg_per_sec", ref: "rotation-rate", type: "range", min: -720, max: 720, step: 5, unit: "°/s" },
-  { k: "distance_m", ref: "source-distance", type: "range", min: 0.3, max: 8, step: 0.1, unit: "m" },
+const KINDS = {
+  ring:   { label: "Ring",   hint: "sources on a circle, turning" },
+  stream: { label: "Stream", hint: "straight-line travel across the space" },
+  radial: { label: "Radial", hint: "travel inward or outward along radii" },
+  spiral: { label: "Spiral", hint: "turning and travelling in or out at once" },
+};
+
+const rotates = c => c.kind === "ring" || c.kind === "spiral";
+const travels = c => c.kind === "stream";
+const radiates = c => c.kind === "radial" || c.kind === "spiral";
+
+const COMPONENT_ROWS = [
+  { k: "kind", ref: "component", type: "sel", opts: Object.keys(KINDS), structural: true },
+  { k: "n_sources", ref: "source", type: "int", min: 1, max: 16, step: 1 },
+  { k: "rotation_deg_per_sec", ref: "rotation-rate", type: "range", min: -720, max: 720, step: 5, unit: "°/s", showIf: rotates },
+  { k: "distance_m", ref: "source-distance", type: "range", min: 0.3, max: 8, step: 0.1, unit: "m", showIf: c => c.kind === "ring" },
+  { k: "heading_deg", ref: "translation", type: "range", min: 0, max: 359, step: 5, unit: "°", showIf: travels },
+  { k: "speed_mps", ref: "translation", type: "range", min: -6, max: 6, step: 0.1, unit: "m/s", showIf: travels },
+  { k: "path_m", ref: "translation", type: "range", min: 2, max: 20, step: 0.5, unit: "m", showIf: travels },
+  { k: "spread_m", ref: "translation", type: "range", min: 0, max: 8, step: 0.25, unit: "m", showIf: travels },
+  { k: "radial_speed_mps", ref: "radial-flow", type: "range", min: -4, max: 4, step: 0.1, unit: "m/s", showIf: radiates },
+  { k: "r_near_m", ref: "radial-flow", type: "range", min: 0.3, max: 4, step: 0.1, unit: "m", showIf: radiates },
+  { k: "r_far_m", ref: "radial-flow", type: "range", min: 1, max: 12, step: 0.5, unit: "m", showIf: radiates },
+  { k: "fade_frac", ref: "translation", type: "range", min: 0.05, max: 0.5, step: 0.05, showIf: c => travels(c) || radiates(c) },
+  { k: "start_azimuths", ref: "azimuth", type: "list", placeholder: "even, or -90, -18, 54, 126, 198", showIf: c => !travels(c) },
+  { k: "spacing_deg", ref: "ring", type: "optnum", placeholder: "even", unit: "°", showIf: c => !travels(c) },
+  { k: "offset_deg", ref: "ring", type: "range", min: 0, max: 360, step: 5, unit: "°", showIf: c => !travels(c) },
+  { k: "random_fraction", ref: "motion-coherence", type: "range", min: 0, max: 1, step: 0.05, structural: true },
+  { k: "wander_deg", ref: "motion-coherence", type: "range", min: 0, max: 180, step: 5, unit: "°", showIf: c => c.random_fraction > 0 || c.radial_wander_m > 0 },
+  { k: "wander_hz", ref: "motion-coherence", type: "range", min: 0, max: 2, step: 0.05, unit: "Hz", showIf: c => c.random_fraction > 0 || c.radial_wander_m > 0 },
+  { k: "radial_wander_m", ref: "motion-coherence", type: "range", min: 0, max: 3, step: 0.05, unit: "m", structural: true },
   { k: "gain_db", ref: "level-matching", type: "range", min: -24, max: 12, step: 1, unit: "dB" },
-  { k: "start_azimuths", ref: "azimuth", type: "list", placeholder: "even, or -90, -18, 54, 126, 198" },
-  { k: "spacing_deg", ref: "ring", type: "optnum", placeholder: "even", unit: "°" },
-  { k: "offset_deg", ref: "ring", type: "range", min: 0, max: 360, step: 5, unit: "°" },
-  { k: "random_fraction", ref: "motion-coherence", type: "range", min: 0, max: 1, step: 0.05 },
-  { k: "wander_deg", ref: "motion-coherence", type: "range", min: 0, max: 180, step: 5, unit: "°", showIf: r => r.random_fraction > 0 || r.radial_wander_m > 0 },
-  { k: "wander_hz", ref: "motion-coherence", type: "range", min: 0, max: 2, step: 0.05, unit: "Hz", showIf: r => r.random_fraction > 0 || r.radial_wander_m > 0 },
-  { k: "radial_wander_m", ref: "motion-coherence", type: "range", min: 0, max: 3, step: 0.05, unit: "m" },
-  { k: "decorr_amount", ref: "decorrelation-amount", type: "optnum", placeholder: "inherit" },
 ];
 
 const PARAMS = [
@@ -436,11 +528,19 @@ const LABELS = {
   distance_m: "distance", gain_db: "gain", random_fraction: "random share",
   wander_deg: "wander range", wander_hz: "wander speed",
   radial_wander_m: "radial wander", decorr_amount: "decorrelation",
+  kind: "pattern", heading_deg: "heading", speed_mps: "speed",
+  path_m: "path length", spread_m: "width", radial_speed_mps: "radial speed",
+  r_near_m: "inner limit", r_far_m: "outer limit", fade_frac: "fade",
+  label: "name",
 };
 
 // Shared clipboard for ring modules, so a ring built in one variant can be
 // pasted into another.
-const CLIP = { ring: null };
+const CLIP = { component: null };
+
+/** Decorrelation rows, reused for the variant default and per-component
+ *  overrides so both editors stay in step. */
+const DECORR_ROWS = PARAMS.find(g => g.path === "decorr").rows;
 
 const defaultDecorr = () => ({
   amount: 1.0, per_source_amount: null, family: "allpass", ir_ms: 30, density: 1500,
@@ -452,54 +552,69 @@ const defaultHotspot = () => ({
   enabled: false, deg_per_sec: 90, start_deg: 0, width_deg: 80,
   hot_amount: 0, bed_amount: 1, shape: "gaussian"
 });
-const defaultRing = () => ({
-  n_sources: 5, rotation_deg_per_sec: 60,
-  start_azimuths: [-90, -18, 54, 126, 198], spacing_deg: null, offset_deg: 0,
-  distance_m: 2.0, gain_db: 0,
-  random_fraction: 0, wander_deg: 60, wander_hz: 0.25, radial_wander_m: 0,
-  decorr_amount: null
-});
+const defaultComponent = (kind = "ring") => {
+  const c = {
+    kind, label: "", n_sources: 5,
+    start_azimuths: kind === "ring" ? [-90, -18, 54, 126, 198] : null,
+    spacing_deg: null, offset_deg: 0, distance_m: 2.0,
+    rotation_deg_per_sec: kind === "ring" || kind === "spiral" ? 60 : 0,
+    heading_deg: 90, speed_mps: 1.5, path_m: 9, spread_m: 3,
+    radial_speed_mps: kind === "radial" || kind === "spiral" ? 0.8 : 0,
+    r_near_m: 0.7, r_far_m: 6,
+    random_fraction: 0, wander_deg: 60, wander_hz: 0.25, radial_wander_m: 0,
+    gain_db: 0, fade_frac: 0.3, min_distance_m: 0.4,
+    decorr: null, collapsed: false,
+  };
+  if (kind === "stream" || kind === "radial") c.n_sources = 7;
+  return c;
+};
 
 const defaultField = () => ({
-  rings: [defaultRing()],
+  components: [defaultComponent("ring")],
   decorr: defaultDecorr(), hotspot: defaultHotspot(),
   head_radius: 0.0875, speed_of_sound: 343, hrtf_taps: 128, hrtf_grid_step: 1,
   block: 256, seed: 0
 });
 
-const effectiveRate = c => {
-  if (!c) return 0;
-  if (c.hotspot?.enabled) return c.hotspot.deg_per_sec || 0;
-  if (c.rings?.length) {
-    let r = 0;
-    for (const ring of c.rings) if (Math.abs(ring.rotation_deg_per_sec) > Math.abs(r))
-      r = ring.rotation_deg_per_sec;
-    return r;
+const effectiveRate = cfg => {
+  if (!cfg) return 0;
+  if (cfg.hotspot?.enabled) return cfg.hotspot.deg_per_sec || 0;
+  let r = 0;
+  for (const c of (cfg.components || [])) {
+    if (!rotates(c)) continue;
+    if (Math.abs(c.rotation_deg_per_sec) > Math.abs(r)) r = c.rotation_deg_per_sec;
   }
-  return c.rotation_deg_per_sec || 0;
+  return r;
 };
 
-const hasMotion = c => !!c && (effectiveRate(c) !== 0 ||
-  (c.rings || []).some(r => r.random_fraction > 0 && r.wander_hz > 0));
+const componentMoves = c =>
+  (rotates(c) && c.rotation_deg_per_sec !== 0) ||
+  (travels(c) && c.speed_mps !== 0) ||
+  (radiates(c) && c.radial_speed_mps !== 0) ||
+  (c.random_fraction > 0 && c.wander_hz > 0) ||
+  (c.radial_wander_m > 0 && c.wander_hz > 0);
 
-function summarize(c) {
-  if (!c) return "original, untreated";
+const hasMotion = cfg => !!cfg && (
+  (cfg.hotspot?.enabled && cfg.hotspot.deg_per_sec !== 0) ||
+  (cfg.components || []).some(componentMoves));
+
+function summarize(cfg) {
+  if (!cfg) return "original, untreated";
+  const comps = cfg.components || [];
   const bits = [];
-  const rings = c.rings || [];
-  if (rings.length > 1) {
-    const total = rings.reduce((n, r) => n + r.n_sources, 0);
-    bits.push(`${rings.length} rings · ${total} sources`);
-  } else if (rings.length === 1) {
-    const r = rings[0];
-    bits.push(`${r.n_sources} sources`);
-    bits.push(r.rotation_deg_per_sec ? `${r.rotation_deg_per_sec}°/s` : "still");
-    if (r.distance_m !== 2) bits.push(`${fmt(r.distance_m, 1)} m`);
-    if (r.random_fraction > 0) bits.push(`${Math.round(r.random_fraction * 100)}% random`);
+  if (comps.length > 1) {
+    const total = comps.reduce((n, c) => n + c.n_sources, 0);
+    const kinds = [...new Set(comps.map(c => KINDS[c.kind]?.label || c.kind))];
+    bits.push(`${comps.length} components · ${total} sources`);
+    bits.push(kinds.join(" + ").toLowerCase());
+  } else if (comps.length === 1) {
+    bits.push((KINDS[comps[0].kind]?.label || comps[0].kind).toLowerCase());
+    bits.push(componentSummary(comps[0]));
   }
-  if (c.hotspot?.enabled) {
-    bits.push(c.hotspot.deg_per_sec ? `hotspot ${c.hotspot.deg_per_sec}°/s` : "hotspot frozen");
+  if (cfg.hotspot?.enabled) {
+    bits.push(cfg.hotspot.deg_per_sec ? `hotspot ${cfg.hotspot.deg_per_sec}°/s` : "hotspot frozen");
   }
-  bits.push(`${c.decorr.family} ${fmt(c.decorr.amount, 2)}`);
+  bits.push(`${cfg.decorr.family} ${fmt(cfg.decorr.amount, 2)}`);
   return bits.join(" · ");
 }
 
@@ -539,7 +654,7 @@ function newPassage(start, end, name) {
  *  configuration under study. */
 function rotatingRing(rate = 60) {
   const c = defaultField();
-  c.rings[0].rotation_deg_per_sec = rate;
+  c.components[0].rotation_deg_per_sec = rate;
   c.decorr.amount = 1.0;
   c.decorr.family = "allpass";
   return c;
@@ -556,21 +671,57 @@ function hotspotField(rate = 90) {
  *  direction, after the coherence manipulation in random-dot kinematograms. */
 function kinematogramField(fraction = 0.5) {
   const c = rotatingRing(60);
-  c.rings[0].n_sources = 7;
-  c.rings[0].start_azimuths = null;
-  c.rings[0].random_fraction = fraction;
-  c.rings[0].wander_deg = 70;
+  const k = c.components[0];
+  k.n_sources = 7; k.start_azimuths = null;
+  k.random_fraction = fraction; k.wander_deg = 70;
+  k.label = "partly coherent";
   return c;
 }
 
 /** Two rings at different distances and rates: depth in the field. */
 function depthField() {
   const c = rotatingRing(40);
-  c.rings[0].n_sources = 3;
-  c.rings[0].start_azimuths = null;
-  c.rings[0].distance_m = 1.2;
-  c.rings.push({ ...defaultRing(), n_sources: 5, start_azimuths: null,
-    rotation_deg_per_sec: 90, distance_m: 3.5 });
+  Object.assign(c.components[0], {
+    n_sources: 3, start_azimuths: null, distance_m: 1.2, label: "inner",
+  });
+  c.components.push({ ...defaultComponent("ring"), n_sources: 5,
+    start_azimuths: null, rotation_deg_per_sec: 90, distance_m: 3.5,
+    label: "outer" });
+  return c;
+}
+
+function streamField(heading = 90) {
+  const c = rotatingRing(0);
+  c.components = [{ ...defaultComponent("stream"), heading_deg: heading,
+    n_sources: 8, speed_mps: 1.5, label: "crossing" }];
+  return c;
+}
+
+function radialField(speed = -0.8) {
+  const c = rotatingRing(0);
+  c.components = [{ ...defaultComponent("radial"), radial_speed_mps: speed,
+    n_sources: 8, label: speed < 0 ? "closing in" : "opening out" }];
+  return c;
+}
+
+function spiralField() {
+  const c = rotatingRing(0);
+  c.components = [{ ...defaultComponent("spiral"), rotation_deg_per_sec: 70,
+    radial_speed_mps: -0.5, n_sources: 8, label: "inward spiral" }];
+  return c;
+}
+
+/** Rotation near, translation far, each with its own coherence. */
+function layeredField() {
+  const c = rotatingRing(60);
+  Object.assign(c.components[0], {
+    n_sources: 4, start_azimuths: null, distance_m: 1.4, label: "near ring",
+    decorr: { ...defaultDecorr(), amount: 0.4, family: "velvet" },
+  });
+  c.components.push({ ...defaultComponent("stream"), n_sources: 7,
+    heading_deg: 90, speed_mps: 1.2, path_m: 12, spread_m: 4,
+    label: "far crossing",
+    decorr: { ...defaultDecorr(), amount: 1.0, family: "allpass" } });
   return c;
 }
 
@@ -581,6 +732,12 @@ const VARIANT_PRESETS = [
   { label: "Coherent ring (degenerate)", make: () => { const c = rotatingRing(60); c.decorr.amount = 0; return c; } },
   { label: "Partly random motion", make: () => kinematogramField(0.5) },
   { label: "Two rings, inner and outer", make: () => depthField() },
+  { label: "Stream, left to right", make: () => streamField(90) },
+  { label: "Stream, front to back", make: () => streamField(180) },
+  { label: "Closing in", make: () => radialField(-0.8) },
+  { label: "Opening out", make: () => radialField(0.8) },
+  { label: "Inward spiral", make: () => spiralField() },
+  { label: "Ring near, stream far", make: () => layeredField() },
   { label: "Circulating hotspot", make: () => hotspotField(90) },
   { label: "Hotspot frozen · control", make: () => controlOf(hotspotField(90)) },
 ];
@@ -593,6 +750,14 @@ function controlOf(cfg) {
   c.total_degrees = null;
   if (c.hotspot) c.hotspot.deg_per_sec = 0;
   for (const r of (c.rings || [])) { r.rotation_deg_per_sec = 0; r.wander_hz = 0; }
+  // Every motion kind stops; positions and levels stay where they are, so the
+  // ensemble's spatial and level distribution is preserved.
+  for (const k of (c.components || [])) {
+    k.rotation_deg_per_sec = 0;
+    k.speed_mps = 0;
+    k.radial_speed_mps = 0;
+    k.wander_hz = 0;
+  }
   return c;
 }
 
@@ -691,13 +856,20 @@ function buildParams(host, cfg, onChange) {
 // Ring modules
 // ====================================================================
 
-function ringSummary(r) {
-  const bits = [`${r.n_sources} src`,
-    r.rotation_deg_per_sec ? `${r.rotation_deg_per_sec}°/s` : "still",
-    `${fmt(r.distance_m, 1)} m`];
-  if (r.random_fraction > 0) bits.push(`${Math.round(r.random_fraction * 100)}% random`);
-  if (r.decorr_amount !== null && r.decorr_amount !== undefined)
-    bits.push(`decorr ${fmt(r.decorr_amount, 2)}`);
+const HEADINGS = { 0: "→ front", 90: "→ right", 180: "→ back", 270: "→ left" };
+
+function componentSummary(c) {
+  const bits = [`${c.n_sources} src`];
+  if (rotates(c)) bits.push(c.rotation_deg_per_sec ? `${c.rotation_deg_per_sec}°/s` : "still");
+  if (travels(c)) {
+    const h = HEADINGS[Math.round(c.heading_deg / 90) * 90 % 360] || `${c.heading_deg}°`;
+    bits.push(`${h} ${fmt(Math.abs(c.speed_mps), 1)} m/s`);
+  }
+  if (radiates(c) && c.radial_speed_mps)
+    bits.push(`${c.radial_speed_mps > 0 ? "outward" : "inward"} ${fmt(Math.abs(c.radial_speed_mps), 1)} m/s`);
+  if (c.kind === "ring") bits.push(`${fmt(c.distance_m, 1)} m`);
+  if (c.random_fraction > 0) bits.push(`${Math.round(c.random_fraction * 100)}% random`);
+  if (c.decorr) bits.push(`decorr ${fmt(c.decorr.amount, 2)}`);
   return bits.join(" · ");
 }
 
@@ -748,75 +920,127 @@ function makeParamRow(row, obj, onChange, rebuild) {
   return el;
 }
 
-function buildRingEditor(host, cfg, onChange) {
+function buildComponentEditor(host, cfg, onChange) {
   host.innerHTML = "";
-  if (!cfg.rings) cfg.rings = [defaultRing()];
-  const rebuild = () => buildRingEditor(host, cfg, onChange);
+  if (!cfg.components) cfg.components = [defaultComponent()];
+  const rebuild = () => buildComponentEditor(host, cfg, onChange);
 
-  cfg.rings.forEach((r, ri) => {
+  cfg.components.forEach((c, ci) => {
     const mod = document.createElement("div");
     mod.className = "ringmod";
+    if (c.collapsed) mod.classList.add("collapsed");
+
     const head = document.createElement("div");
     head.className = "rmhead";
-    head.innerHTML = `<b>Ring ${ri + 1}</b><span class="rmsum">${ringSummary(r)}</span><span class="grow"></span>`;
+    const twist = document.createElement("button");
+    twist.className = "sm ghost twist";
+    twist.textContent = c.collapsed ? "▸" : "▾";
+    twist.addEventListener("click", e => {
+      e.stopPropagation(); c.collapsed = !c.collapsed; rebuild();
+    });
+    head.appendChild(twist);
+
+    const name = document.createElement("input");
+    name.className = "cname";
+    name.value = c.label || "";
+    name.placeholder = `${KINDS[c.kind]?.label || c.kind} ${ci + 1}`;
+    name.addEventListener("change", () => { c.label = name.value; onChange(); });
+    head.appendChild(name);
+
+    const sum = document.createElement("span");
+    sum.className = "rmsum";
+    sum.textContent = componentSummary(c);
+    head.append(sum, Object.assign(document.createElement("span"), { className: "grow" }));
+
     const mk = (label, title, fn) => {
       const b = document.createElement("button");
       b.className = "sm"; b.textContent = label; b.title = title;
       b.addEventListener("click", e => { e.stopPropagation(); fn(); });
       return b;
     };
-    head.appendChild(mk("Duplicate", "insert a copy of this ring below", () => {
-      cfg.rings.splice(ri + 1, 0, JSON.parse(JSON.stringify(r)));
+    head.appendChild(mk("Duplicate", "insert a copy below", () => {
+      cfg.components.splice(ci + 1, 0, JSON.parse(JSON.stringify(c)));
       rebuild(); onChange();
     }));
-    head.appendChild(mk("Copy", "copy this ring; paste it into any variant", () => {
-      CLIP.ring = JSON.parse(JSON.stringify(r));
+    head.appendChild(mk("Copy", "copy; paste into any variant", () => {
+      CLIP.component = JSON.parse(JSON.stringify(c));
       rebuild();
     }));
-    if (cfg.rings.length > 1) {
-      head.appendChild(mk("Remove", "remove this ring", () => {
-        cfg.rings.splice(ri, 1);
-        rebuild(); onChange();
+    if (cfg.components.length > 1) {
+      head.appendChild(mk("Remove", "remove this component", () => {
+        cfg.components.splice(ci, 1); rebuild(); onChange();
       }));
     }
     mod.appendChild(head);
 
-    const body = document.createElement("div");
-    body.className = "rmbody";
-    for (const row of RING_ROWS) {
-      if (row.showIf && !row.showIf(r)) continue;
-      body.appendChild(makeParamRow(row, r, () => {
-        head.querySelector(".rmsum").textContent = ringSummary(r);
-        onChange();
-      }, rebuild));
+    if (!c.collapsed) {
+      const body = document.createElement("div");
+      body.className = "rmbody";
+      const refresh = () => { sum.textContent = componentSummary(c); onChange(); };
+      for (const row of COMPONENT_ROWS) {
+        if (row.showIf && !row.showIf(c)) continue;
+        body.appendChild(makeParamRow(row, c, refresh,
+          row.structural ? rebuild : () => { }));
+      }
+
+      // Per-component decorrelation, so two components in one field can carry
+      // different coherence.
+      const dec = document.createElement("div");
+      dec.className = "pgroup";
+      const dh = document.createElement("div");
+      dh.className = "ghead";
+      dh.append("Decorrelation", infoBtn("decorrelation"));
+      const toggle = document.createElement("button");
+      toggle.className = "sm";
+      toggle.textContent = c.decorr ? "use variant's" : "override";
+      toggle.title = c.decorr
+        ? "fall back to the variant's decorrelation"
+        : "give this component its own decorrelation";
+      toggle.addEventListener("click", () => {
+        c.decorr = c.decorr ? null : JSON.parse(JSON.stringify(cfg.decorr));
+        rebuild(); onChange();
+      });
+      dh.append(Object.assign(document.createElement("span"), { className: "grow" }), toggle);
+      dec.appendChild(dh);
+      if (c.decorr) {
+        for (const row of DECORR_ROWS) {
+          if (row.showIf && !row.showIf(c.decorr)) continue;
+          dec.appendChild(makeParamRow(row, c.decorr, refresh, rebuild));
+        }
+      } else {
+        const n = document.createElement("div");
+        n.className = "note";
+        n.textContent = "Inheriting the variant's decorrelation.";
+        dec.appendChild(n);
+      }
+      body.appendChild(dec);
+      mod.appendChild(body);
     }
-    mod.appendChild(body);
     host.appendChild(mod);
   });
 
   const bar = document.createElement("div");
   bar.className = "ringbar";
-  const add = document.createElement("button");
-  add.className = "sm"; add.textContent = "Add ring";
-  add.addEventListener("click", () => {
-    cfg.rings.push(defaultRing());
+  const addSel = document.createElement("select");
+  addSel.className = "sm";
+  addSel.innerHTML = `<option value="">Add component…</option>` +
+    Object.entries(KINDS).map(([k, v]) =>
+      `<option value="${k}">${v.label} — ${v.hint}</option>`).join("");
+  addSel.addEventListener("change", () => {
+    if (!addSel.value) return;
+    cfg.components.push(defaultComponent(addSel.value));
     rebuild(); onChange();
   });
-  bar.appendChild(add);
-  if (CLIP.ring) {
+  bar.appendChild(addSel);
+  if (CLIP.component) {
     const paste = document.createElement("button");
-    paste.className = "sm"; paste.textContent = "Paste ring";
-    paste.title = "insert the copied ring";
+    paste.className = "sm"; paste.textContent = "Paste component";
     paste.addEventListener("click", () => {
-      cfg.rings.push(JSON.parse(JSON.stringify(CLIP.ring)));
+      cfg.components.push(JSON.parse(JSON.stringify(CLIP.component)));
       rebuild(); onChange();
     });
     bar.appendChild(paste);
   }
-  const seedRow = document.createElement("span");
-  seedRow.className = "dim";
-  seedRow.style.marginLeft = "auto";
-  bar.appendChild(seedRow);
   host.appendChild(bar);
 }
 
@@ -875,7 +1099,7 @@ function renderPassages() {
       body.className = "pasbody";
 
       p.variants.forEach((v, vi) => {
-        const isLive = S.live && S.live.pi === pi && S.live.vi === vi;
+        const isLive = S.live && S.live.pi === pi && S.live.set.includes(vi);
         const vr = document.createElement("div");
         vr.className = "variant" + (isLive ? " live" : "") + (vi === S.ref ? " ref" : "");
 
@@ -921,9 +1145,9 @@ function renderPassages() {
           const pane = document.createElement("div");
           pane.style.cssText = "padding:2px 8px 10px 26px";
           const onchg = () => { tag.textContent = summarize(v.config); markStale(); };
-          const ringHost = document.createElement("div");
-          buildRingEditor(ringHost, v.config, onchg);
-          pane.appendChild(ringHost);
+          const compHost = document.createElement("div");
+          buildComponentEditor(compHost, v.config, onchg);
+          pane.appendChild(compHost);
           const rest = document.createElement("div");
           buildParams(rest, v.config, onchg);
           pane.appendChild(rest);
@@ -1165,10 +1389,20 @@ function playPosition() {
 
 const seekTo = t => { if (S.playing) startPlayback(t); else { S.startOffset = t; drawWave(); } };
 
-/** Crossfade to a variant, or back to the dry spine when vi is null. */
+/** Crossfade to a set of variants, or back to the untreated spine.
+ *
+ * `vi` may be one index or a list, so several variants can sound together. A
+ * combined set is scaled by 1/sqrt(count): the variants are largely
+ * decorrelated from one another, so their powers add, and without the scaling
+ * holding two keys would simply be louder and would win any comparison on that
+ * basis alone.
+ */
 function applyVariant(pi, vi, ms) {
   if (!S.rendered) return;
-  S.live = (vi === null || vi === 0) ? null : { pi, vi };
+  const list = (Array.isArray(vi) ? vi : [vi])
+    .filter(i => i !== null && i !== undefined && i !== 0);
+  S.live = list.length ? { pi, vi: list[0], set: list } : null;
+  const share = list.length ? 1 / Math.sqrt(list.length) : 1;
   const T = (ms ?? Number($("#fadems").value)) / 1000;
   const t0 = AC.currentTime;
 
@@ -1191,8 +1425,8 @@ function applyVariant(pi, vi, ms) {
   };
 
   if (dryGain) ramp(dryGain.gain, S.live ? 0 : 1);
-  varNodes.forEach(n =>
-    ramp(n.gain.gain, S.live && n.pi === S.live.pi && n.vi === S.live.vi ? 1 : 0));
+  varNodes.forEach(n => ramp(n.gain.gain,
+    S.live && n.pi === S.live.pi && S.live.set.includes(n.vi) ? share : 0));
 
   renderPassages();
   showMetrics();
@@ -1213,23 +1447,26 @@ function wireTransport() {
   // Hold a number to audition that variant, release to fall back to the
   // reference. Instant switching mid-note is far more sensitive than
   // comparing two separate listens: auditory memory for spatial quality is short.
+  // Holding several numbers sounds several variants together.
   const held = new Set();
+  const applyHeld = () => {
+    const set = [...held].map(Number).filter(n => n < passage().variants.length);
+    applyVariant(S.active, set.length ? set : S.ref);
+  };
   addEventListener("keydown", e => {
     if (e.target.matches("input, select, textarea")) return;
-    if ($("#sheet").classList.contains("on")) return;
+    if ($("#sheet").classList.contains("on") || Tour.active) return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); return; }
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= 9 && passage() && n < passage().variants.length) {
-      if (!held.has(e.key)) { held.add(e.key); applyVariant(S.active, n); }
+      if (!held.has(e.key)) { held.add(e.key); applyHeld(); }
       e.preventDefault();
     }
   });
   addEventListener("keyup", e => {
-    if (held.delete(e.key)) {
-      if (held.size) applyVariant(S.active, parseInt([...held].pop(), 10));
-      else applyVariant(S.active, S.ref);
-    }
+    if (held.delete(e.key)) applyHeld();
   });
+  addEventListener("blur", () => { if (held.size) { held.clear(); applyHeld(); } });
 }
 
 // ====================================================================
@@ -1253,6 +1490,12 @@ function liveVariant() {
 }
 
 const TRAIL_SECONDS = 1.4;
+
+/** One colour per component, so a field of several reads as several. */
+const COMP_COLOURS = [
+  [44, 95, 124], [154, 91, 45], [61, 107, 82],
+  [122, 74, 122], [163, 58, 42], [70, 90, 110],
+];
 
 /** Frames covering [t0, t1]. Used for motion trails. */
 function framesBetween(trace, t0, t1) {
@@ -1303,8 +1546,10 @@ function drawRing() {
   // scale is chosen so the farthest ring in the variant fits the canvas.
   const REFD = 2.0;
   const nSrc = fr.az.length;
-  const ringOf = v.params.resolved_ring_of || Array(nSrc).fill(0);
+  const ringOf = v.params.resolved_component_of || v.params.resolved_ring_of
+    || Array(nSrc).fill(0);
   const baseDist = v.params.resolved_distances || Array(nSrc).fill(REFD);
+  const lvlAt = frame => frame.lvl || Array(nSrc).fill(1);
   const distAt = frame => frame.dist || baseDist;
   const unit = d => Math.pow(Math.max(d, 0.2) / REFD, 0.7);
   const maxUnit = Math.max(1, ...baseDist.map(unit)) * 1.02;
@@ -1337,7 +1582,9 @@ function drawRing() {
         const age = k / trail.length;
         const [x0, y0] = posD(a0, distAt(trail[k - 1])[i]);
         const [x1, y1] = posD(a1, distAt(trail[k])[i]);
-        x.strokeStyle = `rgba(44,95,124,${(0.62 * age * age).toFixed(3)})`;
+        const [cr, cg, cb] = COMP_COLOURS[ringOf[i] % COMP_COLOURS.length];
+        const lv = lvlAt(trail[k])[i];
+        x.strokeStyle = `rgba(${cr},${cg},${cb},${(0.62 * age * age * lv).toFixed(3)})`;
         x.lineWidth = 1.2 + 3.4 * age;
         x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
       }
@@ -1349,10 +1596,16 @@ function drawRing() {
     const nRings = Math.max(...ringOf) + 1;
     const poly = (frame, alpha, dash) => {
       for (let g = 0; g < nRings; g++) {
+        // Only closed patterns have a meaningful outline; a stream is a line
+        // of sources passing through, and joining its ends would draw a shape
+        // that is not there.
+        const kind = v.params.resolved_components?.[g]?.kind || "ring";
+        if (kind === "stream") continue;
         const idx = [];
         for (let i = 0; i < nSrc; i++) if (ringOf[i] === g) idx.push(i);
         if (idx.length < 2) continue;
-        x.strokeStyle = `rgba(44,95,124,${alpha})`;
+        const [cr, cg, cb] = COMP_COLOURS[g % COMP_COLOURS.length];
+        x.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
         x.lineWidth = 1;
         x.setLineDash(dash);
         x.beginPath();
@@ -1386,28 +1639,50 @@ function drawRing() {
   fr.az.forEach((a, i) => {
     const [sx, sy] = posD(a, distAt(fr)[i]);
     const coh = 1 - (fr.amt[i] ?? 1);       // filled = coherent, hollow = decorrelated
+    const lv = lvlAt(fr)[i];                // a fading source fades on screen
+    const [cr, cg, cb] = COMP_COLOURS[ringOf[i] % COMP_COLOURS.length];
     x.beginPath(); x.arc(sx, sy, 4.5 + 4.5 * coh, 0, Math.PI * 2);
-    x.fillStyle = `rgba(44,95,124,${(0.10 + 0.85 * coh).toFixed(3)})`;
+    x.fillStyle = `rgba(${cr},${cg},${cb},${((0.10 + 0.85 * coh) * lv).toFixed(3)})`;
     x.fill();
-    x.strokeStyle = "#2c5f7c"; x.lineWidth = 1.2; x.stroke();
+    x.strokeStyle = `rgba(${cr},${cg},${cb},${(0.25 + 0.75 * lv).toFixed(3)})`;
+    x.lineWidth = 1.2; x.stroke();
   });
 
-  const ringRates = (v.params.rings || [v.params]).map(r => r.rotation_deg_per_sec || 0);
-  const domRate = ringRates.reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a, 0);
+  const comps = v.params.resolved_components || [];
+  const domRate = comps.filter(c => c.kind === "ring" || c.kind === "spiral")
+    .reduce((a, c) => Math.abs(c.rotation_deg_per_sec) > Math.abs(a)
+      ? c.rotation_deg_per_sec : a, 0);
   drawRotationArrow(x, cx, cy, R + 17, domRate, "#2c5f7c");
   const hot = v.params.hotspot;
   if (hot?.enabled && hot.deg_per_sec) {
     drawRotationArrow(x, cx, cy, R + 31, hot.deg_per_sec, "#9a5b2d");
   }
+  // Arrow showing where a stream is heading.
+  for (const c of comps) {
+    if (c.kind !== "stream" || !c.speed_mps) continue;
+    const dir = (c.heading_deg + (c.speed_mps < 0 ? 180 : 0)) * Math.PI / 180;
+    const ax = cx + Math.sin(dir) * (R + 26), ay = cy - Math.cos(dir) * (R + 26);
+    x.fillStyle = "#3d6b52";
+    x.beginPath();
+    x.moveTo(ax + 7 * Math.sin(dir), ay - 7 * Math.cos(dir));
+    x.lineTo(ax + 5 * Math.sin(dir + 2.4), ay - 5 * Math.cos(dir + 2.4));
+    x.lineTo(ax + 5 * Math.sin(dir - 2.4), ay - 5 * Math.cos(dir - 2.4));
+    x.closePath(); x.fill();
+  }
 
   x.fillStyle = "#7c766c"; x.font = "10px system-ui";
   x.fillText("filled = coherent, hollow = decorrelated", 6, h - 18);
-  const bits = ringRates.map((r, i) =>
-    ringRates.length > 1 ? `ring ${i + 1}: ${r ? fmt(r, 0) + "°/s" : "still"}`
-      : (r ? `ring ${fmt(r, 0)}°/s` : "ring stationary"));
+  const labels = v.params.component_labels || [];
+  const bits = comps.map((c, i) => {
+    const name = labels[i] || c.kind;
+    if (c.kind === "stream") return `${name}: ${fmt(c.speed_mps, 1)} m/s`;
+    if (c.kind === "radial") return `${name}: ${fmt(c.radial_speed_mps, 1)} m/s`;
+    if (c.kind === "spiral") return `${name}: ${fmt(c.rotation_deg_per_sec, 0)}°/s, ${fmt(c.radial_speed_mps, 1)} m/s`;
+    return `${name}: ${c.rotation_deg_per_sec ? fmt(c.rotation_deg_per_sec, 0) + "°/s" : "still"}`;
+  });
   if (hot?.enabled) bits.push(hot.deg_per_sec ? `hotspot ${fmt(hot.deg_per_sec, 0)}°/s` : "hotspot frozen");
   x.fillStyle = "#4a4640";
-  x.fillText(bits.join("   ·   "), 6, h - 5);
+  x.fillText(bits.join("   ·   ").slice(0, 90), 6, h - 5);
 }
 
 /** Curved arrow outside the ring showing which way, and how fast, it turns. */
@@ -1438,9 +1713,11 @@ function updateNow() {
   if (!S.rendered) { bar.innerHTML = '<span class="dim">Nothing rendered yet.</span>'; return; }
   const v = liveVariant();
   const p = passage();
-  bar.innerHTML = v
-    ? `<span class="tag spin">${esc(v.label)}</span><span class="dim">applied</span>`
-    : `<span class="tag dry">untreated</span><span class="dim">hold a number key to apply a variant</span>`;
+  const set = S.live?.set || [];
+  bar.innerHTML = set.length
+    ? set.map(i => `<span class="tag spin">${esc(S.rendered.passages[S.live.pi].variants[i]?.label || i)}</span>`).join("")
+      + `<span class="dim">${set.length > 1 ? `${set.length} applied together` : "applied"}</span>`
+    : `<span class="tag dry">untreated</span><span class="dim">hold one or more number keys to apply variants</span>`;
 
   const host = $("#readout");
   if (!v || !v.params) {
@@ -1452,24 +1729,45 @@ function updateNow() {
   const pr = v.params, d = pr.resolved_decorr, hs = pr.hotspot;
   const rp = S.rendered.passages[S.live.pi];
   const fr = frameAt(v.trace, playPosition() - rp.start);
-  const rings = pr.rings || [];
-  const rows = [
-    ["rings", rings.length
-      ? rings.map(r => `${r.n_sources} src, ${r.rotation_deg_per_sec}°/s, ${fmt(r.distance_m, 1)}m`).join(" | ")
-      : `${pr.n_sources} src, ${fmt(pr.rotation_deg_per_sec, 0)}°/s`],
-    ["azimuths now", fr ? fr.az.map(a => fmt(a, 0)).join("  ") : pr.resolved_azimuths.join("  ")],
-  ];
-  if (fr?.dist) rows.push(["distances now", fr.dist.map(a => fmt(a, 1)).join("  ")]);
+  const comps = pr.resolved_components || [];
+  const labels = pr.component_labels || [];
+  const compOf = pr.resolved_component_of || [];
+  const rows = [];
+
+  // Per component, so a field of several can be read one at a time.
+  comps.forEach((c, ci) => {
+    const idx = compOf.map((g, i) => g === ci ? i : -1).filter(i => i >= 0);
+    const az = fr ? idx.map(i => fmt(fr.az[i], 0)).join(" ") : "";
+    const dist = fr?.dist ? idx.map(i => fmt(fr.dist[i], 1)).join(" ") : "";
+    const lvl = fr?.lvl ? idx.map(i => fmt(fr.lvl[i], 2)).join(" ") : "";
+    const motion = c.kind === "stream"
+      ? `${fmt(c.speed_mps, 1)} m/s heading ${fmt(c.heading_deg, 0)}°`
+      : c.kind === "radial" ? `${fmt(c.radial_speed_mps, 1)} m/s radial`
+      : c.kind === "spiral" ? `${fmt(c.rotation_deg_per_sec, 0)}°/s, ${fmt(c.radial_speed_mps, 1)} m/s`
+      : (c.rotation_deg_per_sec ? `${fmt(c.rotation_deg_per_sec, 0)}°/s` : "stationary");
+    const cd = c.decorr || d;
+    rows.push([`<b>${esc(labels[ci] || c.kind)}</b>`,
+      `${c.kind} · ${c.n_sources} src · ${motion}`]);
+    if (az) rows.push(["  azimuths", az]);
+    if (dist) rows.push(["  distances", dist]);
+    if (lvl && c.kind !== "ring") rows.push(["  levels", lvl]);
+    if (c.random_fraction > 0)
+      rows.push(["  random share", `${Math.round(c.random_fraction * 100)}%`]);
+    rows.push(["  decorrelation",
+      `${cd.family} ${fmt(cd.amount, 2)} · ${fmt(cd.ir_ms, 0)}ms${c.decorr ? "" : " (inherited)"}`]);
+  });
+
   rows.push(
-    ["amounts now", fr ? fr.amt.map(a => fmt(a, 2)).join("  ") : fmt(d.amount, 2)],
-    ["decorrelation", `${d.family} ${fmt(d.amount, 2)} · ${fmt(d.ir_ms, 0)}ms · ${d.envelope}`],
+    ["amounts now", fr ? fr.amt.map(a => fmt(a, 2)).join(" ") : fmt(d.amount, 2)],
     ["bands", d.crossovers ? `${d.crossovers.join("/")} Hz × ${(d.band_amounts || []).join(", ")}` : "full band"],
     ["hotspot", hs?.enabled
       ? `${fmt(hs.deg_per_sec, 0)} °/s, ${fmt(hs.width_deg, 0)}° wide` : "off"],
+    ["head radius", `${fmt(pr.head_radius * 100, 1)} cm`],
     ["seed", pr.seed],
   );
   host.innerHTML = "<table>" +
-    rows.map(([k, val]) => `<tr><td>${k}</td><td>${esc(val)}</td></tr>`).join("") + "</table>";
+    rows.map(([k, val]) => `<tr><td>${k}</td><td>${esc(String(val))}</td></tr>`).join("")
+    + "</table>";
 }
 
 function tick() {
@@ -1534,6 +1832,22 @@ function showMetrics() {
     html += `<div class="finding">Add a variant identical to this one with every
       rate set to zero, and the paired measure appears here. A single render's
       modulation is confounded with the music's own periodicity.</div>`;
+  } else if (v.no_rotation_rate) {
+    html += row("rotation-signature", "rotation", "–",
+      '<span class="dim">no rotation rate</span>');
+    html += `<div class="finding">This variant moves, but translation and radial
+      flow recycle rather than repeating at a fixed rate, so there is no single
+      frequency for the paired measure to examine. Judge these by listening,
+      against a frozen control.</div>`;
+  }
+
+  if (v.component_coherence) {
+    html += `<div class="mrow" style="margin-top:10px"><span class="mlab">per component<button class="i" data-ref="component">i</button></span></div>`;
+    html += `<table class="compare"><tr><th>component</th><th></th>
+      <th style="text-align:right">coherence</th></tr>` +
+      v.component_coherence.map(c => `<tr><td>${esc(c.label)}</td>
+        <td class="dim">${esc(c.kind)}, ${c.n} src</td>
+        <td class="n">${fmt(c.mean_offdiagonal, 3)}</td></tr>`).join("") + `</table>`;
   }
 
   if (m.iacc_bands) {
@@ -1902,11 +2216,26 @@ function welcomeTour() {
         data.`,
     },
     {
+      el: '.tab[data-tab="courses"]',
+      title: "Courses",
+      body: `Six courses in order, from how two ears produce a sense of
+        direction through to running a listening test that counts as evidence.`,
+      before: () => showTab("courses"),
+    },
+    {
+      el: '.tab[data-tab="purpose"]',
+      title: "Purpose",
+      body: `The research programme: the question, where it sits in the
+        literature, what has been measured here, and how it is tested.`,
+      before: () => showTab("purpose"),
+    },
+    {
       el: "#openlearn",
-      title: "Learn",
-      body: `Courses covering the theory in order, a term reference, and longer
-        notes on method. Terms in the interface link into it through the small
-        i buttons.`,
+      title: "Glossary",
+      body: `Two glossaries. One holds this instrument's own vocabulary, the
+        other established audio and hearing terms with references. Terms
+        throughout the interface link into them through the small i buttons.`,
+      before: () => showTab("bench"),
     },
   ];
 }
@@ -2014,8 +2343,9 @@ function buildTour() {
       el: "#metrics",
       title: "Read the measurements carefully",
       body: `The rotation figure is only meaningful as a difference against a
-        matched static control, and the panel says when one is missing. The
-        Learn courses cover why.`,
+        matched static control, and the panel says when one is missing. It also
+        reports nothing for translation and radial flow, which recycle rather
+        than repeating at a fixed rate. The Courses cover why.`,
     },
     {
       title: "Where to go from here",
@@ -2309,8 +2639,10 @@ async function upload(f) {
 
 async function boot() {
   try { REF = await api("/api/encyclopedia"); } catch (_) { }
-  try { GUIDE = await api("/api/guide"); } catch (_) { }
+  try { PURPOSE = await api("/api/purpose"); } catch (_) { }
   try { COURSES = await api("/api/courses"); } catch (_) { }
+  renderCoursesPage();
+  renderPurposePage();
   wireSheet();
   wireHelpMenu();
   wireExperiments();

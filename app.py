@@ -145,6 +145,37 @@ class RingIn(BaseModel):
         return rf.RingConfig(**self.model_dump())
 
 
+class ComponentIn(BaseModel):
+    kind: str = "ring"
+    n_sources: int = 5
+    label: str = ""
+    start_azimuths: Optional[List[float]] = None
+    spacing_deg: Optional[float] = None
+    offset_deg: float = 0.0
+    distance_m: float = 2.0
+    rotation_deg_per_sec: float = 60.0
+    heading_deg: float = 180.0
+    speed_mps: float = 1.5
+    path_m: float = 9.0
+    spread_m: float = 3.0
+    radial_speed_mps: float = 0.0
+    r_near_m: float = 0.7
+    r_far_m: float = 6.0
+    random_fraction: float = 0.0
+    wander_deg: float = 60.0
+    wander_hz: float = 0.25
+    radial_wander_m: float = 0.0
+    gain_db: float = 0.0
+    fade_frac: float = 0.3
+    min_distance_m: float = 0.4
+    decorr: Optional[DecorrIn] = None
+
+    def to_cfg(self) -> rf.ComponentConfig:
+        d = self.model_dump()
+        d["decorr"] = self.decorr.to_cfg() if self.decorr else None
+        return rf.ComponentConfig(**d)
+
+
 class FieldIn(BaseModel):
     n_sources: int = 3
     rotation_deg_per_sec: float = 60.0
@@ -154,6 +185,7 @@ class FieldIn(BaseModel):
     offset_deg: float = 0.0
     per_source_gain_db: Optional[List[float]] = None
     rings: Optional[List[RingIn]] = None
+    components: Optional[List[ComponentIn]] = None
     decorr: DecorrIn = Field(default_factory=DecorrIn)
     hotspot: HotspotIn = Field(default_factory=HotspotIn)
     head_radius: float = rf.HEAD_RADIUS
@@ -173,6 +205,8 @@ class FieldIn(BaseModel):
             offset_deg=self.offset_deg,
             per_source_gain_db=self.per_source_gain_db,
             rings=[r.to_cfg() for r in self.rings] if self.rings else None,
+            components=([c.to_cfg() for c in self.components]
+                        if self.components else None),
             decorr=self.decorr.to_cfg(), hotspot=self.hotspot.to_cfg(),
             head_radius=self.head_radius, speed_of_sound=self.speed_of_sound,
             hrtf_taps=self.hrtf_taps, hrtf_grid_step=self.hrtf_grid_step,
@@ -301,10 +335,14 @@ def encyclopedia():
     return _load_json("encyclopedia.json")
 
 
-@app.get("/api/guide")
-def guide():
-    """Longer-form theory and practice, separate from the term definitions."""
-    return _load_json("guide.json")
+@app.get("/api/purpose")
+def purpose():
+    """The research programme: question, literature, findings, method.
+
+    Sections carry ids, so a [[link]] from a lesson or a glossary entry can
+    resolve here as well as to a term.
+    """
+    return _load_json("purpose.json")
 
 
 @app.get("/api/courses")
@@ -502,6 +540,13 @@ def _effective_rate(cfg_in: FieldIn) -> float:
     """
     if cfg_in.hotspot and cfg_in.hotspot.enabled:
         return cfg_in.hotspot.deg_per_sec
+    if cfg_in.components:
+        # Only rotation has a well-defined cyclic rate. Translation and radial
+        # flow recycle, but their period depends on path length and speed, and
+        # mixing those into one figure would misreport what is being measured.
+        rates = [c.rotation_deg_per_sec for c in cfg_in.components
+                 if c.kind in ("ring", "spiral")]
+        return max(rates, key=abs) if rates else 0.0
     if cfg_in.rings:
         rates = [r.rotation_deg_per_sec for r in cfg_in.rings]
         return max(rates, key=abs) if rates else 0.0
@@ -523,7 +568,26 @@ def _control_key(cfg_in: FieldIn) -> str:
     if d.get("rings"):
         d["rings"] = [{**r, "rotation_deg_per_sec": 0.0, "wander_hz": 0.0}
                       for r in d["rings"]]
+    if d.get("components"):
+        d["components"] = [{**c, "rotation_deg_per_sec": 0.0, "speed_mps": 0.0,
+                            "radial_speed_mps": 0.0, "wander_hz": 0.0}
+                           for c in d["components"]]
     return json.dumps(d, sort_keys=True, default=str)
+
+
+def _has_motion(cfg_in: FieldIn) -> bool:
+    """Whether anything in the variant moves, across every motion kind."""
+    if cfg_in.hotspot and cfg_in.hotspot.enabled and cfg_in.hotspot.deg_per_sec:
+        return True
+    for c in (cfg_in.components or []):
+        if not c.to_cfg().is_static():
+            return True
+    for r in (cfg_in.rings or []):
+        if r.rotation_deg_per_sec or (r.random_fraction > 0 and r.wander_hz > 0):
+            return True
+    if not cfg_in.components and not cfg_in.rings:
+        return bool(cfg_in.rotation_deg_per_sec)
+    return False
 
 
 def _render_layers(req: RenderIn, mono, stereo, hrtf, fs, payload) -> Dict[str, Any]:
@@ -674,7 +738,7 @@ def _render_session(req: RenderIn, mono, stereo, hrtf, fs) -> Dict[str, Any]:
 
         controls: Dict[str, int] = {}
         for i, v in enumerate(p.variants):
-            if v.config is not None and _effective_rate(v.config) == 0:
+            if v.config is not None and not _has_motion(v.config):
                 controls[_control_key(v.config)] = i
 
         vs = []
@@ -704,13 +768,15 @@ def _render_session(req: RenderIn, mono, stereo, hrtf, fs) -> Dict[str, Any]:
             entry["params"] = rf.config_dict(cfg)
 
             if req.with_metrics:
-                rate = (cfg.hotspot.deg_per_sec
-                        if (cfg.hotspot and cfg.hotspot.enabled)
-                        else cfg.rotation_deg_per_sec)
+                rate = _effective_rate(v.config)
+                moves = _has_motion(v.config)
                 entry["metrics"] = rf.metrics(y, fs, rotation_deg_per_sec=rate)
                 entry["effective_rate"] = rate
+                entry["moves"] = moves
                 entry["coherence"] = _measured_coherence(
                     mono[a:b], cfg, fs, p.end - p.start)
+                entry["component_coherence"] = _component_coherence(
+                    mono[a:b], cfg, fs)
                 if rate:
                     ci = controls.get(_control_key(v.config))
                     if ci is not None and ci != vi and rendered[pi][ci] is not None:
@@ -719,6 +785,10 @@ def _render_session(req: RenderIn, mono, stereo, hrtf, fs) -> Dict[str, Any]:
                         entry["control_variant"] = ci
                     else:
                         entry["control_missing"] = True
+                elif moves:
+                    # Translation and radial flow recycle rather than cycling at
+                    # a fixed rate, so there is no single frequency to test.
+                    entry["no_rotation_rate"] = True
             vs.append(entry)
 
         out_passages.append({"name": p.name, "start": p.start, "end": p.end,
@@ -736,6 +806,37 @@ def _render_session(req: RenderIn, mono, stereo, hrtf, fs) -> Dict[str, Any]:
             "passages": out_passages}
 
 
+def _component_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int):
+    """Measured inter-source coherence within each component separately.
+
+    A whole-variant matrix mixes components that may be carrying deliberately
+    different coherence, so the average across it describes nothing in
+    particular. Reported per component alongside it.
+    """
+    comps = cfg.resolved_components()
+    if len(comps) < 2:
+        return None
+    take = x[: min(len(x), 6 * fs)]
+    per = cfg.per_source_decorr()
+    out, at = [], 0
+    for ci, c in enumerate(comps):
+        n = max(int(c.n_sources), 1)
+        cfgs = per[at:at + n]
+        at += n
+        if n < 2:
+            out.append({"label": c.label or f"{c.kind} {ci + 1}",
+                        "kind": c.kind, "n": n, "mean_offdiagonal": None})
+            continue
+        bank = rf.SourceBank(take, n, cfgs, fs)
+        sigs = bank.blocks(0, len(take), bank.base_amounts())
+        m = rf.coherence_matrix(sigs)
+        off = m[~np.eye(n, dtype=bool)]
+        out.append({"label": c.label or f"{c.kind} {ci + 1}", "kind": c.kind,
+                    "n": n,
+                    "mean_offdiagonal": round(float(np.mean(np.abs(off))), 4)})
+    return out
+
+
 def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
                         duration: float = 0.0):
     """What the sources actually ended up looking like to each other.
@@ -750,7 +851,10 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
     point is that the structure moves.
     """
     take = x[: min(len(x), 6 * fs)]
-    bank = rf.SourceBank(take, cfg.n_sources, cfg.resolved_decorr(), fs)
+    n_src = cfg.total_sources() if (cfg.components or cfg.rings) else cfg.n_sources
+    decorr = (cfg.per_source_decorr() if (cfg.components or cfg.rings)
+              else cfg.resolved_decorr())
+    bank = rf.SourceBank(take, n_src, decorr, fs)
     az = cfg.resolved_azimuths()
     hot = cfg.hotspot
     moving = hot is not None and hot.enabled

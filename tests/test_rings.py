@@ -98,11 +98,14 @@ def test_median_plane_ear_gains_are_equal():
 # ----------------------------------------------------------------------
 
 def test_random_fraction_splits_movers_and_wanderers():
+    """Half the ring should advance with the rotation and half should not."""
     cfg = rf.FieldConfig(rings=[rf.RingConfig(
         n_sources=6, rotation_deg_per_sec=90.0, random_fraction=0.5)])
     geom = rf.FieldGeometry(cfg)
-    assert int(np.sum(geom.rates == 0.0)) == 3
-    assert int(np.sum(geom.rates == 90.0)) == 3
+    advance = (geom.azimuths(2.0) - geom.azimuths(0.0)) % 360.0
+    movers = int(np.sum(np.abs(advance - 180.0) < 1.0))
+    assert movers == 3
+    assert geom.n - movers == 3
 
 
 def test_wander_is_deterministic_and_seed_dependent():
@@ -119,10 +122,12 @@ def test_wander_is_deterministic_and_seed_dependent():
 
 def test_wander_is_smooth_and_bounded():
     geom = rf.FieldGeometry(rf.FieldConfig(rings=[rf.RingConfig(
-        n_sources=3, random_fraction=1.0, wander_deg=60.0, wander_hz=0.25)]))
+        n_sources=3, rotation_deg_per_sec=0.0,
+        random_fraction=1.0, wander_deg=60.0, wander_hz=0.25)]))
+    base = rf.RingConfig(n_sources=3).resolved_azimuths()
     t = np.arange(0, 10, 0.01)
     az = np.array([geom.azimuths(x) for x in t])
-    excursion = np.abs(az - geom.base_az)
+    excursion = np.abs(az - base)
     assert np.max(excursion) <= 60.0 * 1.01      # weights sum to the amplitude
     steps = np.abs(np.diff(az, axis=0))
     assert np.max(steps) < 3.0                    # no jumps at 100 Hz sampling
@@ -157,7 +162,7 @@ def test_two_rings_compose(hrtf, signal):
     ])
     geom = rf.FieldGeometry(cfg)
     assert geom.n == 8
-    assert geom.ring_of == [0, 0, 0, 1, 1, 1, 1, 1]
+    assert geom.comp_of == [0, 0, 0, 1, 1, 1, 1, 1]
     trace = []
     y = rf.render(signal, hrtf, cfg, FS, trace=trace)
     assert y.shape == (len(signal), 2)

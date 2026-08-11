@@ -1,4 +1,31 @@
-# ringfield — project handoff
+# Sonokinetic — project handoff
+
+**Renamed from ringfield.** The question generalised past rotation, so the name
+did too. Package and module names are unchanged (`ringfield.py` is still the DSP
+core); only the product name moved.
+
+**Components replaced rings as the unit of a variant.** `ComponentConfig` gives
+a group of sources a trajectory in (azimuth, distance, level): `ring`, `stream`
+(straight-line translation with fades and recycling), `radial`, `spiral`. Each
+carries its own optional `DecorrConfig`, so coherence varies per component.
+`FieldConfig.components` supersedes `rings`, which supersedes the scalar fields;
+all three still render, and `tests/test_components.py` asserts bit-identity for
+the legacy paths.
+
+**A stream heading front-to-back produces zero interaural difference.** The model
+is front-back symmetric and the median plane keeps both ears equidistant, so
+that condition is a level ramp, not a spatial trajectory. Asserted in the tests
+and stated in Purpose; do not describe it as a front-back percept.
+
+**Learn split four ways:** Courses and Purpose are top-level tabs; the popup
+holds two glossaries (project vocabulary, established terms) with collapsible
+topic groups. Findings and method material moved out of the glossary into
+Purpose as sections carrying the same ids, so existing `[[links]]` still
+resolve. `guide.json` was folded into `purpose.json` and deleted.
+
+---
+
+# Original handoff
 
 Read this before changing anything. It carries the context, the findings that
 constrain the design, and the spec for what to build next.
