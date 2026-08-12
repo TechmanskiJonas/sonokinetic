@@ -572,7 +572,17 @@ button.busy {
 .ringmod .rmsum { color: var(--ink-3); font-family: var(--mono); font-size: 11px; }
 .ringmod .rmbody { padding: 4px 8px 8px; }
 .ringmod.collapsed .rmhead { border-bottom: none; }
-.ringmod .twist { padding: 0 4px; min-width: 16px; color: var(--ink-3); }
+/* Disclosure control. Big enough to read and to hit: a bare glyph at button
+   size reads as a speck rather than as something to press. */
+.twist {
+  width: 24px; height: 24px; flex: none; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1; color: var(--ink-2);
+  border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--card);
+}
+.twist:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-w); }
+.ringmod .twist { margin-right: 2px; }
 .ringmod .cname {
   border-color: transparent; background: none; font-weight: 600;
   font-size: 12px; width: 108px; padding: 1px 4px;
