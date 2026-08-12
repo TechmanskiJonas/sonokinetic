@@ -19,6 +19,18 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const fmt = (v, d = 2) =>
   (v === null || v === undefined || Number.isNaN(v)) ? "–" : Number(v).toFixed(d);
+/** Disclosure chevron, drawn rather than typed.
+ *
+ * The triangle characters render at whatever size the font decides, which is
+ * small, and they pixelate because they are filled glyphs rather than strokes.
+ * A stroked path stays crisp at any size and rotates to show state.
+ */
+const chevron = (open, size = 14) =>
+  `<svg class="chev${open ? " open" : ""}" width="${size}" height="${size}"
+     viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.2 L10.8 8 L6 12.8"
+     fill="none" stroke="currentColor" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 /** Minutes, seconds and milliseconds, for setting passage edges precisely. */
 const mmssms = t => `${mmss(t)}.${String(Math.floor((t % 1) * 1000)).padStart(3, "0")}`;
@@ -150,7 +162,7 @@ function buildNav(mode, current) {
       if (!items.length) continue;
       const open = openGroups.has(s.id);
       html += `<div class="subsect grp ${open ? "open" : ""}" data-group="${s.id}">
-        <span class="tw">${open ? "▾" : "▸"}</span>${esc(s.title)}
+        <span class="tw">${chevron(open, 11)}</span>${esc(s.title)}
         <span class="pct">${items.length}</span></div>`;
       if (open) {
         html += items.map(([id, e]) =>
@@ -907,7 +919,7 @@ function buildParams(host, cfg, onChange) {
     gh.className = "ghead";
     const caret = document.createElement("span");
     caret.className = "fold";
-    caret.textContent = folded ? "▸" : "▾";
+    caret.innerHTML = chevron(!folded, 12);
     gh.append(caret, grp.group, infoBtn(grp.ref));
     gh.addEventListener("click", e => {
       if (e.target.closest(".i")) return;
@@ -941,7 +953,7 @@ function buildComponentEditor(host, cfg, onChange, hue) {
     head.className = "rmhead";
     const twist = document.createElement("button");
     twist.className = "sm ghost twist";
-    twist.textContent = c.collapsed ? "▸" : "▾";
+    twist.innerHTML = chevron(!c.collapsed);
     twist.title = c.collapsed ? "show settings" : "hide settings";
     twist.addEventListener("click", e => {
       e.stopPropagation(); c.collapsed = !c.collapsed; rebuild();
@@ -1227,10 +1239,10 @@ function renderPassages() {
             renderPassages(); markStale();
           }));
         }
-        const chev = mk(v.open ? "▾" : "▸",
-          v.open ? "hide settings" : "show settings", () => {
-            v.open = !v.open; renderPassages();
-          }, "sm ghost twist");
+        const chev = mk("", v.open ? "hide settings" : "show settings", () => {
+          v.open = !v.open; renderPassages();
+        }, "sm ghost twist");
+        chev.innerHTML = chevron(v.open);
         vr.appendChild(chev);
         if (vi > 0) vr.appendChild(mk("×", "remove variant", () => {
           p.variants.splice(vi, 1); renderPassages(); markStale();
