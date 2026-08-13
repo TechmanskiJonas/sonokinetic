@@ -439,3 +439,60 @@ def test_retired_vocabulary_is_gone_from_the_writing(ref, purpose, courses,
             haystack += [lesson["title"], lesson["body"], lesson.get("try") or ""]
     hits = [h for h in haystack if phrase.lower() in h.lower()]
     assert not hits, f"{phrase!r} survives ({why}): {hits[0][:120]}"
+
+
+# ----------------------------------------------------------------------
+# Blinding is a property of the interface, so it is asserted against the
+# interface. Every one of these failed at some point during the rewrite.
+# ----------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def appjs():
+    return open(os.path.join(ROOT, "static", "app.js"), encoding="utf-8").read()
+
+
+def test_the_transport_bar_hides_the_variant_label_during_a_trial(appjs):
+    """That bar is pinned to the bottom of every page, including the trial.
+
+    It names the sounding variant, which is the single fact a blind trial
+    exists to withhold, and it had been doing so for the whole run.
+    """
+    body = appjs.split("function updateTransport()")[1].split("\nfunction ")[0]
+    assert "S.blind" in body, (
+        "updateTransport must special-case a running trial before printing a label")
+
+
+def test_participant_mode_hides_every_route_to_the_bench():
+    """A participant who reaches the bench sees the labels, the parameters and
+    the monitor drawing the motion."""
+    css = open(os.path.join(ROOT, "static", "app.css"), encoding="utf-8").read()
+    rule = css.split(".testmode")[1:]
+    hidden = " ".join(rule).split("display: none")[0]
+    for escape in ("nav .tab", "#bench", "#arrange", "#gtbench"):
+        assert escape in hidden, f"participant mode leaves {escape} reachable"
+
+
+def test_the_bench_keyboard_yields_while_a_trial_runs(appjs):
+    """The digit keys reach any variant of the passage, including ones the
+    trial did not offer, and space means something else there."""
+    handler = appjs.split("// comparing two separate listens")[1][:1400]
+    assert "if (S.blind) return;" in handler
+
+
+def test_a_trial_pairs_two_conditions_rather_than_presenting_one(appjs):
+    """The method chapter argues that spatial memory is too short for
+    successive presentation. The test has to match the argument."""
+    assert "function buildTrials(" in appjs
+    assert "PAIR_QUESTIONS" in appjs
+    assert "function holdB(" in appjs
+
+
+def test_the_side_of_the_key_is_randomised(appjs):
+    """A fixed assignment would let one trial's insight carry to all the rest."""
+    build = appjs.split("function buildTrials(")[1].split("\nfunction ")[0]
+    assert "Math.random() < 0.5" in build, "pair order must be drawn per trial"
+
+
+def test_catch_trials_pair_a_condition_with_itself(appjs):
+    build = appjs.split("function buildTrials(")[1].split("\nfunction ")[0]
+    assert "round.push([c, c])" in build

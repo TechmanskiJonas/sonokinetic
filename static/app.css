@@ -309,6 +309,34 @@ kbd {
 /* ---- trial ----------------------------------------------------------- */
 
 .trial { min-height: 220px; }
+
+/* The A/B control. Which side is sounding has to be readable at a glance, or
+   a listener loses track of which one they are describing. */
+.abbar {
+  display: flex; align-items: stretch; gap: 10px; margin-bottom: 8px;
+}
+.abside {
+  flex: 1; padding: 10px 12px; text-align: center;
+  border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--card); color: var(--ink-3);
+}
+.abside b { display: block; font-size: 20px; color: var(--ink-2); }
+.abside span { font-size: 11.5px; }
+.abside.live {
+  border-color: var(--accent); background: var(--accent-w); color: var(--ink);
+}
+.abside.live b { color: var(--accent); }
+.abhold {
+  flex: 1.2; font-size: 14px; font-weight: 600; cursor: pointer;
+  touch-action: none; user-select: none;
+}
+.abhold.down { border-color: var(--accent); background: var(--accent-w); color: var(--accent); }
+.gate {
+  margin: 10px 0 14px; padding: 7px 10px; border-radius: var(--r);
+  background: var(--sunken); color: var(--ink-2);
+  font-size: 12px; font-family: var(--mono);
+}
+.gate.ok { color: var(--ink-3); }
 .qbox { margin: 12px 0; padding: 10px 12px; background: var(--sunken); border-radius: var(--r); }
 .qtext { margin-bottom: 7px; }
 .opts, .scale { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -626,8 +654,11 @@ textarea.tnotes {
 }
 
 /* participant mode ----------------------------------------------------- */
+/* #gtbench would walk a participant onto the bench, where the variant labels,
+   the parameters and the moving monitor are all on display. */
 .testmode nav .tab, .testmode #openlearn, .testmode #starttour,
-.testmode #bench, .testmode #arrange, .testmode #feedback { display: none !important; }
+.testmode #bench, .testmode #arrange, .testmode #feedback,
+.testmode #gtbench { display: none !important; }
 
 /* feedback ------------------------------------------------------------- */
 #feedback .card { max-width: 640px; }

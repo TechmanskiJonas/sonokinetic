@@ -1012,10 +1012,20 @@ def feedback(req: FeedbackIn):
 # ----------------------------------------------------------------------
 
 class TrialIn(BaseModel):
+    """One trial.
+
+    A trial is a pair, so condition/params describe side A and condition_b /
+    params_b describe side B. Both are optional so that a session file written
+    by an older single-stimulus run still parses.
+    """
     session: str
     trial: int
     condition: str
     params: Optional[Dict[str, Any]] = None
+    condition_b: Optional[str] = None
+    params_b: Optional[Dict[str, Any]] = None
+    identity: Optional[bool] = None      # both sides the same render: a catch trial
+    switches: Optional[int] = None       # how many times the listener crossed over
     responses: Dict[str, Any]
     blind: bool = True
     seconds: Optional[float] = None
@@ -1065,21 +1075,28 @@ def session_csv(name: str):
             if not line.strip():
                 continue
             r = json.loads(line)
-            flat = {k: v for k, v in r.items() if k not in ("responses", "params")}
+            flat = {k: v for k, v in r.items()
+                    if k not in ("responses", "params", "params_b")}
             for k, v in (r.get("responses") or {}).items():
                 flat[f"response.{k}"] = v
-            p = r.get("params") or {}
-            d = p.get("resolved_decorr") or {}
-            comps = p.get("resolved_components") or []
-            flat.update({
-                "n_sources": p.get("n_sources"),
-                "rotation_deg_per_sec": p.get("rotation_deg_per_sec"),
-                "azimuths": json.dumps(p.get("resolved_azimuths")),
-                "decorr_family": d.get("family"),
-                "decorr_amount": d.get("amount"),
-                "ir_ms": d.get("ir_ms"), "density": d.get("density"),
-                "envelope": d.get("envelope"), "seed": d.get("seed"),
-            })
+            # Side A keeps the unprefixed column names so a file mixing paired
+            # trials with older single-stimulus ones still lines up.
+            for prefix, p in (("", r.get("params") or {}),
+                              ("b.", r.get("params_b") or {})):
+                if not p:
+                    continue
+                d = p.get("resolved_decorr") or {}
+                flat.update({
+                    f"{prefix}n_sources": p.get("n_sources"),
+                    f"{prefix}rotation_deg_per_sec": p.get("rotation_deg_per_sec"),
+                    f"{prefix}azimuths": json.dumps(p.get("resolved_azimuths")),
+                    f"{prefix}decorr_family": d.get("family"),
+                    f"{prefix}decorr_amount": d.get("amount"),
+                    f"{prefix}ir_ms": d.get("ir_ms"),
+                    f"{prefix}density": d.get("density"),
+                    f"{prefix}envelope": d.get("envelope"),
+                    f"{prefix}seed": d.get("seed"),
+                })
             rows.append(flat)
 
     if not rows:

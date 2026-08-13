@@ -153,7 +153,7 @@
         {
           "id": "blind-testing",
           "heading": "Why blinding is required",
-          "body": "The person who designed a stimulus knows what it should do, and that knowledge shapes perception below the level of deliberate judgement. Listening unblinded, by the person holding the hypothesis, is exploration rather than evidence.\n\nThe remedy is procedural. The blind test hides the condition during judgement, shuffles presentation order within each repeat, uses fixed response formats so answers can be counted, and includes the untreated signal among the conditions.\n\nThe bench and the blind test have different standing. Use the bench freely to find candidates; use the blind test to decide whether they are real."
+          "body": "The person who designed a stimulus knows what it should do, and that knowledge shapes perception below the level of deliberate judgement. Listening unblinded, by the person holding the hypothesis, is exploration rather than evidence.\n\nThe remedy is procedural. A trial holds two conditions at once with their labels hidden: one sounds while a key is held, the other while it is released, and the passage loops until the listener has compared as much as they want to.\n\nPresenting the pair together rather than one condition after another follows from how short memory for spatial quality is. A rating given to a single stimulus is compared against a remembered one, and the remembered one decays over the seconds it takes to move between renders. Holding both under one key removes that step; see [[auditory-memory]].\n\nThe bench and the blind test have different standing. Use the bench freely to find candidates; use the blind test to decide whether they are real."
         },
         {
           "id": "experimenter-bias",
@@ -163,12 +163,12 @@
         {
           "id": "catch-trial",
           "heading": "Catch trials",
-          "body": "Including the untreated signal among the blind conditions measures how often an effect is reported when none is present. That rate calibrates the remaining responses against expectation, and it is the cheapest single safeguard available."
+          "body": "Some trials pair a condition with itself. Both sides of the key carry the same render, so the correct answer is that nothing differs, and how often a difference gets reported anyway measures how much of the remaining data is expectation.\n\nPairing a condition with itself is stronger than presenting the untreated signal as a condition of its own. The task, the material and the controls are identical to a real trial, so nothing marks it out to a listener, and the expected answer is exact rather than merely different from the others.\n\nIt is the cheapest safeguard available, at the cost of one trial in each repeat."
         },
         {
           "id": "randomization",
           "heading": "Randomisation and repeats",
-          "body": "Without shuffling, order effects contaminate everything: listeners adapt, fatigue, and learn the sequence, and any condition that always comes last inherits all of it. Shuffle within each repeat rather than once, so each condition appears at different points across a session.\n\nDecide how many repeats constitute a test before running it rather than after looking at the results."
+          "body": "Two things are shuffled. Which pairs appear in which order, so that no condition inherits the fatigue or the practice attaching to a fixed position in a session. And which member of each pair answers to the key, so that the held side is not always the treated one.\n\nThe second matters more than it looks. Under a fixed assignment, one trial's worth of insight into the arrangement would carry to every trial after it, and the blinding would be gone with nothing appearing to have changed.\n\nShuffle within each repeat rather than once. Decide how many repeats constitute a test before running it rather than after looking at the results."
         },
         {
           "id": "statistical-power",
@@ -178,12 +178,12 @@
         {
           "id": "forced-choice",
           "heading": "Response formats",
-          "body": "Free description is rich but unanalysable and lets a listener avoid committing. Fixed formats yield countable data with a defined chance level.\n\nThe items in use separate localization of individual sources from whether the sound is centred in the head, since a mono image is centred yet has a pointable position and a single question would not discriminate between them. Graded qualities use 0 to 6 scales. The movement-type item appears only after a nonzero movement rating.\n\nA discrimination format such as **ABX**, in which a listener says which of two labelled options an unlabelled third matches, answers the prior question of whether two settings are distinguishable at all. Chance is 50%, which gives a clean statistical test. It is not currently implemented here."
+          "body": "Free description is rich but unanalysable, and it lets a listener avoid committing. Fixed formats yield countable data with a defined chance level. Both are collected, description first, so that the fixed items do not supply the vocabulary the description is then written in.\n\nBecause a trial holds two conditions rather than one, the items ask which of the two rather than how much of a quality. The first asks whether the pair differed at all, with 'cannot say' offered as a real answer. That item together with the [[catch-trial|identity trials]] is a same-different discrimination task: the catch trials have a known correct answer, so the false-alarm rate is measured rather than assumed, which a rating scale cannot do.\n\nThe items after it separate which side moved more from which side was harder to point at, since those are the two properties the question holds apart. Direction of motion is not asked, because the head model cannot carry it.\n\nConfidence is recorded on a 0 to 6 scale, since a listener who is right while guessing and one who is right while certain are different results.\n\n**ABX**, in which a listener says which of two labelled options an unlabelled third matches, is the other standard discrimination format. It is not implemented here; the same-different design was chosen because it needs one presentation rather than three and leaves room for the description."
         },
         {
           "id": "n-of-1",
           "heading": "One listener",
-          "body": "Everything measured so far comes from a single listener who designed the stimuli and knows the hypothesis. Blinding within that listener is a real improvement but does not address individuality: [[hrtf|HRTFs]] are personal, and a percept obtained on one non-[[individualization|individualized]] model may not generalise.\n\nResponses log per trial with the full parameter set attached and export as CSV, so adding listeners requires no rebuilding. A participant link presents only the listening test, with the software assigning presentation order, so the person running the session need not be present."
+          "body": "Everything measured so far comes from a single listener who designed the stimuli and knows the hypothesis. Blinding within that listener is a real improvement but does not address individuality: [[hrtf|HRTFs]] are personal, and a percept obtained on one non-[[individualization|individualized]] model may not generalise.\n\nResponses log per trial with the full parameter set attached and export as CSV, so adding listeners requires no rebuilding. A participant link presents only the listening test, with the software assigning both the order of pairs and which side of the key each condition takes, so the person running the session need not be present."
         }
       ]
     },

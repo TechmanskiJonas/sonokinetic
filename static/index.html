@@ -178,15 +178,21 @@
         <h2>Setup</h2>
         <button class="i" data-ref="blind-testing">i</button>
       </div>
-      <p class="note">Variants of the selected passage are presented in random
-        order with their labels hidden. Responses are written to disk as they
-        are made, and can be exported as CSV with the full parameter set
-        attached to each trial.</p>
+      <p class="note">Each trial holds two variants of the selected passage at
+        once, with their labels hidden. The passage loops, one variant plays
+        while the space bar is held and the other while it is released, and the
+        listener moves between them as long as they like before answering.
+        Responses are written to disk as they are made, and export as CSV with
+        the full parameter set attached to each trial.</p>
       <div class="row"><label>Session <input id="bsession" value="s1"></label></div>
-      <div class="row"><label>Repeats per condition
+      <div class="row"><label>Repeats per pair
         <input id="brepeats" type="number" value="3" min="1" max="20"></label></div>
-      <div class="row"><label class="chk"><input type="checkbox" id="bincludedry" checked>
-        Include a dry catch trial <button class="i" data-ref="catch-trial">i</button></label></div>
+      <div class="row"><label class="chk"><input type="checkbox" id="bagainstdry">
+        Pair everything against the untreated signal, rather than every pair
+        <button class="i" data-ref="forced-choice">i</button></label></div>
+      <div class="row"><label class="chk"><input type="checkbox" id="bidentity" checked>
+        Add a catch trial pairing one variant with itself
+        <button class="i" data-ref="catch-trial">i</button></label></div>
       <div class="row">
         <button id="bstart" class="primary">Start</button>
         <button id="bstop">Stop</button>

@@ -1714,6 +1714,9 @@ function wireTransport() {
   addEventListener("keydown", e => {
     if (e.target?.matches?.("input, select, textarea")) return;
     if ($("#sheet").classList.contains("on") || Tour.active) return;
+    // A trial owns the keyboard while it runs: space holds B there, and the
+    // digits would let a listener reach a variant the trial did not offer.
+    if (S.blind) return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); return; }
     // Ctrl or Cmd with a digit produces a different e.key on some layouts, so
     // the digit is taken from the physical key instead.
@@ -2073,10 +2076,15 @@ function updateTransport() {
   bar.classList.toggle("on", sounding && !onBench);
   if (!sounding || onBench) return;
   const p = passage();
+  // The variant label is the one thing a trial exists to hide, and this bar is
+  // pinned to the bottom of every page. During a trial it shows the side of
+  // the key instead, which the listener can already see.
   const what = previewSrc
     ? `selection ${fmt(S.sel[0], 1)}–${fmt(S.sel[1], 1)}s`
-    : `${p ? p.name : "passage"}${S.live ? " · " + esc(
-        S.rendered.passages[S.live.pi].variants[S.live.vi]?.label || "") : " · untreated"}`;
+    : S.blind
+      ? `trial ${S.blind.idx + 1} · ${S.blind.holding ? "B" : "A"}`
+      : `${p ? p.name : "passage"}${S.live ? " · " + esc(
+          S.rendered.passages[S.live.pi].variants[S.live.vi]?.label || "") : " · untreated"}`;
   $("#gtwhat").innerHTML = what;
   $("#gtclock").textContent = previewSrc
     ? mmssms(previewPosition()) : mmssms(playPosition());
@@ -2316,29 +2324,42 @@ function wireArrangement() {
  * absent: the head model is front-back symmetric, so direction is not
  * recoverable from the cues it produces, and asking would collect noise.
  */
-const QUESTIONS = [
-  // Free description comes first, before any fixed response supplies the
-  // categories. What the percept is like is exactly what the fixed items
-  // cannot ask, and asking after them collects their vocabulary back.
+/** Trial items for a paired comparison.
+ *
+ * A trial holds two conditions at once and the listener moves between them, so
+ * the items ask which of the two rather than how much of a quality. Absolute
+ * ratings would throw away the sensitivity that switching buys: a rating
+ * collected from one stimulus is compared against a remembered one, and memory
+ * for spatial quality is the thing that fades.
+ *
+ * The free description runs first, before any fixed response supplies the
+ * categories. What the percept is like is exactly what the fixed items cannot
+ * ask, and asking afterwards collects their vocabulary back.
+ */
+const PAIR_QUESTIONS = [
   { id: "description", type: "text", optional: true, ref: "phenomenology",
-    text: "Describe what you hear, in your own words.",
-    placeholder: "Whatever stands out. There is no right answer." },
-  { id: "focus", type: "scale", text: "How spatially focused is the sound?",
-    lo: "one compact source", hi: "no direction at all", ref: "apparent-source-width" },
-  { id: "individual", type: "opts", ref: "localization",
-    text: "Leaving aside the sound as a whole, can you point to any individual source inside it?",
-    opts: ["yes, clearly", "yes, vaguely", "no"] },
-  { id: "center", type: "opts", ref: "lateralization",
-    text: "Does the sound sit at the centre of your head?",
-    opts: ["yes", "partly", "no"] },
-  { id: "motion", type: "scale", text: "How much does it move?",
-    lo: "static", hi: "clearly moving", ref: "auditory-motion" },
+    text: "What did you notice when you switched?",
+    placeholder: "Whatever stands out. There is no right answer, and “nothing” is a real one." },
+  { id: "differ", type: "opts", ref: "forced-choice",
+    text: "Did the two differ at all?",
+    opts: ["yes", "no", "cannot say"] },
+  { id: "confidence", type: "scale", ref: "forced-choice",
+    text: "How sure are you of that?", lo: "guessing", hi: "certain",
+    when: r => r.differ === "yes" || r.differ === "no" },
+  { id: "which_moves", type: "opts", ref: "auditory-motion",
+    text: "Which one moved more?", when: r => r.differ === "yes",
+    opts: ["A", "B", "the same", "cannot say"] },
   { id: "motion_kind", type: "opts", ref: "auditory-motion",
-    text: "What kind of movement?", when: r => Number(r.motion) > 0,
+    text: "What kind of movement?",
+    when: r => r.which_moves === "A" || r.which_moves === "B",
     opts: ["circling", "side to side", "nearer and farther", "irregular", "cannot say"] },
-  { id: "envelopment", type: "scale", text: "How surrounded are you?",
-    lo: "it is in front of me", hi: "it is all around me", ref: "envelopment" },
-  { id: "notes", type: "text", text: "Notes", optional: true },
+  { id: "which_diffuse", type: "opts", ref: "localization",
+    text: "In which was it harder to point at anything?", when: r => r.differ === "yes",
+    opts: ["A", "B", "the same", "cannot say"] },
+  { id: "pointable", type: "opts", ref: "localization",
+    text: "Setting the comparison aside, could you point at any individual source in either?",
+    opts: ["yes, clearly", "yes, vaguely", "no"] },
+  { id: "notes", type: "text", text: "Anything else", optional: true },
 ];
 
 function questionHtml(q) {
@@ -2359,19 +2380,73 @@ function questionHtml(q) {
     ${controls}</div>`;
 }
 
+/** How many times a listener must move between the two before answering.
+ *
+ * Answering without having compared is the failure this design exists to
+ * prevent, and it is easy to do by accident when the form is already on
+ * screen. The count is logged either way, so a listener who switched the
+ * minimum and one who switched thirty times stay distinguishable. */
+const MIN_SWITCHES = 4;
+
 function refreshTrialState() {
   const b = S.blind;
   if (!b) return;
-  for (const q of QUESTIONS) {
+  for (const q of PAIR_QUESTIONS) {
     if (!q.when) continue;
     const box = $(`.qbox[data-q="${q.id}"]`);
     const on = q.when(b.responses);
     box?.classList.toggle("off", !on);
     if (!on) delete b.responses[q.id];
   }
-  const ready = QUESTIONS.every(q =>
+  const answered = PAIR_QUESTIONS.every(q =>
     q.optional || (q.when && !q.when(b.responses)) || (q.id in b.responses));
-  $("#bnext").disabled = !ready;
+  const compared = b.switches >= MIN_SWITCHES;
+  const next = $("#bnext");
+  if (next) next.disabled = !(answered && compared);
+  const gate = $("#bgate");
+  if (gate) {
+    gate.textContent = compared
+      ? `${b.switches} switches`
+      : `Switch between A and B at least ${MIN_SWITCHES - b.switches} more time${
+          MIN_SWITCHES - b.switches === 1 ? "" : "s"} before answering.`;
+    gate.classList.toggle("ok", compared);
+  }
+}
+
+/** Build the trial list: pairs, not single conditions.
+ *
+ * Identity pairs, where both sides are the same render, are the catch trials.
+ * They are stronger than presenting the untreated signal alone, because the
+ * correct answer is known exactly and the listener has no way to spot them:
+ * the task, the material and the controls are identical to a real pair.
+ */
+function buildTrials(pool, reps, againstFirst, identity) {
+  const pairs = [];
+  for (let i = 0; i < pool.length; i++)
+    for (let j = i + 1; j < pool.length; j++)
+      if (!againstFirst || i === 0) pairs.push([pool[i], pool[j]]);
+
+  const shuffle = xs => {
+    for (let k = xs.length - 1; k > 0; k--) {
+      const j = Math.floor(Math.random() * (k + 1));
+      [xs[k], xs[j]] = [xs[j], xs[k]];
+    }
+    return xs;
+  };
+
+  const out = [];
+  for (let r = 0; r < reps; r++) {
+    const round = pairs.map(p => [...p]);
+    if (identity) {
+      const c = pool[Math.floor(Math.random() * pool.length)];
+      round.push([c, c]);
+    }
+    // Which member of a pair answers to the key is decided per trial, so a
+    // listener cannot learn that the held side is always the treated one.
+    for (const p of shuffle(round))
+      out.push(Math.random() < 0.5 ? { a: p[0], b: p[1] } : { a: p[1], b: p[0] });
+  }
+  return out;
 }
 
 function startBlind() {
@@ -2380,19 +2455,15 @@ function startBlind() {
     $("#btrial").innerHTML = '<p class="note">Render a passage with at least two variants first.</p>';
     return;
   }
-  const reps = Number($("#brepeats").value) || 3;
-  const pool = rp.variants.map((v, i) => ({ vi: i, label: v.label, kind: v.kind }))
-    .filter(c => $("#bincludedry").checked || c.vi !== 0);
-  const order = [];
-  for (let r = 0; r < reps; r++) {
-    const round = [...pool];
-    for (let k = round.length - 1; k > 0; k--) {         // Fisher-Yates
-      const j = Math.floor(Math.random() * (k + 1));
-      [round[k], round[j]] = [round[j], round[k]];
-    }
-    order.push(...round);
+  const pool = rp.variants.map((v, i) => ({ vi: i, label: v.label, kind: v.kind }));
+  const order = buildTrials(pool, Number($("#brepeats").value) || 3,
+                            $("#bagainstdry").checked, $("#bidentity").checked);
+  if (!order.length) {
+    $("#btrial").innerHTML = '<p class="note">That combination produces no pairs.</p>';
+    return;
   }
-  S.blind = { order, idx: 0, session: $("#bsession").value || "s1", responses: {}, t0: 0 };
+  S.blind = { order, idx: 0, session: $("#bsession").value || "s1",
+              responses: {}, t0: 0, switches: 0, holding: false };
   nextTrial();
 }
 
@@ -2407,19 +2478,27 @@ function nextTrial() {
     S.blind = null;
     return;
   }
-  const cond = b.order[b.idx];
-  b.responses = {}; b.t0 = performance.now();
+  b.responses = {}; b.t0 = performance.now(); b.switches = 0; b.holding = false;
 
-  // The label is never shown. Playback restarts at the top of the passage so
-  // every trial hears identical material.
+  // Labels are never shown. The passage loops from its start and keeps
+  // looping: the listener decides when they have compared enough, since
+  // capping the time would add a variable without answering anything.
   $("#loop").checked = true;
   startPlayback(passage().start);
-  applyVariant(S.active, cond.vi, 0);
+  applyVariant(S.active, b.order[b.idx].a.vi, 0);
 
   $("#bprogress").textContent = `Trial ${b.idx + 1} of ${b.order.length}`;
-  $("#btrial").innerHTML = `<p class="dim">Condition hidden.</p>` +
-    QUESTIONS.map(questionHtml).join("") +
-    `<div class="row"><button id="breplay">Replay</button>
+  $("#btrial").innerHTML = `
+    <div class="abbar">
+      <div class="abside live" id="abA"><b>A</b><span>on release</span></div>
+      <button class="abhold" id="abhold">Hold for B</button>
+      <div class="abside" id="abB"><b>B</b><span>while held</span></div>
+    </div>
+    <p class="dim">Hold the space bar, or the button above, to hear B. Release
+      for A. The passage loops until you move on.</p>
+    <div id="bgate" class="gate"></div>` +
+    PAIR_QUESTIONS.map(questionHtml).join("") +
+    `<div class="row"><button id="breplay">Restart the loop</button>
       <button id="bnext" class="primary" disabled>Next trial</button></div>`;
 
   $$(".qbox", $("#btrial")).forEach(qb => {
@@ -2430,23 +2509,44 @@ function nextTrial() {
       refreshTrialState();
     }));
   });
+  const hold = $("#abhold");
+  hold.addEventListener("pointerdown", e => { e.preventDefault(); holdB(true); });
+  addEventListener("pointerup", () => { if (S.blind?.holding) holdB(false); });
   refreshTrialState();
   $("#breplay").addEventListener("click", () => startPlayback(passage().start));
   $("#bnext").addEventListener("click", submitTrial);
 }
 
+/** Move to B and back, counting the crossings. */
+function holdB(on) {
+  const b = S.blind;
+  if (!b || b.holding === on) return;
+  b.holding = on;
+  const t = b.order[b.idx];
+  applyVariant(S.active, (on ? t.b : t.a).vi);
+  if (on) b.switches++;
+  $("#abA")?.classList.toggle("live", !on);
+  $("#abB")?.classList.toggle("live", on);
+  $("#abhold")?.classList.toggle("down", on);
+  refreshTrialState();
+}
+
 async function submitTrial() {
   const b = S.blind;
-  const cond = b.order[b.idx];
-  const v = S.rendered.passages[S.active].variants[cond.vi];
-  $$("#btrial [data-text]").forEach(t => {
-    const val = t.value.trim();
-    if (val) b.responses[t.dataset.text] = val;
+  const t = b.order[b.idx];
+  const vs = S.rendered.passages[S.active].variants;
+  holdB(false);
+  $$("#btrial [data-text]").forEach(el => {
+    const val = el.value.trim();
+    if (val) b.responses[el.dataset.text] = val;
   });
   await post("/api/trial", {
-    session: b.session, trial: b.idx, condition: v.label, params: v.params,
-    responses: b.responses, blind: true,
-    seconds: (performance.now() - b.t0) / 1000, presentation_index: cond.vi,
+    session: b.session, trial: b.idx,
+    condition: vs[t.a.vi].label, condition_b: vs[t.b.vi].label,
+    params: vs[t.a.vi].params, params_b: vs[t.b.vi].params,
+    identity: t.a.vi === t.b.vi,
+    responses: b.responses, blind: true, switches: b.switches,
+    seconds: (performance.now() - b.t0) / 1000, presentation_index: t.a.vi,
   });
   b.idx++;
   nextTrial();
@@ -2461,6 +2561,19 @@ function wireBlind() {
   $("#bsession").addEventListener("change", e => {
     $("#bcsv").href = `/api/session/${e.target.value}.csv`;
   });
+
+  // Space holds B during a trial. It types a space inside the description box,
+  // so a focused field keeps it; the on-screen button covers that case.
+  addEventListener("keydown", e => {
+    if (!S.blind || e.code !== "Space" || e.repeat) return;
+    if (e.target?.matches?.("input, select, textarea")) return;
+    if ($("#sheet").classList.contains("on") || Tour.active) return;
+    e.preventDefault(); holdB(true);
+  });
+  addEventListener("keyup", e => {
+    if (S.blind && e.code === "Space") { e.preventDefault(); holdB(false); }
+  });
+  addEventListener("blur", () => { if (S.blind?.holding) holdB(false); });
 }
 
 // ====================================================================
@@ -2723,9 +2836,9 @@ function blindTour() {
     {
       el: '.tab[data-tab="blind"]',
       title: "Blind testing",
-      body: `Listening while knowing which condition is playing is exploration,
-        not evidence. This page hides the condition, shuffles the order, and
-        records responses as they are made.`,
+      body: `Listening while knowing which condition is playing is exploration
+        rather than evidence. This page hides the labels, shuffles what is
+        presented, and records responses as they are made.`,
       before: () => showTab("blind"),
     },
     {
@@ -2736,20 +2849,32 @@ function blindTour() {
         everything already answered.`,
     },
     {
-      el: "#bincludedry",
+      el: "#brepeats",
+      title: "A trial is a pair",
+      body: `Each trial holds two variants at once: one sounds while the space
+        bar is held, the other while it is released, and the passage loops
+        until the listener moves on. This is the comparison the bench is built
+        around, for the same reason. Memory for spatial quality fades within
+        seconds, so two renders heard in succession is a weaker test than
+        moving between them.`,
+    },
+    {
+      el: "#bidentity",
       title: "Catch trials",
-      body: `Including the untreated signal calibrates the rest: reporting
-        motion on it measures how much of the other reports is expectation.`,
+      body: `A catch trial pairs a variant with itself, so the two sides are
+        the same render and the correct answer is that nothing differs. How
+        often a difference gets reported anyway measures how much of the rest
+        is expectation. Nothing distinguishes it from a real trial.`,
     },
     {
       el: "#btrial",
       title: "The questions",
-      body: `Graded qualities use 0 to 6 scales. Localization of individual
-        sources is asked separately from whether the sound sits at the centre
-        of the head, since a mono signal is centred yet has a pointable
-        position. The movement-type item appears only after a nonzero movement
-        rating, and rotation direction is not asked at all: the current head
-        model cannot distinguish front from back, so direction is not
+      body: `Because a trial holds two conditions, the items ask which of the
+        two rather than how much of a quality. Free description comes first, so
+        the fixed items do not supply the words it is written in. Which side
+        moved more is asked separately from which was harder to point at, since
+        those are the two properties the question holds apart. Direction is not
+        asked at all: the head model cannot tell front from back, so it is not
         recoverable.`,
     },
     {
