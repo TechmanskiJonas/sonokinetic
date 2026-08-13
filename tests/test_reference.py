@@ -299,13 +299,13 @@ def test_every_course_link_resolves(targets, courses):
     assert not broken, "dead links: " + ", ".join(sorted(broken))
 
 
-def test_checkpoints_have_both_a_question_and_an_answer(courses):
+def test_lessons_carry_no_quiz(courses):
+    """Lessons are reference material someone works from, so they end where the
+    explanation ends. The renderer no longer has a branch for this field, and a
+    stray one would sit in the data doing nothing."""
     for c in courses["courses"]:
         for lesson in c["lessons"]:
-            cp = lesson.get("checkpoint")
-            if cp is None:
-                continue
-            assert cp.get("q") and cp.get("a"), f"{lesson['id']} checkpoint incomplete"
+            assert "checkpoint" not in lesson, f"{lesson['id']} still carries a checkpoint"
 
 
 def test_the_curriculum_starts_from_nothing(courses):

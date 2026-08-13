@@ -11,40 +11,24 @@
         {
           "id": "the-question",
           "title": "The question",
-          "body": "A sound that crosses from left to right is heard at one position and then at another, and the sequence is perceived as movement. That much is well understood.\n\nThe question here is whether a whole field of sound can be heard as moving when nothing inside it can be singled out and pointed at. Motion is a global property of the field, and localizability is a local property of its parts, so the two can be set independently and varied against each other. The claim under test is that the first survives the removal of the second.\n\nThe standard account of [[auditory-motion]] holds that motion is inferred by comparing successive position estimates. On that account a field with nothing localizable in it supplies no estimates to compare, and should not be heard as moving. A listener who hears motion anyway would show the account to be incomplete.\n\nMotion is meant broadly throughout. A field can turn about the listener, close in or open out, or drift past in a straight line, and the instrument builds all of these from the same parts. Rotation was the first case examined and is the easiest to describe, which is why it recurs in the examples, although nothing in the question depends on it.\n\nListening sessions always address two things: whether anything in the field can be pointed at, and whether the field is moving.",
-          "checkpoint": {
-            "q": "Why does a wide, enveloping sound not answer the question by itself?",
-            "a": "Width and envelopment are separate qualities from motion, and a wide sound still has a locatable centre. The claim requires global motion together with the absence of anything locally pointable."
-          }
+          "body": "A sound that crosses from left to right is heard at one position and then at another, and the sequence is perceived as movement. That much is well understood.\n\nThe question here is whether a whole field of sound can be heard as moving when nothing inside it can be singled out and pointed at. Motion is a global property of the field, and localizability is a local property of its parts, so the two can be set independently and varied against each other. The claim under test is that the first survives the removal of the second.\n\nThe standard account of [[auditory-motion]] holds that motion is inferred by comparing successive position estimates. On that account a field with nothing localizable in it supplies no estimates to compare, and should not be heard as moving. A listener who hears motion anyway would show the account to be incomplete.\n\nMotion is meant broadly throughout. A field can turn about the listener, close in or open out, or drift past in a straight line, and the instrument builds all of these from the same parts. Rotation was the first case examined and is the easiest to describe, which is why it recurs in the examples, although nothing in the question depends on it.\n\nListening sessions always address two things: whether anything in the field can be pointed at, and whether the field is moving."
         },
         {
           "id": "the-analogy",
           "title": "The analogy that motivates it",
-          "body": "In vision the corresponding question is settled. A [[random-dot-kinematogram]] is a field of dots in which some proportion move together while the rest move at random. Observers report the global motion and its direction well below the proportion at which any single dot can be followed, so motion there is computed by pooling across elements and belongs to the ensemble; see [[global-motion]].\n\nTwo details of the stimulus matter for carrying the analogy over. The dots move, and their coherence lies in a shared direction of travel. Individual dots stay visible throughout and are simply uninformative on their own.\n\nThe auditory counterpart is a group of sources travelling together while each one is made too diffuse to locate, which this project calls [[unison-motion]]. The visual stimulus also supplies the central manipulation: the proportion of elements taking part in the common motion, available here as the [[motion-coherence|motion coherence share]].\n\nThe analogy has a known limit. Vision resolves many independent spatial channels, while hearing reconstructs space from a comparison between two ear signals, so any auditory pooling would operate on [[interaural-statistics|interaural statistics]] rather than on a spatial map. It motivates the design without establishing that the effect exists.",
-          "checkpoint": {
-            "q": "What makes an individual dot in a kinematogram useless for judging the global motion?",
-            "a": "Its own trajectory carries almost no information about the ensemble's direction. The auditory version aims for the same property through decorrelation."
-          }
+          "body": "In vision the corresponding question is partly settled. A [[random-dot-kinematogram]] is a field of dots in which some proportion move in a common direction while the rest move at random. Observers report the global direction well below the proportion at which any single dot can be followed, so the motion is computed by pooling across elements and belongs to the ensemble; see [[global-motion]].\n\nThat result is why this project treats motion as something an ensemble might carry rather than as something read off a tracked object. It is established vision science with an identified neural substrate.\n\nThe analogy reaches less far than it first appears. Every dot in a kinematogram stays visible and localizable throughout, and the manipulation varies how many dots share a direction rather than whether a dot has a position. The paradigm therefore speaks to pooling and stays silent on motion perceived without localization, since that condition never arises in it.\n\nThis instrument varies two things where the kinematogram varies one. The [[motion-coherence|motion coherence share]] carries the kinematogram manipulation over directly, and the parallel there is close. [[decorrelation|Decorrelation]] is the second, and it has no visual counterpart: it removes each source's position rather than its informativeness about direction. The question this project exists for turns on that second manipulation.\n\nA structural limit applies to both. Vision resolves many independent spatial channels while hearing reconstructs space from a comparison between two ear signals, so any auditory pooling would operate on [[interaural-statistics|interaural statistics]] rather than on a spatial map."
         },
         {
           "id": "what-the-tool-does",
           "title": "What the instrument does",
           "body": "The instrument sums a piece of audio to mono and builds a field from it: virtual [[source|sources]] placed around the head, each filtered to differ from the others, each given an angle and a distance through a head model.\n\nWork is organised in three levels. A [[passage]] is a time region of the track. A [[variant]] is one treatment of that passage, or the untreated signal. A [[component]] is a lattice of sources with a motion applied, and a variant is built from as many components as it needs.\n\nRendering produces every variant of a passage over the same span, sample aligned and matched in loudness, so a comparison between them isolates the treatment.\n\nDuring playback the track runs untreated while each rendered variant runs alongside it in step. Holding a number key brings one forward and releasing returns to the untreated signal, with the change occurring mid-note.",
-          "try": "A new passage starts with the untreated signal only. Add a variant, then add a component to it from the menu.",
-          "checkpoint": {
-            "q": "Why are variants rendered over exactly the same span?",
-            "a": "So the material is identical across conditions and any audible difference is attributable to the treatment rather than to the music."
-          }
+          "try": "A new passage starts with the untreated signal only. Add a variant, then add a component to it from the menu."
         },
         {
           "id": "how-to-work",
           "title": "Working method",
           "body": "Comparison is more sensitive the closer together the compared sounds are in time, because memory for spatial quality fades quickly; see [[auditory-memory]]. Switching between aligned variants in the middle of a sustained note is therefore a stronger test than listening to renders in sequence.\n\nA workable loop: choose a passage of fifteen to thirty seconds, build two or three variants that differ in one parameter, render, loop the passage, and switch between variants repeatedly.\n\nThree habits protect the conclusions. Change one parameter per comparison, since a difference heard between variants that differ in two ways cannot be attributed to either. Compare against the right reference, which for a moving field is the same field held still; see [[matched-control]]. Record what was heard before reading the measurements.\n\nListen on headphones, with any operating-system spatializer disabled, since those apply a second head model on top of this one.",
-          "try": "With Loop passage on, press Play, then hold and release key 1 several times.",
-          "checkpoint": {
-            "q": "Two variants differ in rotation rate and in source count, and one sounds more diffuse. What can be concluded?",
-            "a": "Nothing attributable, since either parameter or their interaction could be responsible. Comparisons need a single difference."
-          }
+          "try": "With Loop passage on, press Play, then hold and release key 1 several times."
         }
       ]
     },
@@ -58,49 +42,29 @@
         {
           "id": "two-ears",
           "title": "Two ears, two differences",
-          "body": "The ears sit on opposite sides of the head, and this produces two measurable differences between the signals at the two eardrums. A sound to the right arrives at the right ear earlier, which is the [[itd|interaural time difference]], at most roughly 0.65 ms for a human head. It also arrives louder, because the head shadows the far ear, which is the [[ild|interaural level difference]].\n\nBoth differences are zero for directions on the [[median-plane]], the vertical plane of symmetry through the head, and maximal on the [[interaural-axis]] through the ears. What the pair really encodes is the angle from that axis, a fact with consequences covered later in this course.\n\nHearing that rests on comparing the two ear signals is called [[binaural]].",
-          "checkpoint": {
-            "q": "Why are both interaural differences zero for a sound directly behind the listener?",
-            "a": "That direction is equidistant from the two ears, as straight ahead is, so the signals match in both time and level."
-          }
+          "body": "The ears sit on opposite sides of the head, and this produces two measurable differences between the signals at the two eardrums. A sound to the right arrives at the right ear earlier, which is the [[itd|interaural time difference]], at most roughly 0.65 ms for a human head. It also arrives louder, because the head shadows the far ear, which is the [[ild|interaural level difference]].\n\nBoth differences are zero for directions on the [[median-plane]], the vertical plane of symmetry through the head, and maximal on the [[interaural-axis]] through the ears. What the pair really encodes is the angle from that axis, a fact with consequences covered later in this course.\n\nHearing that rests on comparing the two ear signals is called [[binaural]]."
         },
         {
           "id": "timing",
           "title": "Timing and its limits",
-          "body": "The auditory system extracts [[itd]] by comparing the fine structure of the two ear signals. Neurons phase-lock to the waveform at low frequencies, and the comparison of their timing yields the delay.\n\nAbove roughly 1.5 kHz this fails for two reasons: phase-locking to individual cycles degrades, and the wavelength becomes shorter than the head, which makes the cycle-to-cycle comparison ambiguous. The envelope of a high-frequency sound still carries usable timing, but fine-structure timing is a low-frequency mechanism.\n\nHuman resolution for interaural delay is near 10 microseconds. One sample at 44.1 kHz lasts about 23 microseconds, so a renderer that rounded delays to whole samples would be audibly coarse, and delays are instead interpolated between samples; see [[fractional-delay]].",
-          "checkpoint": {
-            "q": "Why does a binaural renderer need delays finer than one sample?",
-            "a": "Interaural timing resolution is around 10 microseconds and a sample at 44.1 kHz is 23 microseconds, so sample-rounded delays would quantise the cue audibly."
-          }
+          "body": "The auditory system extracts [[itd]] by comparing the fine structure of the two ear signals. Neurons phase-lock to the waveform at low frequencies, and the comparison of their timing yields the delay.\n\nAbove roughly 1.5 kHz this fails for two reasons: phase-locking to individual cycles degrades, and the wavelength becomes shorter than the head, which makes the cycle-to-cycle comparison ambiguous. The envelope of a high-frequency sound still carries usable timing, but fine-structure timing is a low-frequency mechanism.\n\nHuman resolution for interaural delay is near 10 microseconds. One sample at 44.1 kHz lasts about 23 microseconds, so a renderer that rounded delays to whole samples would be audibly coarse, and delays are instead interpolated between samples; see [[fractional-delay]]."
         },
         {
           "id": "level",
           "title": "Level and frequency",
           "body": "The head shadows sound only when the wavelength is small relative to the head. A 100 Hz tone, with a wavelength near 3.4 m, bends around it by [[diffraction]]; an 8 kHz tone, with a wavelength near 4 cm, is blocked.\n\nThe [[ild]] is therefore a function of frequency. Measured from this instrument's model at 90° to the right: about +1.3 dB at 200 to 500 Hz, +7.8 dB at 1 to 2 kHz, and +15.2 dB at 4 to 8 kHz. A plausible head-shadow model is consequently a filter rather than a flat gain; see [[brown-duda-shadow]].\n\nTogether with the previous lesson this gives the [[duplex-theory]]: timing dominates at low frequencies and level at high ones.\n\nOne consequence recurs later. The bass carries very little level difference, so low frequencies offer almost no cue for position, and decorrelating them tends to produce vagueness rather than width; see [[bass-coherence]].",
-          "try": "A variant's Decorrelation group carries crossovers and band amounts, which are there so the bass can be held coherent while the bands above it are decorrelated.",
-          "checkpoint": {
-            "q": "Why is the interaural level difference small below a few hundred hertz?",
-            "a": "Those wavelengths exceed the size of the head, so the sound diffracts around it rather than being shadowed, and little level difference arises."
-          }
+          "try": "A variant's Decorrelation group carries crossovers and band amounts, which are there so the bass can be held coherent while the bands above it are decorrelated."
         },
         {
           "id": "where-cues-fail",
           "title": "The cone of confusion",
-          "body": "Since [[itd]] and [[ild]] encode the angle from the [[interaural-axis]], every direction on a cone around that axis produces the same pair of values; see [[cone-of-confusion]]. Front and back at mirror-image angles are the simplest such pair.\n\nListeners resolve the ambiguity in two ways. The [[pinna]] imposes direction-dependent [[spectral-cues]], mostly above 5 kHz, which differ between front and back and also carry [[elevation]]. More decisively, small head movements shift the cues in opposite directions for front and back sources; see [[head-movement-cue]]. Static headphone listening removes head movement, and the spherical model used here has no pinna.\n\nThe consequence for this instrument is complete [[front-back-confusion]]: azimuths 0° and 180° produce identical signals. A full rotation yields an interaural pattern that repeats twice per lap, so rotation cannot be distinguished from side-to-side oscillation at twice the rate, and rotation direction cannot be recovered. Listening questions about pointing remain valid; questions about direction do not, which is why the blind test does not ask one.",
-          "checkpoint": {
-            "q": "Which listening question remains valid despite the front-back symmetry?",
-            "a": "Whether any individual source can be pointed at. Judgements of rotation direction are not recoverable under this model."
-          }
+          "body": "Since [[itd]] and [[ild]] encode the angle from the [[interaural-axis]], every direction on a cone around that axis produces the same pair of values; see [[cone-of-confusion]]. Front and back at mirror-image angles are the simplest such pair.\n\nListeners resolve the ambiguity in two ways. The [[pinna]] imposes direction-dependent [[spectral-cues]], mostly above 5 kHz, which differ between front and back and also carry [[elevation]]. More decisively, small head movements shift the cues in opposite directions for front and back sources; see [[head-movement-cue]]. Static headphone listening removes head movement, and the spherical model used here has no pinna.\n\nThe consequence for this instrument is complete [[front-back-confusion]]: azimuths 0° and 180° produce identical signals. A full rotation yields an interaural pattern that repeats twice per lap, so rotation cannot be distinguished from side-to-side oscillation at twice the rate, and rotation direction cannot be recovered. Listening questions about pointing remain valid; questions about direction do not, which is why the blind test does not ask one."
         },
         {
           "id": "what-a-sphere-gives",
           "title": "The spherical model's scope",
           "body": "The head model is a rigid sphere of radius 8.75 cm; see [[spherical-head-model]]. From that geometry the [[woodworth-model]] yields the ITD and the [[brown-duda-shadow]] filter yields a frequency-dependent ILD, and both have been verified against the figures earlier in this course.\n\nA sphere has no pinna, so the model produces no [[spectral-cues]], no [[elevation]], and no front-back discrimination, and it corresponds to no listener in particular; see [[individualization]]. It places sounds convincingly left and right and supports the coherence manipulations this project depends on.\n\nThe upgrade path is measured data in [[sofa]] format, for which the code already has a drop-in class. The substantive work there is [[hrtf-interpolation]], since naive blending between measured directions causes [[comb-filtering]].",
-          "try": "Head radius and speed of sound appear in a variant's Physical model group and feed the formulas above directly.",
-          "checkpoint": {
-            "q": "What capability arrives first with measured HRTFs?",
-            "a": "Front-back discrimination, through pinna spectral cues, which would make rotation direction answerable."
-          }
+          "try": "Head radius and speed of sound appear in a variant's Physical model group and feed the formulas above directly."
         }
       ]
     },
@@ -114,39 +78,23 @@
         {
           "id": "impulse-and-convolution",
           "title": "Impulse responses and convolution",
-          "body": "For a linear time-invariant system, the response to a single instantaneous impulse characterises the system completely: the output for any input follows from it. That recording is the [[impulse-response]], and the operation that applies it is [[convolution]], in which every output sample is a weighted sum of recent input samples with the impulse response supplying the weights.\n\nMost of this instrument is expressed in impulse responses. The path from a direction to an eardrum is one, and each decorrelating filter is one.\n\nDirect convolution costs the product of the two lengths, so in practice both signals are transformed to the frequency domain, multiplied, and transformed back, which is one reason the renderer works in blocks.",
-          "checkpoint": {
-            "q": "Why does the impulse response fully characterise a linear system?",
-            "a": "Any input can be written as a sum of scaled, shifted impulses, and a linear system's response to a sum is the sum of its responses."
-          }
+          "body": "For a linear time-invariant system, the response to a single instantaneous impulse characterises the system completely: the output for any input follows from it. That recording is the [[impulse-response]], and the operation that applies it is [[convolution]], in which every output sample is a weighted sum of recent input samples with the impulse response supplying the weights.\n\nMost of this instrument is expressed in impulse responses. The path from a direction to an eardrum is one, and each decorrelating filter is one.\n\nDirect convolution costs the product of the two lengths, so in practice both signals are transformed to the frequency domain, multiplied, and transformed back, which is one reason the renderer works in blocks."
         },
         {
           "id": "direction-as-filter",
           "title": "A direction as a filter",
-          "body": "The delay, shadowing, and spectral shaping a direction imposes can be collected into one filter per ear, the [[hrtf]], or in the time domain the [[hrir]]. Convolving a mono signal with a direction's pair places it in that direction over headphones.\n\nThis instrument synthesizes each pair from the model: a [[fractional-delay]] carries the [[itd]] and the [[brown-duda-shadow]] filter carries the [[ild]]. Pairs are computed for each degree of [[azimuth]] and stored. Measured data in [[sofa]] format uses the same interface, so nothing downstream changes when it is substituted.\n\nOne implementation detail is audible if done wrongly: the delay filter's window must be centred on the delay rather than on the middle of the array, since the asymmetric truncation otherwise removes high frequencies; see [[windowed-sinc]].",
-          "checkpoint": {
-            "q": "How are the HRTF and the HRIR related?",
-            "a": "They are the same information in different domains, related by the Fourier transform. Rendering convolves with the time-domain form."
-          }
+          "body": "The delay, shadowing, and spectral shaping a direction imposes can be collected into one filter per ear, the [[hrtf]], or in the time domain the [[hrir]]. Convolving a mono signal with a direction's pair places it in that direction over headphones.\n\nThis instrument synthesizes each pair from the model: a [[fractional-delay]] carries the [[itd]] and the [[brown-duda-shadow]] filter carries the [[ild]]. Pairs are computed for each degree of [[azimuth]] and stored. Measured data in [[sofa]] format uses the same interface, so nothing downstream changes when it is substituted.\n\nOne implementation detail is audible if done wrongly: the delay filter's window must be centred on the delay rather than on the middle of the array, since the asymmetric truncation otherwise removes high frequencies; see [[windowed-sinc]]."
         },
         {
           "id": "many-sources",
           "title": "Lattices of sources",
           "body": "A field is built by repeating the single-source operation: take the mono signal, make several versions of it, place each at its own [[azimuth]] and distance, and add the results.\n\nSources are placed by a **lattice**, of which there are two. A [[polar-lattice]] is concentric rings, so many rings across a radial band with so many sources around each. A [[grid-lattice]] is a rectangle of sources spanning an extent in metres. One ring at a single radius is the simplest polar case and is where this project began.\n\nGeometry interacts with symmetry. In an even ring every source has one directly opposite, and opposite pairs of identical signals cancel each other's interaural contributions; see [[antipodal-cancellation]]. Odd counts avoid exact opposition, and staggering successive rings stops them lining up on shared spokes.\n\nA lattice on its own is static. The same lattice can be turned, drawn inward, or carried past the listener without any change to how its sources are placed, which is why placement and motion are separate settings.\n\nIdentical copies on a symmetric lattice cancel completely, a result taken up in the course on coherence.",
-          "try": "In a component, compare 4 evenly spaced sources against 5, then raise the ring count to 3 and watch the monitor.",
-          "checkpoint": {
-            "q": "Why do the polar lattices here default to odd source counts per ring?",
-            "a": "An even ring gives every source an exact antipode, and those pairs cancel each other's interaural contributions when the signals are identical."
-          }
+          "try": "In a component, compare 4 evenly spaced sources against 5, then raise the ring count to 3 and watch the monitor."
         },
         {
           "id": "moving-sources",
           "title": "Rendering a moving field",
-          "body": "A moving source requires a filter that changes over time, and an abrupt filter change produces a click. The renderer therefore processes short overlapping blocks, convolving each with the [[hrir]] for the angle at the block's midpoint and summing the results; see [[overlap-add]].\n\nBlocks are tapered by a [[window-function]] that doubles as the crossfade between successive filter settings. The taper must satisfy [[cola]], the condition that overlapping windows sum to a constant, since otherwise the output is amplitude-modulated at the block rate. A periodic [[hann-window]] at half-block overlap satisfies it exactly.\n\nThe default block of 256 samples updates every position about 344 times per second, far beyond what the binaural system can follow; see [[binaural-sluggishness]]. Motion is therefore continuous as far as a listener is concerned, and the block length is chosen for the cost of the transform rather than for the smoothness of the trajectory.\n\nThe same per-block schedule updates the filters that make sources differ from one another, so a field can change its internal structure while it moves. Those filters are the subject of the next course.",
-          "checkpoint": {
-            "q": "What happens when the analysis windows fail the constant-overlap condition?",
-            "a": "The reconstruction acquires ripple at the block rate, heard as amplitude modulation."
-          }
+          "body": "A moving source requires a filter that changes over time, and an abrupt filter change produces a click. The renderer therefore processes short overlapping blocks, convolving each with the [[hrir]] for the angle at the block's midpoint and summing the results; see [[overlap-add]].\n\nBlocks are tapered by a [[window-function]] that doubles as the crossfade between successive filter settings. The taper must satisfy [[cola]], the condition that overlapping windows sum to a constant, since otherwise the output is amplitude-modulated at the block rate. A periodic [[hann-window]] at half-block overlap satisfies it exactly.\n\nThe default block of 256 samples updates every position about 344 times per second, far beyond what the binaural system can follow; see [[binaural-sluggishness]]. Motion is therefore continuous as far as a listener is concerned, and the block length is chosen for the cost of the transform rather than for the smoothness of the trajectory.\n\nThe same per-block schedule updates the filters that make sources differ from one another, so a field can change its internal structure while it moves. Those filters are the subject of the next course."
         }
       ]
     },
@@ -160,49 +108,29 @@
         {
           "id": "what-coherence-is",
           "title": "Two coherences",
-          "body": "Two signals are coherent when one predicts the other, and incoherent when it does not, with a continuum between; see [[coherence]]. The measure used is the [[correlation-coefficient]], which is normalised so that level does not affect it.\n\nTwo distinct coherences appear throughout this instrument. Inter-source coherence holds between source signals before spatialization, is what the decorrelation controls act on, and is reported as a [[coherence-matrix]]. Interaural coherence holds between the two ear signals after summation and is measured as [[iacc]]. The two are related but move separately, and conclusions drawn about one from the other are unreliable.",
-          "checkpoint": {
-            "q": "Which coherence do the decorrelation controls act on directly?",
-            "a": "Inter-source coherence. Interaural coherence at the ears is a downstream result that also depends on geometry and the head model."
-          }
+          "body": "Two signals are coherent when one predicts the other, and incoherent when it does not, with a continuum between; see [[coherence]]. The measure used is the [[correlation-coefficient]], which is normalised so that level does not affect it.\n\nTwo distinct coherences appear throughout this instrument. Inter-source coherence holds between source signals before spatialization, is what the decorrelation controls act on, and is reported as a [[coherence-matrix]]. Interaural coherence holds between the two ear signals after summation and is measured as [[iacc]]. The two are related but move separately, and conclusions drawn about one from the other are unreliable."
         },
         {
           "id": "identical-copies-collapse",
           "title": "The degenerate ring",
           "body": "An evenly spaced ring whose sources all carry the same signal renders with the left and right channels identical to machine precision. The result is a centred mono image with no interaural information, and moving it changes nothing beyond a faint timbral shimmer from shifting [[comb-filtering]]. The measurement appears in the test suite; see [[degenerate-ring]].\n\nThe cancellation is a symmetry property: summing identical copies over a symmetric arrangement removes exactly the interaural differences that would carry direction. Motion of any kind can only be audible after the symmetry is broken, through [[decorrelation]], uneven spacing, per-source gain, or per-source coherence; see [[symmetry-breaking]].\n\nA silent-seeming result is most often this configuration, so it is the first thing to check.",
-          "try": "Add a Ring, which places six sources evenly at two metres, and set the variant's decorrelation amount to zero. Measured IACC is 1.000. Raise the amount and watch it fall.",
-          "checkpoint": {
-            "q": "A moving component produces no audible motion. What is checked first?",
-            "a": "The decorrelation amount. A coherent symmetric arrangement cancels to mono and carries no motion at any rate."
-          }
+          "try": "Add a Ring, which places six sources evenly at two metres, and set the variant's decorrelation amount to zero. Measured IACC is 1.000. Raise the amount and watch it fall."
         },
         {
           "id": "making-copies-differ",
           "title": "Decorrelating without changing timbre",
-          "body": "The requirement is copies that are mutually incoherent while each still sounds like the original. Timbre follows the [[magnitude-spectrum]], so the filters must leave magnitude essentially flat while altering timing, which is the definition of [[allpass-filter|allpass]].\n\nTwo constructions are used. A random-phase allpass filter scrambles the [[phase-spectrum]] completely and preserves magnitude exactly, at the cost of smearing transients. [[velvet-noise]] places sparse random-sign impulses on a jittered grid, is nearly colourless, cheap to convolve, and gentler on transients.\n\nThe two lie on one axis: as velvet's [[impulse-density]] rises, the sequence approaches a random sign sequence, which is the allpass case. The blend between the untreated and filtered signal is the [[decorrelation-amount]].",
-          "checkpoint": {
-            "q": "Why must a decorrelating filter be approximately allpass?",
-            "a": "A filter that changed the magnitude spectrum would change timbre, and comparisons would then be about colouration rather than coherence."
-          }
+          "body": "The requirement is copies that are mutually incoherent while each still sounds like the original. Timbre follows the [[magnitude-spectrum]], so the filters must leave magnitude essentially flat while altering timing, which is the definition of [[allpass-filter|allpass]].\n\nTwo constructions are used. A random-phase allpass filter scrambles the [[phase-spectrum]] completely and preserves magnitude exactly, at the cost of smearing transients. [[velvet-noise]] places sparse random-sign impulses on a jittered grid, is nearly colourless, cheap to convolve, and gentler on transients.\n\nThe two lie on one axis: as velvet's [[impulse-density]] rises, the sequence approaches a random sign sequence, which is the allpass case. The blend between the untreated and filtered signal is the [[decorrelation-amount]]."
         },
         {
           "id": "the-control-set",
           "title": "Which controls do work",
           "body": "Measured on this system, the controls differ widely in usable range.\n\n[[ir-length|IR length]] has the most: inter-source coherence runs from about 0.19 at 5 ms to 0.04 at 120 ms, large against the measurement [[noise-floor]] of roughly 0.05. Longer filters also smear transients more.\n\n[[impulse-density|Density]] acts only while the filter is sparse, with coherence falling from about 0.50 at 60 impulses per second to 0.07 at 400 and remaining flat beyond; see [[density-saturation]].\n\n[[ir-envelope|Envelope]] dominates in the sparse regime and is nearly inert once dense, and it previously confounded comparisons between the two filter families; see [[envelope-confound]]. It is held fixed when anything else is compared.\n\n[[phase-depth|Phase depth]] provides a smooth route to partial coherence. [[micro-delay]] and [[micro-pitch]] decorrelate crudely and colour recognisably, and are kept for comparison. The [[coherence-lfo]] varies the amount over time.",
-          "try": "Set envelope to flat explicitly and sweep IR length from 5 to 120 ms across renders, watching the measured coherence.",
-          "checkpoint": {
-            "q": "A large difference appears between velvet at 200 impulses per second and allpass. What is ruled out first?",
-            "a": "The IR envelope, which historically differed between the two presets and dominates when the filter is sparse."
-          }
+          "try": "Set envelope to flat explicitly and sweep IR length from 5 to 120 ms across renders, watching the measured coherence."
         },
         {
           "id": "two-constraints",
           "title": "Level and the low end",
-          "body": "A plain blend between the untreated and filtered signal is not power preserving: the components partially cancel, and the middle of the sweep sits several decibels below the ends. Loudness differences dominate subjective comparison, so such a control would make every comparison about level. Each control here holds per-source level constant through a closed-form correction, verified per control in the test suite; see [[level-preserved]] and [[level-matching]].\n\nFrequency receives separate treatment. The bass carries little [[ild]], so decorrelating it produces vagueness and risks partial cancellation on summing, and common practice keeps it coherent; see [[bass-coherence]]. The [[crossover]] is adjustable because that practice has not been tested on rotating fields, and the band splitting is arranged so that uniform band amounts change nothing at all.",
-          "checkpoint": {
-            "q": "Why is level preservation checked per control rather than once overall?",
-            "a": "Any single control that leaked level would bias every comparison made with it, so each axis is verified separately."
-          }
+          "body": "A plain blend between the untreated and filtered signal is not power preserving: the components partially cancel, and the middle of the sweep sits several decibels below the ends. Loudness differences dominate subjective comparison, so such a control would make every comparison about level. Each control here holds per-source level constant through a closed-form correction, verified per control in the test suite; see [[level-preserved]] and [[level-matching]].\n\nFrequency receives separate treatment. The bass carries little [[ild]], so decorrelating it produces vagueness and risks partial cancellation on summing, and common practice keeps it coherent; see [[bass-coherence]]. The [[crossover]] is adjustable because that practice has not been tested on rotating fields, and the band splitting is arranged so that uniform band amounts change nothing at all."
         }
       ]
     },
@@ -217,40 +145,24 @@
           "id": "unison",
           "title": "Motion in unison",
           "body": "The main configuration is a group of mutually decorrelated sources moving together, which this project calls [[unison-motion]].\n\nIts two properties come from two independent controls. The component's velocity moves every source together and keeps the formation rigid. The [[decorrelation-amount]] removes each source's individual locatability. At low decorrelation the result is trackable objects moving around the listener, which is unremarkable; at high decorrelation the sources merge into a diffuse field, and whether that field is still heard to move is the experimental question.\n\nThe motion itself is open. Rotation turns the lattice about the head, [[radial-flow]] draws it inward or outward, and [[translation]] carries it past the listener in a straight line. These combine within a single [[component]], so a [[whirlpool]] is one polar lattice turning while flowing inward, with its inner rings set to outrun the outer ones.\n\nThe design point holds across all of them. Decorrelation is what makes the field unlocalizable, and the velocity is what makes it move, and keeping the two separate is what makes the question testable.",
-          "try": "The monitor shows this directly. Each source drags a trail, and the outline connecting a ring turns without changing shape while its sources move together.",
-          "checkpoint": {
-            "q": "Which control carries motion and which carries unlocalizability?",
-            "a": "The component's velocity carries motion and the decorrelation amount carries unlocalizability. Their independence is what makes the question testable."
-          }
+          "try": "The monitor shows this directly. Each source drags a trail, and the outline connecting a ring turns without changing shape while its sources move together."
         },
         {
           "id": "choosing-a-rate",
           "title": "Choosing rates",
-          "body": "Every motion has a usable band. It is bounded below by too little change to register within a listening window, and above by the binaural system's own inertia.\n\nFor rotation the lower bound comes from the [[mama|minimum audible movement angle]], and the upper bound from [[binaural-sluggishness]], an integration window of a hundred milliseconds or more that smooths quickly changing cues into texture. Working figures from listening here: a slow drift near 30°/s, clear rotation between roughly 60 and 120°/s, and loss of the motion impression somewhere past a few hundred. The turning presets sit at 60°/s, and the whirlpool runs its inner ring at 160°/s against 40°/s at the outside.\n\nRadial flow and translation are set in metres per second, and their usable range depends on the size of the lattice as well as the speed. Translation sweeps azimuth quickly when the lattice is close and slowly when it is far, so a wide lattice tolerates more speed than a narrow one; the drifting presets run between 1 and 2 m/s across an extent of eight to ten metres. Radial flow changes level and near-field balance rather than angle, and reads clearly at lower speeds, with the closing and opening presets at 0.8 m/s across a band from 0.8 to 6 metres.\n\nOne point applies to rotation alone. Front-back symmetry in this model makes the interaural pattern repeat twice per lap, so a ring turning at 90°/s modulates the cues at 0.5 Hz; see [[interaural-pattern-rate]]. Translation and radial flow have no equivalent fixed rate, which matters when the measures are introduced later.",
-          "checkpoint": {
-            "q": "At 120°/s, what is the interaural pattern rate under this model?",
-            "a": "0.667 Hz. A lap takes three seconds and the pattern completes twice per lap."
-          }
+          "body": "Every motion has a usable band. It is bounded below by too little change to register within a listening window, and above by the binaural system's own inertia.\n\nFor rotation the lower bound comes from the [[mama|minimum audible movement angle]], and the upper bound from [[binaural-sluggishness]], an integration window of a hundred milliseconds or more that smooths quickly changing cues into texture. Working figures from listening here: a slow drift near 30°/s, clear rotation between roughly 60 and 120°/s, and loss of the motion impression somewhere past a few hundred. The turning presets sit at 60°/s, and the whirlpool runs its inner ring at 160°/s against 40°/s at the outside.\n\nRadial flow and translation are set in metres per second, and their usable range depends on the size of the lattice as well as the speed. Translation sweeps azimuth quickly when the lattice is close and slowly when it is far, so a wide lattice tolerates more speed than a narrow one; the drifting presets run between 1 and 2 m/s across an extent of eight to ten metres. Radial flow changes level and near-field balance rather than angle, and reads clearly at lower speeds, with the closing and opening presets at 0.8 m/s across a band from 0.8 to 6 metres.\n\nOne point applies to rotation alone. Front-back symmetry in this model makes the interaural pattern repeat twice per lap, so a ring turning at 90°/s modulates the cues at 0.5 Hz; see [[interaural-pattern-rate]]. Translation and radial flow have no equivalent fixed rate, which matters when the measures are introduced later."
         },
         {
           "id": "material",
           "title": "Choosing material",
           "body": "Material affects the outcome more than any parameter. Under identical treatment, sustained theremin passages reach [[iacc]] near 0.04 while guitar remains between 0.38 and 0.62; see [[transient-material]].\n\nA transient is a sharp, precisely timed event, and such events give the auditory system discrete snapshots from which positions are fixed. Those snapshots are the localization the experiment is trying to remove, so material full of onsets works against the treatment regardless of settings.\n\nSuitable material is sustained and nearly transient-free: pads, drones, bowed strings, organ, held voice, cymbal wash. When the percept fails to appear, the passage is worth changing before the parameters.",
-          "try": "Treat a sustained section and a percussive section with identical settings and compare.",
-          "checkpoint": {
-            "q": "Why does percussive material resist this treatment?",
-            "a": "Its onsets provide well-timed localization snapshots, restoring the pointable positions the configuration is designed to remove."
-          }
+          "try": "Treat a sustained section and a percussive section with identical settings and compare."
         },
         {
           "id": "depth-and-randomness",
           "title": "Depth, drift, and partial coherence",
           "body": "Three further axes, all available on either lattice.\n\n**Distance.** Each component sits at a distance in metres, carried by level and by the near-field growth of the [[ild]]; see [[source-distance]]. Two components at different distances make a field with depth, an inner and outer structure that can move together, at different speeds, or in opposite directions. Without reverberation the distance cue is thin, so expectations should be modest, though the level balance still separates them audibly. Distance may reach zero, where both ears are equidistant and the source is heard as a centred, in-head image.\n\n**Translation.** A [[grid-lattice]] with a drift velocity carries the whole lattice past the listener, wrapping so the field is endless. The motivating image is moving through a space with sources at regular intervals. Left-and-right travel moves both interaural cues strongly while front-and-back travel moves neither, so travel toward and away is heard through level alone; see [[front-back-measured]].\n\n**Partial coherence.** A share of any component's sources can be excluded from its motion, wandering instead with no net direction; see [[motion-coherence]]. This is the kinematogram's central manipulation: in vision the proportion of coherently moving dots sets the strength of the global motion signal, and the threshold on that proportion is a standard measure. Sweeping the share asks how much coherent motion the auditory ensemble needs before it reads as moving.\n\nWander counts as motion, so the matched control for any of these freezes the component rather than removing its rates, which preserves the spatial and level distribution exactly.",
-          "try": "Add a grid drifting forward, then a second component with a high random share, and compare each against its own frozen control.",
-          "checkpoint": {
-            "q": "What is the correct static control for a component with wandering sources?",
-            "a": "The same component frozen, which stops time rather than zeroing the rates. That preserves the geometry and the level distribution while removing all motion."
-          }
+          "try": "Add a grid drifting forward, then a second component with a high random share, and compare each against its own frozen control."
         }
       ]
     },
@@ -264,48 +176,28 @@
         {
           "id": "iacc",
           "title": "IACC and its variants",
-          "body": "[[iacc]] is the correlation between the two ear signals at the best small time lag. Values near 1 indicate a coherent, centred image and values near 0 a diffuse one. The measure comes from room acoustics, where low values accompany [[envelopment]] and [[apparent-source-width|width]].\n\nOn a static ring it tracks the decorrelation amount monotonically, from 1.000 through roughly 0.92 and 0.55 to near 0.22 at full decorrelation.\n\nTwo refinements are reported alongside it. [[octave-bands|Per-band]] values show where the coherence went, with the low bands being where decorrelation costs the most. The [[iacc-over-time]] series shows change within a passage, which a single number averages away.\n\nThe next two lessons cover the measure's limits, which matter more than its values.",
-          "checkpoint": {
-            "q": "What does the per-band breakdown reveal that the broadband number hides?",
-            "a": "Which frequency regions lost coherence, particularly the low bands, where decorrelation produces vagueness rather than width."
-          }
+          "body": "[[iacc]] is the correlation between the two ear signals at the best small time lag. Values near 1 indicate a coherent, centred image and values near 0 a diffuse one. The measure comes from room acoustics, where low values accompany [[envelopment]] and [[apparent-source-width|width]].\n\nOn a static ring it tracks the decorrelation amount monotonically, from 1.000 through roughly 0.92 and 0.55 to near 0.22 at full decorrelation.\n\nTwo refinements are reported alongside it. [[octave-bands|Per-band]] values show where the coherence went, with the low bands being where decorrelation costs the most. The [[iacc-over-time]] series shows change within a passage, which a single number averages away.\n\nThe next two lessons cover the measure's limits, which matter more than its values."
         },
         {
           "id": "noise-floor",
           "title": "The noise floor",
-          "body": "The decorrelating filters are random draws, so identical settings measure differently under different [[seed|seeds]]. Across twelve seeds at full decorrelation, [[iacc]] has a standard deviation near 0.038 and spans 0.166 to 0.283, and inter-source coherence carries about 0.05 per draw; see [[noise-floor]].\n\nSome effects under study are smaller than this. Ring geometry moves IACC by roughly 0.04 to 0.05, which single renders cannot resolve.\n\nThe working rules follow directly: hold the seed fixed when comparing two settings, average over seeds when characterising one, and treat any difference smaller than the floor as unresolved.",
-          "checkpoint": {
-            "q": "Conditions measured with different seeds differ by 0.05 in IACC. What is concluded?",
-            "a": "Nothing, since the difference is within draw-to-draw variation. The comparison needs a shared seed or averaging."
-          }
+          "body": "The decorrelating filters are random draws, so identical settings measure differently under different [[seed|seeds]]. Across twelve seeds at full decorrelation, [[iacc]] has a standard deviation near 0.038 and spans 0.166 to 0.283, and inter-source coherence carries about 0.05 per draw; see [[noise-floor]].\n\nSome effects under study are smaller than this. Ring geometry moves IACC by roughly 0.04 to 0.05, which single renders cannot resolve.\n\nThe working rules follow directly: hold the seed fixed when comparing two settings, average over seeds when characterising one, and treat any difference smaller than the floor as unresolved."
         },
         {
           "id": "rotation-signature",
           "title": "Motion needs a matched control",
-          "body": "[[iacc]] describes how diffuse a field is and cannot separate a moving field from a static one, since both can produce the same value. The alternative is to look for cyclic modulation of the [[iacc-over-time]] series at the [[interaural-pattern-rate]].\n\nOn music that measure is confounded by the material's own periodicity. Over a 20-second passage here, a completely static field scored a modulation ratio of 2.04 at 0.5 Hz while genuinely rotating fields scored 2.65 to 3.14, so the raw number cannot support a motion claim; see [[rotation-signature]].\n\nThe interpretable quantity is the difference against a [[matched-control]]: the identical configuration, same seed, frozen. The material's contribution then appears in both and subtracts out. The instrument pairs such controls automatically and reports the difference.\n\nThe paired figure stays noisy on short passages, having given +0.61 over 20 seconds and −0.91 over 12 for the same comparison, against a clean +4.74 on a synthetic drone with no competing periodicity. Long passages, synthetic sanity checks, and repetition across seeds are all warranted.\n\nOnly rotation has a well-defined cyclic rate to look for. Translation and radial flow recycle at a period set by the extent and the speed, and no modulation figure is reported for them, so they are judged by listening against a frozen control.",
-          "checkpoint": {
-            "q": "A rotating field scores a modulation ratio of 2.8. What does this show?",
-            "a": "Little by itself, since a static field scored 2.04 on similar material. Only the difference against a matched control with the same seed is interpretable."
-          }
+          "body": "[[iacc]] describes how diffuse a field is and cannot separate a moving field from a static one, since both can produce the same value. The alternative is to look for cyclic modulation of the [[iacc-over-time]] series at the [[interaural-pattern-rate]].\n\nOn music that measure is confounded by the material's own periodicity. Over a 20-second passage here, a completely static field scored a modulation ratio of 2.04 at 0.5 Hz while genuinely rotating fields scored 2.65 to 3.14, so the raw number cannot support a motion claim; see [[rotation-signature]].\n\nThe interpretable quantity is the difference against a [[matched-control]]: the identical configuration, same seed, frozen. The material's contribution then appears in both and subtracts out. The instrument pairs such controls automatically and reports the difference.\n\nThe paired figure stays noisy on short passages, having given +0.61 over 20 seconds and −0.91 over 12 for the same comparison, against a clean +4.74 on a synthetic drone with no competing periodicity. Long passages, synthetic sanity checks, and repetition across seeds are all warranted.\n\nOnly rotation has a well-defined cyclic rate to look for. Translation and radial flow recycle at a period set by the extent and the speed, and no modulation figure is reported for them, so they are judged by listening against a frozen control."
         },
         {
           "id": "metric-and-ear",
           "title": "Disagreement between measure and ear",
-          "body": "The measures and the listening reports disagree in specific, repeatable ways. Velvet decorrelation measures slightly louder than allpass in [[lufs]] yet is reported quieter, with a much lower [[iacc]]. Ring geometry barely moves IACC in conditions where it may be plainly audible; see [[metric-vs-percept]].\n\nThese measures were developed for concert halls and steady sources and have not been validated on moving decorrelated fields, so the disagreements are informative about what the measures omit rather than errors in either direction.\n\nThe practice here is to record both, letting neither overrule the other, and to treat a heard difference that the measures deny as a result worth keeping once it survives blind testing.",
-          "checkpoint": {
-            "q": "The measures show two conditions as identical, but they sound different. What follows?",
-            "a": "Both observations are recorded and the difference is tested blind. If it survives, it documents a limit of the measure."
-          }
+          "body": "The measures and the listening reports disagree in specific, repeatable ways. Velvet decorrelation measures slightly louder than allpass in [[lufs]] yet is reported quieter, with a much lower [[iacc]]. Ring geometry barely moves IACC in conditions where it may be plainly audible; see [[metric-vs-percept]].\n\nThese measures were developed for concert halls and steady sources and have not been validated on moving decorrelated fields, so the disagreements are informative about what the measures omit rather than errors in either direction.\n\nThe practice here is to record both, letting neither overrule the other, and to treat a heard difference that the measures deny as a result worth keeping once it survives blind testing."
         },
         {
           "id": "blind",
           "title": "Blind procedure",
           "body": "The person who designed a stimulus knows what it should do, and that knowledge shapes perception below deliberate judgement; see [[experimenter-bias]]. The remedy is procedural rather than attitudinal.\n\nThe blind test applies four standard elements. [[blind-testing|Blinding]] hides the condition during judgement. [[randomization|Randomised order]] within each repeat prevents order effects from attaching to any condition. [[forced-choice|Fixed response formats]] make answers countable and chance performance defined. [[catch-trial|Catch trials]] with the untreated signal calibrate how much of the other responses is expectation.\n\nThe bench serves unblinded exploration, and the blind test decides whether an explored difference is real; the two have different evidential standing.\n\nEvery result so far also comes from one listener who holds the hypothesis, on a non-individualized model; see [[n-of-1]]. Responses log to disk per trial with full parameters and export to CSV, so adding listeners requires no new construction.",
-          "try": "The Blind test page runs on the selected passage's variants once they are rendered.",
-          "checkpoint": {
-            "q": "What does a catch trial with the untreated signal measure?",
-            "a": "The rate of reporting effects where none exist, which calibrates the listener's remaining responses against expectation."
-          }
+          "try": "The Blind test page runs on the selected passage's variants once they are rendered."
         }
       ]
     }

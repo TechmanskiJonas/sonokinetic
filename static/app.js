@@ -252,11 +252,6 @@ function renderCoursesPage() {
     <h1>${esc(l.title)}</h1>
     ${linkify(l.body)}
     ${l.try ? `<div class="tryit"><b>Try it</b><div>${linkify(l.try)}</div></div>` : ""}
-    ${l.checkpoint ? `<div class="check">
-        <div class="cq">${esc(l.checkpoint.q)}</div>
-        <button class="sm" data-reveal>Show answer</button>
-        <div class="ca" hidden>${esc(l.checkpoint.a)}</div>
-      </div>` : ""}
     <div class="lessonnav">
       ${prev ? `<button class="sm" data-lesson="${c.id}:${prev.id}">&larr; ${esc(prev.title)}</button>` : "<span></span>"}
       <span class="grow"></span>
@@ -434,14 +429,6 @@ function wireSheet() {
     }
     const chap = e.target.closest("[data-chapter]");
     if (chap) { e.preventDefault(); renderPurposePage(chap.dataset.chapter); return; }
-    const rev = e.target.closest("[data-reveal]");
-    if (rev) {
-      e.preventDefault();
-      const a = rev.parentElement.querySelector(".ca");
-      a.hidden = !a.hidden;
-      rev.textContent = a.hidden ? "Show answer" : "Hide answer";
-      return;
-    }
     if (!e.target.closest("#card")) closeCard();
   });
 

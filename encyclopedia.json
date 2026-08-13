@@ -7,11 +7,11 @@
     },
     "implementation": {
       "label": "Implementation",
-      "note": "How this particular codebase does something. A design choice, not a fact about hearing."
+      "note": "How this particular codebase does something. A design choice, settled by reading the source rather than by an experiment."
     },
     "project": {
       "label": "This project's term",
-      "note": "Vocabulary invented here for convenience. Not a term of art, and not something another researcher will recognise."
+      "note": "A name coined in this project. The entry describes the configuration the name stands for, which is the part that carries over to other work."
     },
     "measured": {
       "label": "Measured here",
@@ -19,7 +19,7 @@
     },
     "open": {
       "label": "Conjecture",
-      "note": "An idea under test. Stated as a hypothesis, not as a finding."
+      "note": "An idea under test, stated as a hypothesis and awaiting evidence."
     }
   },
   "sections": [
@@ -670,13 +670,13 @@
       "section": "motion",
       "status": "established",
       "grounding": "Braddick (1974, Vision Research) introduced the paradigm. Newsome and Paré (1988, Journal of Neuroscience) established the link to area MT via lesions; Britten, Shadlen, Newsome and Movshon (1992, Journal of Neuroscience) compared neuronal and psychophysical sensitivity. Motion coherence threshold is a standard measure.",
-      "short": "A visual stimulus in which global motion is seen without any individual element being trackable.",
-      "body": "A field of dots, some fraction moving coherently and the rest randomly. Observers reliably report the global motion and its direction well below the coherence level at which any single dot can be followed. Motion is extracted by pooling across elements: see [[global-motion]].\n\nTwo features are worth noting precisely. **The dots move.** Coherence lives in their shared direction of travel. And no dot is hidden; each is simply uninformative alone.\n\n**This entry describes established vision science.** Using it as an analogy for hearing is this project's own move, and that analogy is a conjecture rather than a result: see [[the-analogy]].",
+      "short": "A visual stimulus in which the direction of an ensemble is reported while any single element carries almost none of it.",
+      "body": "A field of dots, some proportion moving in a common direction and the rest moving at random. Observers report the global direction reliably well below the proportion at which any single dot can be followed, so the motion is extracted by pooling across elements; see [[global-motion]].\n\nTwo properties of the stimulus are worth stating exactly, since they bound what it can be used to argue. The dots move, and their coherence lies in a shared direction of travel. Every dot also stays visible and localizable throughout: what the experimenter varies is how many dots share a direction, never whether a dot has a position.\n\nThat second property is where the auditory parallel stops. The manipulation transfers directly as the [[motion-coherence|motion coherence share]], which is the one place the analogy is close. [[decorrelation|Decorrelation]] removes a source's position altogether and has no counterpart in this stimulus; see [[the-analogy]].",
       "prereq": [],
       "see": [
         "global-motion",
-        "the-analogy",
-        "the-question"
+        "motion-coherence",
+        "the-analogy"
       ]
     },
     "global-motion": {
@@ -685,13 +685,15 @@
       "status": "established",
       "grounding": "Well established in vision, with identified neural substrate in area MT/V5. See Newsome and Paré (1988) and Born and Bradley (2005, Annual Review of Neuroscience) for review.",
       "short": "Motion as a property of an ensemble, pooled across elements rather than tracked in any one.",
-      "body": "In vision this is a distinct level of processing with an identified substrate, probed by the [[random-dot-kinematogram]].\n\nWhether an auditory equivalent exists is not established. Note the structural asymmetry: vision has many independently resolvable spatial channels, while hearing reconstructs space from a two-channel comparison, so any auditory pooling would have to operate quite differently.",
+      "body": "In vision this is a distinct level of processing with an identified substrate, probed by the [[random-dot-kinematogram]]: the direction of an ensemble is available even where the trajectory of any one element is uninformative.\n\nWhat it establishes is that motion perception can proceed by pooling rather than by tracking an individual. It leaves open whether motion can be perceived when the elements have no recoverable position at all, since the dots in the paradigm always have one.\n\nWhether an auditory equivalent exists is unestablished, and there is a structural asymmetry to reckon with. Vision resolves many independent spatial channels while hearing reconstructs space from a two-channel comparison, so any auditory pooling would operate on [[interaural-statistics|interaural statistics]] rather than on a spatial map.",
       "prereq": [
         "random-dot-kinematogram"
       ],
       "see": [
-        "the-question",
-        "auditory-motion"
+        "random-dot-kinematogram",
+        "auditory-motion",
+        "interaural-statistics",
+        "the-analogy"
       ]
     },
     "front-back-confusion": {
@@ -1493,13 +1495,14 @@
       "section": "p-motion",
       "status": "project",
       "short": "The share of a component's sources taking part in its motion, the rest wandering with no net direction.",
-      "body": "**Named in this project**, after the coherence manipulation in the [[random-dot-kinematogram]], where the proportion of coherently moving dots sets the strength of the global motion signal and the threshold on that proportion is a standard measure.\n\nA share of the sources is excluded from the component's motion entirely, whatever that motion is: they neither turn, nor flow, nor drift. They wander instead, on a bounded path generated from the [[seed]], so the setting renders identically every time.\n\nIt applies to any lattice, so a drifting [[grid-lattice]] can be made partly incoherent exactly as a turning [[polar-lattice]] can. Sweeping the share asks how much coherent motion the ensemble needs before it reads as moving.",
+      "body": "A share of a component's sources is excluded from its motion entirely, whatever that motion is: they neither turn, nor flow, nor drift. They wander instead, on a bounded path generated from the [[seed]], so the setting renders identically every time.\n\nThis carries the [[random-dot-kinematogram]] manipulation over directly, and it is where the visual parallel holds tightest. There the proportion of coherently moving dots sets the strength of the global motion signal, and the threshold on that proportion is a standard measure. Sweeping the share here puts the same question to an auditory ensemble.\n\nIt applies to any lattice, so a drifting [[grid-lattice]] can be made partly incoherent exactly as a turning [[polar-lattice]] can.\n\nIt is independent of [[decorrelation]], and the two do different work. This share decides which sources share a direction; decorrelation decides whether a source has a recoverable position at all. A field can be fully coherent in its motion and still unlocalizable, or fully localizable and only partly coherent.",
       "prereq": [
         "random-dot-kinematogram",
         "component"
       ],
       "see": [
         "random-dot-kinematogram",
+        "decorrelation",
         "component",
         "seed",
         "unison-motion"
@@ -1631,7 +1634,7 @@
       "section": "p-motion",
       "status": "open",
       "short": "The pooled pattern of interaural differences produced by a whole field, as opposed to any one source's cues.",
-      "body": "For a single source, [[itd]] and [[ild]] point at a position. For a [[field]] of many decorrelated sources no single pair dominates; what exists instead is a distribution, summarised by measures such as [[iacc]] and its variation across bands and over time.\n\n**The conjecture** is that rotation can be carried by slow cyclic modulation of that distribution without any individual source's position being recovered. That is a hypothesis about hearing, not an established mechanism.",
+      "body": "For a single source, [[itd]] and [[ild]] point at a position. For a [[field]] of many decorrelated sources no single pair dominates; what exists instead is a distribution, summarised by measures such as [[iacc]] and its variation across bands and over time.\n\n**The conjecture** is that motion can be carried by slow modulation of that distribution without any individual source's position being recovered. That is a hypothesis about hearing rather than an established mechanism, and it is the level at which any auditory counterpart of [[global-motion]] would have to operate.",
       "prereq": [
         "itd",
         "ild",
@@ -1799,8 +1802,8 @@
       "title": "Motion in unison",
       "section": "p-motion",
       "status": "project",
-      "short": "This project's name for a group of decorrelated sources travelling together as one. Not a term of art.",
-      "body": "**Named in this project.** Describe the configuration rather than the name when writing for others.\n\nA [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. The motion can be a rotation about the head, an inward or outward flow, a straight drift past the listener, or any combination of them, since the lattice and the velocity are set separately.\n\nThe design point is that two properties come from two separate controls. **Motion** comes from the component's velocity. **Unlocalizability** comes from the decorrelation amount. Turning decorrelation down yields trackable objects; turning it up dissolves them into a diffuse field. Whether that field still audibly moves is [[the-question]].\n\nWatch for the failure at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]] and carries no motion at any velocity.",
+      "short": "A group of mutually decorrelated sources travelling together as one.",
+      "body": "A [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. The motion can be a rotation about the head, an inward or outward flow, a straight drift past the listener, or any combination, since the lattice and the velocity are set separately.\n\nTwo properties come from two separate controls. **Motion** comes from the component's velocity. **Unlocalizability** comes from the decorrelation amount. At low decorrelation the result is trackable objects moving around the listener; at high decorrelation they merge into a diffuse field, and whether that field still audibly moves is [[the-question]].\n\nThe [[motion-coherence|motion coherence share]] is a third and independent setting. It decides how many of the sources share the motion, where decorrelation decides whether any of them can be placed at all.\n\nAt the coherent end the configuration fails outright: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]] and carries no motion at any velocity.",
       "prereq": [
         "component",
         "decorrelation"
@@ -1809,6 +1812,7 @@
         "the-question",
         "component",
         "motion-coherence",
+        "decorrelation",
         "degenerate-ring"
       ]
     }
@@ -1817,7 +1821,7 @@
     {
       "id": "project",
       "title": "Sonokinetic terms",
-      "note": "Vocabulary specific to this instrument and this research programme. Not terms of art: describe the configuration rather than naming it when writing for others."
+      "note": "Vocabulary specific to this instrument and this research programme. Each entry describes the configuration its name stands for."
     },
     {
       "id": "established",
