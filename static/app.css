@@ -578,13 +578,28 @@ button.busy {
 .ringmod .rmbody { padding: 4px 8px 8px; }
 .ringmod.collapsed .rmhead { border-bottom: none; }
 /* Disclosure control. Big enough to read and to hit: a bare glyph at button
-   size reads as a speck rather than as something to press. The mark itself is
-   a stroked path, so it stays crisp instead of pixelating the way a filled
-   triangle character does at small sizes. */
-/* flex: none matters. Inside a flex button the svg is a flex item and gets
-   shrunk on its main axis, which squashes the mark instead of sizing it. */
+   size reads as a speck rather than as something to press.
+
+   flex: none matters. Inside a flex button the svg is itself a flex item and
+   gets shrunk on its main axis, which squashes the mark instead of sizing it. */
 .chev { display: block; flex: none; transition: transform .13s ease; }
 .chev.open { transform: rotate(90deg); }
+
+/* The same triangle on every menu, pointing down. A native select draws the
+   platform arrow, which is a different shape at a different weight from the
+   disclosure control beside it, so the two never match. appearance: none
+   removes it and leaves the mark as a background image. The colour is written
+   out because a custom property cannot be read from inside a data URI. */
+select:not([multiple]) {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 21px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 4.1 L12.5 4.1 L8 11.9 Z' fill='%237c766c' stroke='%237c766c' stroke-width='1.1' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 12px 12px;
+}
+select:not([multiple]):hover { background-color: var(--sunken); }
+select:disabled { opacity: .55; }
 .twist {
   width: 24px; height: 24px; flex: none; padding: 0;
   display: inline-flex; align-items: center; justify-content: center;

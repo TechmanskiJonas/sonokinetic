@@ -19,17 +19,25 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const fmt = (v, d = 2) =>
   (v === null || v === undefined || Number.isNaN(v)) ? "–" : Number(v).toFixed(d);
-/** Disclosure chevron, drawn rather than typed.
+/** The disclosure triangle, drawn rather than typed.
  *
- * The triangle characters render at whatever size the font decides, which is
- * small, and they pixelate because they are filled glyphs rather than strokes.
- * A stroked path stays crisp at any size and rotates to show state.
+ * The ▸ character is unusable at this size for two reasons. It renders at
+ * whatever fraction of the em box the font chooses, which is small and not
+ * adjustable, and fonts give it uneven side bearings, so it sits off centre
+ * inside its own box and reads as lopsided.
+ *
+ * Drawing it fixes both. The triangle below is centred on its bounding box
+ * rather than on its centroid, which is what the eye reads as centred and
+ * what keeps the 90° rotation between the two states from shifting the mark.
+ * Proportions are near equilateral: 7.8 wide by 9 tall before the stroke,
+ * which rounds the points and adds 0.55 evenly on every side.
  */
+const TRI_RIGHT = "M4.1 3.5 L11.9 8 L4.1 12.5 Z";
 const chevron = (open, size = 14) =>
   `<svg class="chev${open ? " open" : ""}" width="${size}" height="${size}"
-     viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.2 L10.8 8 L6 12.8"
-     fill="none" stroke="currentColor" stroke-width="2.1"
-     stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+     viewBox="0 0 16 16" aria-hidden="true"><path d="${TRI_RIGHT}"
+     fill="currentColor" stroke="currentColor" stroke-width="1.1"
+     stroke-linejoin="round"/></svg>`;
 
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 /** Minutes, seconds and milliseconds, for setting passage edges precisely. */
@@ -547,7 +555,18 @@ const PARAMS = [
 ];
 
 const LABELS = {
-  n_sources: "sources", rotation_deg_per_sec: "ring rate", offset_deg: "offset",
+  n_sources: "sources", rotation_deg_per_sec: "rotation", offset_deg: "offset",
+  // Lattice shape and the motions applied to it. Axes are named by what the
+  // listener would call them rather than by x and y: +x is to the right and
+  // +y is ahead, which is worth stating once here and nowhere else.
+  lattice: "lattice", rings: "rings", per_ring: "sources per ring",
+  cols: "columns", rows: "rows",
+  extent_x_m: "width", extent_y_m: "depth",
+  ring_stagger_deg: "ring stagger",
+  rotation_outer_deg_per_sec: "rotation, outer",
+  drift_x_mps: "drift, sideways", drift_y_mps: "drift, forward",
+  edge_fade: "edge fade", min_distance_m: "closest approach",
+  max_gain_db: "level ceiling", time_scale: "time scale",
   spacing_deg: "spacing", start_azimuths: "azimuths", per_source_gain_db: "per-source gain",
   seed: "seed", amount: "amount", family: "family", ir_ms: "IR length",
   density: "density", phase_depth: "phase depth", envelope: "envelope",
@@ -1356,89 +1375,66 @@ function drawWave() {
   for (let t = 0; t < S.duration; t += step) x.fillText(mmss(t), px(t) + 2, h - 3);
 }
 
-/** Waveform interaction, following the conventions of an audio editor.
+/** Waveform interaction, on the left button alone.
  *
- *   left click or drag   move the cursor
- *   right drag           select an interval
- *   right click          set the selection start or end from a menu
+ *   click   move the cursor, and make the passage under it the active one
+ *   drag    mark out a selection, then play it
+ *
+ * The right button is deliberately unused. A custom menu on it has to suppress
+ * the browser's own, and the suppression is unreliable across browsers, so the
+ * browser menu appears over the waveform instead of the intended one. The edges
+ * of a selection are editable as numbers beside the waveform, which is more
+ * precise than a menu anyway.
  */
 function wireWave() {
   const c = $("#wave");
-  let dragging = null;      // "cursor" | "select"
-  let from = null;
+  let mode = null;          // null | "down" (may still be a click) | "select"
+  let from = null, downX = 0;
   const tAt = e => {
     const r = c.getBoundingClientRect();
     return clamp((e.clientX - r.left) / r.width * S.duration, 0, S.duration);
   };
 
-  // The browser's own menu would cover the one below, so it is suppressed
-  // across the whole waveform card rather than only on the canvas.
-  const card = c.closest(".wavecard") || c;
-  card.addEventListener("contextmenu", e => e.preventDefault());
-  c.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); });
+  // Nothing here acts on the right button, so a right click on the canvas is
+  // swallowed rather than being allowed to drop a menu over the waveform.
+  c.addEventListener("contextmenu", e => e.preventDefault());
 
   c.addEventListener("mousedown", e => {
-    from = tAt(e);
-    if (e.button === 2) { dragging = "select"; }
-    else {
-      dragging = "cursor";
-      S.cursor = from;
-      const hit = S.passages.findIndex(p => from >= p.start && from <= p.end);
-      if (hit >= 0 && hit !== S.active) { S.active = hit; renderPassages(); }
-      drawWave();
-    }
+    if (e.button !== 0) return;
+    from = tAt(e); downX = e.clientX; mode = "down";
   });
 
   c.addEventListener("mousemove", e => {
-    if (!dragging) return;
+    if (!mode) return;
+    // A few pixels of travel separates a drag from an unsteady click. The
+    // threshold is in pixels, not seconds, because a second is a different
+    // distance on a two-minute track than on a ten-minute one.
+    if (mode === "down" && Math.abs(e.clientX - downX) < 3) return;
+    mode = "select";
     const t = tAt(e);
-    if (dragging === "select") {
-      S.sel = [Math.min(from, t), Math.max(from, t)];
-      syncSel();
-    } else {
-      S.cursor = t;
-    }
+    S.sel = [Math.min(from, t), Math.max(from, t)];
+    syncSel();
     drawWave();
   });
 
-  addEventListener("mouseup", e => {
-    if (!dragging) return;
-    const t = tAt(e);
-    const moved = Math.abs(t - from) > 0.3;
-    if (dragging === "select" && !moved) {
-      showSelectMenu(e, t);
-    } else if (dragging === "select") {
-      if (S.sel[1] - S.sel[0] < 0.5) S.sel[1] = S.sel[0] + 0.5;
+  addEventListener("mouseup", () => {
+    if (!mode) return;
+    if (mode === "select") {
+      if (S.sel[1] - S.sel[0] < 0.5) S.sel[1] = Math.min(S.duration, S.sel[0] + 0.5);
       syncSel();
+      // Hearing the selection immediately is what makes an edge adjustable by
+      // ear rather than by number.
+      previewSelection(S.sel[0], false);
+    } else {
+      S.cursor = from;
+      const hit = S.passages.findIndex(p => from >= p.start && from <= p.end);
+      if (hit >= 0 && hit !== S.active) { S.active = hit; renderPassages(); }
     }
-    dragging = null; from = null;
+    mode = null; from = null;
     drawWave();
   });
 
   addEventListener("resize", drawWave);
-}
-
-/** Right-click menu for adjusting one edge of the selection. */
-function showSelectMenu(e, t) {
-  const menu = document.createElement("div");
-  menu.className = "helpmenu on";
-  menu.style.left = e.clientX + "px";
-  menu.style.top = e.clientY + "px";
-  menu.innerHTML = `
-    <button data-a><div class="hm-title">Set selection start</div>
-      <div class="hm-sub">${fmt(t, 2)}s</div></button>
-    <button data-b><div class="hm-title">Set selection end</div>
-      <div class="hm-sub">${fmt(t, 2)}s</div></button>
-    <button data-all><div class="hm-title">Select whole track</div></button>`;
-  document.body.appendChild(menu);
-  const close = () => menu.remove();
-  menu.addEventListener("click", ev => {
-    if (ev.target.closest("[data-a]")) S.sel = [Math.min(t, S.sel[1] - 0.2), S.sel[1]];
-    else if (ev.target.closest("[data-b]")) S.sel = [S.sel[0], Math.max(t, S.sel[0] + 0.2)];
-    else if (ev.target.closest("[data-all]")) S.sel = [0, S.duration];
-    syncSel(); drawWave(); close();
-  });
-  setTimeout(() => addEventListener("click", close, { once: true }), 0);
 }
 
 const syncSel = () => {
