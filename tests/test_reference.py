@@ -91,7 +91,7 @@ def test_established_entries_cite_something(ref):
         f"{sorted(missing)[:12]}")
 
 
-@pytest.mark.parametrize("eid", ["unison-rotation", "field", "source",
+@pytest.mark.parametrize("eid", ["unison-motion", "field", "source",
                                  "ring", "passage", "variant",
                                  "motion-coherence", "polar-lattice"])
 def test_project_coinages_are_labelled_as_such(ref, eid):
@@ -345,7 +345,7 @@ def test_courses_reach_the_conjectures_and_label_the_route(targets, courses):
     for c in courses["courses"]:
         for lesson in c["lessons"]:
             linked |= links_in(lesson["body"])
-    assert "unison-rotation" in linked
+    assert "unison-motion" in linked
     assert "random-dot-kinematogram" in linked
 
 
@@ -407,3 +407,35 @@ def test_the_load_bearing_entries_exist(ref, eid):
     """These are the findings a reader has to meet to use the tool correctly.
     Named individually so deleting one fails loudly."""
     assert eid in ref["entries"]
+
+
+RETIRED = {
+    "ringfield": "the project was renamed to Sonokinetic",
+    "hotspot": "the circulating coherence hotspot was removed",
+    "punch-in": "the interface no longer uses that name for latching",
+    "unison rotation": "generalised to motion in unison",
+    "Coherent ring preset": "the presets were rebuilt around lattices",
+}
+
+
+@pytest.mark.parametrize("phrase,why", sorted(RETIRED.items()))
+def test_retired_vocabulary_is_gone_from_the_writing(ref, purpose, courses,
+                                                     phrase, why):
+    """Renames leave the prose behind.
+
+    Every one of these named something that existed at some point, so nothing
+    fails when a sentence still describes it: the text simply documents a
+    feature the reader cannot find. A professor meeting a term the interface
+    does not contain has no way to tell which of the two is out of date.
+    """
+    haystack = []
+    for e in ref["entries"].values():
+        haystack += [e["title"], e["short"], e["body"]]
+    for c in purpose["chapters"]:
+        haystack += [s["heading"] + " " + s["body"] for s in c["sections"]]
+    for c in courses["courses"]:
+        haystack += [c["summary"]]
+        for lesson in c["lessons"]:
+            haystack += [lesson["title"], lesson["body"], lesson.get("try") or ""]
+    hits = [h for h in haystack if phrase.lower() in h.lower()]
+    assert not hits, f"{phrase!r} survives ({why}): {hits[0][:120]}"

@@ -303,7 +303,8 @@
       ],
       "see": [
         "front-back-confusion",
-        "externalization"
+        "externalization",
+        "head-tracking"
       ]
     },
     "localization": {
@@ -729,15 +730,17 @@
       "title": "Rotation rate",
       "section": "motion",
       "status": "implementation",
-      "short": "How fast the ring turns, in degrees per second.",
-      "body": "Bounded below by [[mama]] and above by [[binaural-sluggishness]].\n\nIn practice: slow drift around 30°/s, clear rotation between roughly 60 and 120°/s, and past a few hundred it stops reading as motion. These are working figures from listening here, not published thresholds.",
+      "short": "How fast a lattice turns about the head, in degrees per second.",
+      "body": "Bounded below by [[mama]] and above by [[binaural-sluggishness]].\n\nIn practice: slow drift around 30°/s, clear rotation between roughly 60 and 120°/s, and past a few hundred it stops reading as motion. These are working figures from listening here rather than published thresholds.\n\nRotation is the one motion measured in degrees, and the only one with a fixed cyclic rate for a measure to look for; see [[interaural-pattern-rate]]. [[radial-flow]] and [[translation]] are set in metres per second, and their usable range depends on the size of the lattice as well as on the speed.",
       "prereq": [
         "mama",
         "binaural-sluggishness"
       ],
       "see": [
         "interaural-pattern-rate",
-        "unison-rotation"
+        "radial-flow",
+        "translation",
+        "unison-motion"
       ]
     },
     "coherence": {
@@ -791,7 +794,7 @@
       "section": "decorr",
       "status": "implementation",
       "short": "The master coherence control. 0 is identical copies, 1 is maximally decorrelated.",
-      "body": "A dry/wet blend between the original signal and its decorrelated version.\n\nLevel is held constant across the whole sweep. This is not automatic: a plain blend dips several decibels in the middle because the two components partially cancel, which would make the control change loudness as well as coherence. See [[level-matching]].",
+      "body": "A blend between the original signal and its decorrelated version, applied per source so that the sources become independent of one another as well as of the input.\n\nIt is set on the variant and may be overridden on any [[component]], which is what lets a near group stay coherent inside a diffuse far one, or the reverse.\n\nLevel is held constant across the whole sweep. This is not automatic: a plain blend dips several decibels in the middle because the two components partially cancel, which would make the control change loudness as well as coherence. See [[level-matching]].",
       "prereq": [
         "decorrelation"
       ],
@@ -806,13 +809,15 @@
       "section": "decorr",
       "status": "implementation",
       "short": "Measured pairwise correlation between every pair of sources: what was achieved, as opposed to what was requested.",
-      "body": "An N×N table with 1.0 on the diagonal. Off-diagonal entries near 0 mean the sources are mutually independent; near 1 means they are still effectively copies.\n\nWhen a the coherence hotspot is running the matrix varies with time, so a single snapshot is not a summary; it is sampled at several instants and the range reported.",
+      "body": "An N×N table with 1.0 on the diagonal. Off-diagonal entries near 0 mean the sources are mutually independent; near 1 means they are still effectively copies.\n\nIt reports what was achieved rather than what was asked for, a distinction that matters because the [[decorrelation-amount]] is a request while the filters themselves are random draws; see [[noise-floor]].\n\nThe matrix varies over time whenever the amount does, whether through [[coherence-lfo|modulation]] or through components carrying different amounts, so a single snapshot is not a summary. It is sampled at several instants and the range reported.",
       "prereq": [
         "coherence",
         "correlation-coefficient"
       ],
       "see": [
         "decorrelation",
+        "decorrelation-amount",
+        "coherence-lfo",
         "noise-floor"
       ]
     },
@@ -979,12 +984,13 @@
       "section": "decorr",
       "status": "implementation",
       "short": "Varying the decorrelation amount over time, so the field alternates between focused and diffuse.",
-      "body": "A low-frequency oscillator on the [[decorrelation-amount]].",
+      "body": "A low-frequency oscillator on the [[decorrelation-amount]], so a field moves between focused and diffuse across a passage rather than holding one coherence throughout.\n\nRate and depth are set separately, and a source spread offsets the oscillator's phase from one source to the next so that they do not all reach maximum coherence at the same instant. Level is held constant across the sweep, as it is for the fixed amount.\n\nThe usable rate has the same ceiling as motion does, since the binaural system integrates over a hundred milliseconds or more; see [[binaural-sluggishness]]. Faster modulation reads as texture rather than as the field changing focus.",
       "prereq": [
         "decorrelation-amount"
       ],
       "see": [
         "decorrelation-amount",
+        "coherence-matrix",
         "binaural-sluggishness"
       ]
     },
@@ -993,7 +999,7 @@
       "section": "dsp",
       "status": "established",
       "short": "What a system does to a single instantaneous click. It characterises the system completely.",
-      "body": "For any linear time-invariant system, the impulse response is a full description: from it you can predict the output for any input by [[convolution]].\n\nThat is why so much here is expressed as impulse responses: the [[hrir]] is the impulse response of the path from a direction to your eardrum, and the decorrelating filters are impulse responses designed to be allpass but mutually dissimilar.",
+      "body": "For any linear time-invariant system, the impulse response is a full description: the output for any input follows from it by [[convolution]].\n\nThat is why so much here is expressed as impulse responses: the [[hrir]] is the impulse response of the path from a direction to your eardrum, and the decorrelating filters are impulse responses designed to be allpass but mutually dissimilar.",
       "prereq": [],
       "see": [
         "convolution",
@@ -1360,7 +1366,7 @@
       "section": "metrics",
       "status": "established",
       "short": "Splitting a measurement into bands each spanning a doubling of frequency.",
-      "body": "Roughly matches how hearing organises frequency, and is the convention in room acoustics.\n\nBroadband [[iacc]] hides where the coherence went. Per-band IACC shows it, and the low bands are where decorrelation costs you: no [[head-shadow]] means no [[ild]] to carry a position. See [[bass-coherence]].",
+      "body": "Roughly matches how hearing organises frequency, and is the convention in room acoustics.\n\nBroadband [[iacc]] hides where the coherence went. Per-band IACC shows it, and the low bands are where decorrelation costs most: no [[head-shadow]] means no [[ild]] to carry a position. See [[bass-coherence]].",
       "prereq": [
         "iacc"
       ],
@@ -1387,13 +1393,15 @@
       "section": "metrics",
       "status": "established",
       "short": "A condition identical in every respect except the one variable under test.",
-      "body": "The general principle is standard experimental design. Its specific form here: for a rotation claim, the control is the identical configuration with every rate set to zero and the same [[seed]]. Whatever the music itself contributes then appears in both and subtracts out.\n\nFor a the coherence hotspot the right control is the hotspot **frozen** in place rather than switched off, since that preserves the same coherence distribution and removes only the motion.\n\nThe instrument detects these pairs automatically. A difference near zero means no measurable signature, which given [[metric-vs-percept]] is not the same as inaudible.",
+      "body": "The general principle is standard experimental design. Its form here: for any motion claim, the control is the identical configuration, on the same [[seed]], with the motion removed and nothing else touched. Whatever the material itself contributes appears in both and subtracts out.\n\nMotion is removed by freezing the component, which stops its clock and leaves every rate in place. Zeroing the rates instead would also remove the edge fade a wrapping lattice carries, and the control would then sit louder at its edges than the thing it controls for. Both routes are recognised as the same control, and freezing is the one the interface offers.\n\nThe instrument pairs these automatically and reports the difference. A difference near zero means no measurable signature, which given [[metric-vs-percept]] is a weaker statement than inaudible.",
       "prereq": [
         "confound"
       ],
       "see": [
+        "confound",
         "rotation-signature",
-        "seed"
+        "seed",
+        "metric-vs-percept"
       ]
     },
     "seed": {
@@ -1430,7 +1438,7 @@
       "status": "established",
       "grounding": "ASW is a standard concert-hall attribute, associated with early lateral energy; see Barron and Marshall (1981) and Beranek.",
       "short": "How broad a single source seems, as opposed to how surrounded you feel.",
-      "body": "A source can be clearly in front and still seem metres wide. Width and [[envelopment]] are distinct qualities, both associated with reduced [[iacc]], and both distinct from [[localization]] accuracy.\n\nThe distinction matters here: a very wide source is still **localizable**, in that you can point at the middle of it. 'Cannot point at anything' is a stronger claim than 'it is wide'.",
+      "body": "A source can be clearly in front and still seem metres wide. Width and [[envelopment]] are distinct qualities, both associated with reduced [[iacc]], and both distinct from [[localization]] accuracy.\n\nThe distinction matters here: a very wide source is still **localizable**, in that its middle can be pointed at. 'Cannot point at anything' is a stronger claim than 'it is wide'.",
       "prereq": [
         "iacc"
       ],
@@ -1494,24 +1502,7 @@
         "random-dot-kinematogram",
         "component",
         "seed",
-        "unison-rotation"
-      ]
-    },
-    "unison-rotation": {
-      "title": "Unison rotation",
-      "section": "p-motion",
-      "status": "project",
-      "short": "This project's name for a group of decorrelated sources moving together as one. Not a term of art.",
-      "body": "**Named in this project.** Describe the configuration rather than the name when writing for others.\n\nA [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. Named for rotation because that was the first case studied, but the idea applies to any motion a lattice can carry: a drifting grid and an inward flow are the same arrangement with a different motion field.\n\nThe design point is that two properties come from two separate controls. **Motion** comes from the component's rates. **Unlocalizability** comes from the decorrelation amount. Turning decorrelation down yields trackable objects; turning it up dissolves them into a diffuse field. Whether that field still audibly moves is [[the-question]].\n\nWatch for the failure at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]].",
-      "prereq": [
-        "ring",
-        "decorrelation"
-      ],
-      "see": [
-        "the-question",
-        "component",
-        "motion-coherence",
-        "degenerate-ring"
+        "unison-motion"
       ]
     },
     "field": {
@@ -1519,13 +1510,14 @@
       "section": "p-components",
       "status": "project",
       "short": "The whole ensemble of sources considered as one thing.",
-      "body": "A [[ring]] of [[source|sources]] taken together. The premise under test is that the field can carry properties, such as rotation, that no individual source carries.\n\nContrast with the usual way of describing spatial audio, where each source has a position and the scene is the sum of those positions.",
+      "body": "Every [[source|source]] a [[variant]] renders, taken together, across however many [[component|components]] built it. The premise under test is that the field carries properties, motion among them, that no individual source carries.\n\nContrast with the usual way of describing spatial audio, where each source has a position and the scene is the sum of those positions. Here the arrangement is built so that the individual positions are unavailable to the listener and only the ensemble remains.",
       "prereq": [
         "source",
-        "ring"
+        "component"
       ],
       "see": [
         "the-question",
+        "component",
         "interaural-statistics"
       ]
     },
@@ -1533,15 +1525,16 @@
       "title": "Source",
       "section": "p-components",
       "status": "project",
-      "short": "One virtual sound position in the ring.",
-      "body": "Each source takes the same input audio, applies its own [[decorrelation]] filter, and is placed at an [[azimuth]] using an [[hrtf]]. Sources are virtual: nothing is actually there, the ear signals are synthesized as though something were.\n\nCount matters. Odd numbers are preferred because of [[antipodal-cancellation]].",
+      "short": "One virtual sound position in the field.",
+      "body": "Each source takes the same input audio, applies its own [[decorrelation]] filter, and is placed at an [[azimuth]] and a distance through an [[hrtf]]. Sources are virtual: nothing is actually there, and the ear signals are synthesized as though something were.\n\nCount matters as much as placement, since an odd number around a ring avoids the exact opposition behind [[antipodal-cancellation]].",
       "prereq": [
         "azimuth",
         "hrtf"
       ],
       "see": [
-        "ring",
+        "component",
         "decorrelation",
+        "antipodal-cancellation",
         "degenerate-ring"
       ]
     },
@@ -1584,7 +1577,8 @@
       "see": [
         "level-matching",
         "auditory-memory",
-        "component"
+        "component",
+        "equal-power-crossfade"
       ]
     },
     "mono-dry": {
@@ -1603,15 +1597,16 @@
       "title": "Symmetry breaking",
       "section": "p-structure",
       "status": "implementation",
-      "short": "Anything that stops a ring from cancelling to mono. Necessary for rotation to be perceptible at all.",
-      "body": "Four ways, all available:\n\n1. **[[decorrelation]]** above 0, the main control. Sources stop being identical copies, so they stop cancelling. This is also what makes them individually unlocalizable, so it does both jobs at once.\n2. **Uneven [[azimuth|azimuths]]**, removing the exact [[antipodal-cancellation|antipodal pairs]].\n3. **Per-source gain**, unbalancing the field even with identical signals.\n4. **Per-component decorrelation**, letting one group stay coherent inside a diffuse one.",
+      "short": "Anything that stops a symmetric lattice from cancelling to mono, which any motion needs before it can be heard.",
+      "body": "Four ways, all available:\n\n1. **[[decorrelation]]** above 0, the main control. Sources stop being identical copies, so they stop cancelling. This is also what makes them individually unlocalizable, so it does both jobs at once.\n2. **Uneven [[azimuth|azimuths]]**, removing the exact [[antipodal-cancellation|antipodal pairs]].\n3. **Per-source gain**, unbalancing the field even with identical signals.\n4. **Per-component decorrelation**, letting one group stay coherent inside a diffuse one.\n\nThe requirement is not specific to rotation. A perfectly symmetric coherent lattice cancels whatever velocity it is given, so a drifting grid and an inward flow need the symmetry broken exactly as a turning ring does; see [[degenerate-ring]].",
       "prereq": [
-        "degenerate-ring"
+        "decorrelation",
+        "antipodal-cancellation"
       ],
       "see": [
         "decorrelation",
         "antipodal-cancellation",
-        "unison-rotation",
+        "unison-motion",
         "degenerate-ring"
       ]
     },
@@ -1645,7 +1640,7 @@
       "see": [
         "the-question",
         "rotation-signature",
-        "unison-rotation"
+        "unison-motion"
       ]
     },
     "component": {
@@ -1689,12 +1684,13 @@
       "section": "p-components",
       "status": "project",
       "short": "Concentric rings of sources: a number of rings across a radial band, with a number of sources around each.",
-      "body": "Rings are spaced evenly across the band between the inner and outer radius, at half-steps rather than at the endpoints so that the outermost ring does not sit where the innermost one wraps to.\n\nOne ring with a single radius is the simplest case and was the original configuration this project studied. Several rings make a field with depth, and give [[radial-flow]] something to carry.\n\nRing stagger rotates each successive ring, which breaks the alignment that would otherwise put sources on shared radial spokes.",
+      "body": "Rings are spaced evenly across the band between the inner and outer radius, at half-steps rather than at the endpoints so that the outermost ring does not sit where the innermost one wraps to.\n\nOne [[ring]] at a single radius is the simplest case and was the original configuration this project studied. Several rings make a field with depth, and give [[radial-flow]] something to carry.\n\nRing stagger rotates each successive ring, which breaks the alignment that would otherwise put sources on shared radial spokes.",
       "prereq": [
         "component",
         "azimuth"
       ],
       "see": [
+        "ring",
         "component",
         "grid-lattice",
         "radial-flow",
@@ -1741,7 +1737,7 @@
       "section": "p-motion",
       "status": "project",
       "short": "Sources travelling inward or outward, wrapping at the limits of the band.",
-      "body": "On a [[polar-lattice]] this moves whole rings inward or outward together, so a ring reaching the inner limit reappears at the outer one and the flow is endless rather than emptying out. Sources fade briefly at each limit, which prevents the wrap being heard as a click while keeping every source present.\n\nDistance is carried by level and by the near-field growth of the [[ild]]: see [[source-distance]]. With no reverberation the cue is thin, so radial motion is a weaker percept than lateral motion.\n\nInward and outward are worth treating as separate conditions, since approach and recession are not symmetric in perception.",
+      "body": "On a [[polar-lattice]] this moves whole rings inward or outward together, so a ring reaching the inner limit reappears at the outer one and the flow is endless rather than emptying out. On a [[grid-lattice]] it changes each source's distance while leaving its direction unchanged, drawing the whole grid toward the listener or away from them.\n\nSources fade briefly at each limit, which keeps the wrap from being heard as a click while leaving every source present throughout.\n\nDistance is carried by level and by the near-field growth of the [[ild]]; see [[source-distance]]. With no reverberation the cue is thin, so radial motion is a weaker percept than lateral motion.\n\nInward and outward are worth treating as separate conditions, since approach and recession are not symmetric in perception.",
       "prereq": [
         "component",
         "source-distance"
@@ -1797,6 +1793,23 @@
         "phenomenology",
         "micro-phenomenology",
         "iacc"
+      ]
+    },
+    "unison-motion": {
+      "title": "Motion in unison",
+      "section": "p-motion",
+      "status": "project",
+      "short": "This project's name for a group of decorrelated sources travelling together as one. Not a term of art.",
+      "body": "**Named in this project.** Describe the configuration rather than the name when writing for others.\n\nA [[component]] whose sources are each [[decorrelation|decorrelated]] from the others while all taking part in the same motion. The motion can be a rotation about the head, an inward or outward flow, a straight drift past the listener, or any combination of them, since the lattice and the velocity are set separately.\n\nThe design point is that two properties come from two separate controls. **Motion** comes from the component's velocity. **Unlocalizability** comes from the decorrelation amount. Turning decorrelation down yields trackable objects; turning it up dissolves them into a diffuse field. Whether that field still audibly moves is [[the-question]].\n\nWatch for the failure at the coherent end: a fully coherent evenly spaced ring is [[degenerate-ring|degenerate]] and carries no motion at any velocity.",
+      "prereq": [
+        "component",
+        "decorrelation"
+      ],
+      "see": [
+        "the-question",
+        "component",
+        "motion-coherence",
+        "degenerate-ring"
       ]
     }
   },

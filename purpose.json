@@ -14,11 +14,6 @@
           "id": "the-analogy",
           "heading": "The analogy that motivates it",
           "body": "In vision the corresponding question is settled. A [[random-dot-kinematogram]] shows a field of dots in which some proportion move together while the rest move randomly. Observers report the global motion well below the proportion at which any single dot can be tracked, and motion there is computed by pooling across elements; see [[global-motion]].\n\nTwo features of that stimulus carry over. The dots move, with coherence lying in a shared direction of travel. Individual dots stay visible and are simply uninformative alone.\n\nThe auditory counterpart is a group of sources travelling together while each is made too diffuse to locate. The proportion moving coherently is adjustable here as well; see [[motion-coherence]].\n\n**The analogy is this project's own and is not established by the literature.** It has a known limit: vision resolves many independent spatial channels, while hearing reconstructs space from a comparison between two ear signals, so any auditory pooling must operate on interaural statistics rather than on a spatial map. Treat it as motivation for the design rather than as an argument that the effect exists."
-        },
-        {
-          "id": "what-can-move",
-          "heading": "Which motions this instrument can present",
-          "body": "The head model determines what is available, and it is worth being exact about it.\n\n**Left and right** are carried strongly. Both [[itd]] and [[ild]] change with lateral angle, and the model reproduces both.\n\n**Front and back** are not carried at all. The model is front-back symmetric, so azimuth 0° and 180° produce identical signals; see [[front-back-measured]]. A source crossing the median plane from front to back also keeps both ears equidistant throughout, so nothing interaural changes during the crossing. Motion toward or away from the listener is therefore heard only as a change of level and near-field balance, not as a change of direction. It remains worth presenting, since it asks whether level-modulated approach and recession reads as motion, but it should not be described as a front-back percept.\n\n**Distance** is carried weakly, through level and the near-field growth of the [[ild]]; see [[source-distance]] and [[distance-hearing]]. There is no reverberation, so the strongest natural distance cue is absent.\n\n**Elevation** is not modelled at all. A sphere has no [[pinna]], so there are no [[spectral-cues]] to carry it.\n\nMeasured [[sofa|HRTFs]] would supply front-back discrimination and elevation, and are the single upgrade that would most expand what can be asked."
         }
       ]
     },
@@ -55,7 +50,7 @@
         {
           "id": "lit-caution",
           "heading": "What this chapter is",
-          "body": "Orientation rather than a review. It names areas and standard entry points so the relevant literature can be found and the right vocabulary searched. Verify specifics against sources before citing.\n\nThe glossaries separate established material from this project's own vocabulary for the same reason. Terms such as unison rotation, motion coherence share, and circulating coherence hotspot were coined here; describing the configuration is safer than naming it when writing for others."
+          "body": "Orientation rather than a review. It names areas and standard entry points so the relevant literature can be found and the right vocabulary searched. Verify specifics against sources before citing.\n\nThe glossaries separate established material from this project's own vocabulary for the same reason. Terms such as motion in unison, the motion coherence share, and the polar and grid lattices were coined here; describing the configuration is safer than naming it when writing for others."
         },
         {
           "id": "lit-spatial",
@@ -85,13 +80,29 @@
       ]
     },
     {
+      "id": "scope",
+      "title": "What this instrument can test",
+      "sections": [
+        {
+          "id": "motion-families",
+          "heading": "The motions available",
+          "body": "Three motions exist in the instrument, and they combine freely inside a single component.\n\n**Rotation** turns a lattice about the head at a rate in degrees per second. It was the first case studied here and remains the easiest to describe, since the trajectory closes on itself and repeats.\n\n**Radial flow** draws a lattice inward or outward at a speed in metres per second, so that sources approach the listener or recede. It is carried by level and by the near-field growth of the [[ild]] rather than by a change of angle.\n\n**Translation** carries a lattice past the listener in a straight line. The lattice wraps, so a source leaving one edge reappears at the other and the field is endless; the motivating image is moving through a space with sources at regular intervals.\n\nCombining them is a setting rather than a special case. A [[whirlpool]] is one [[polar-lattice|polar lattice]] turning while flowing inward, with its inner rings set to outrun the outer ones, and a drifting [[grid-lattice|grid]] can turn at the same time.\n\nThe question is put to each of these separately. They load the two interaural cues differently, and an answer obtained for one gives little reason to expect the same answer for the others."
+        },
+        {
+          "id": "what-can-move",
+          "heading": "What the head model carries, and what it does not",
+          "body": "The head model determines what is available, and it is worth being exact about it.\n\n**Left and right** are carried strongly. Both [[itd]] and [[ild]] change with lateral angle, and the model reproduces both.\n\n**Front and back** are not carried at all. The model is front-back symmetric, so azimuth 0° and 180° produce identical signals; see [[front-back-measured]]. A source crossing the median plane from front to back also keeps both ears equidistant throughout, so nothing interaural changes during the crossing. Motion toward or away from the listener is therefore heard only as a change of level and near-field balance, not as a change of direction. It remains worth presenting, since it asks whether level-modulated approach and recession reads as motion, but it should not be described as a front-back percept.\n\n**Distance** is carried weakly, through level and the near-field growth of the [[ild]]; see [[source-distance]] and [[distance-hearing]]. There is no reverberation, so the strongest natural distance cue is absent.\n\n**Elevation** is not modelled at all. A sphere has no [[pinna]], so there are no [[spectral-cues]] to carry it.\n\nMeasured [[sofa|HRTFs]] would supply front-back discrimination and elevation, and are the single upgrade that would most expand what can be asked."
+        }
+      ]
+    },
+    {
       "id": "findings",
       "title": "What has been measured",
       "sections": [
         {
           "id": "degenerate-ring",
           "heading": "A coherent even ring cancels to mono",
-          "body": "An evenly spaced ring in which every source carries the same signal renders with left and right identical to machine precision. The result is a centred mono image carrying no interaural information, and rotating it changes nothing beyond faint timbral shimmer from shifting [[comb-filtering]].\n\nThe cancellation is a symmetry property: summing identical copies over a symmetric arrangement removes exactly the differences that would carry direction. Motion becomes audible only once the symmetry is broken, through [[decorrelation]], uneven spacing, per-source gain, or per-source coherence; see [[symmetry-breaking]].\n\n**A field that seems to do nothing is most often this configuration.** It is the first thing to check."
+          "body": "An evenly spaced ring in which every source carries the same signal renders with left and right identical to machine precision. The result is a centred mono image carrying no interaural information, and moving it changes nothing beyond faint timbral shimmer from shifting [[comb-filtering]].\n\nThe cancellation is a symmetry property: summing identical copies over a symmetric arrangement removes exactly the differences that would carry direction. Motion becomes audible only once the symmetry is broken, through [[decorrelation]], uneven spacing, per-source gain, or per-source coherence; see [[symmetry-breaking]].\n\nThe result is a property of the symmetry rather than of the ring: a coherent lattice that is symmetric about the listener cancels whatever velocity it is given, so a drifting grid and an inward flow fail in the same way.\n\n**A field that seems to do nothing is most often this configuration.** It is the first thing to check."
         },
         {
           "id": "noise-floor",
@@ -183,7 +194,7 @@
         {
           "id": "next-steps",
           "heading": "In rough order of value",
-          "body": "**Measured [[sofa|HRTFs]].** The highest-value upgrade. Pinna [[spectral-cues]] bring real front-back discrimination and elevation, which would make direction answerable and would make front-to-back translation a genuine spatial condition rather than a level ramp. The class exists with an identical interface; the substantive work is [[hrtf-interpolation]].\n\n**Other listeners**, ideally naive to the hypothesis. Addresses both [[n-of-1]] and the individuality of HRTFs, and requires only sitting people down with a participant link.\n\n**Head tracking.** Resolves front-back robustly and improves [[externalization]], at the cost of giving the listener an active strategy that may change the percept under study.\n\n**A motion aftereffect experiment.** If prolonged exposure biases the perceived direction of a subsequent static field, that indicates direction-selective adaptation and would be far stronger evidence than a description task, since it does not depend on reporting a subtle quality.\n\n**Reverberation.** The strongest natural distance cue is absent, which limits how convincingly radial motion can be presented.\n\n**A target coherence matrix** as a first-class control, so coherence structure can be specified directly rather than through per-component amounts."
+          "body": "**Measured [[sofa|HRTFs]].** The highest-value upgrade. Pinna [[spectral-cues]] bring real front-back discrimination and elevation, which would make direction answerable and would make front-to-back translation a genuine spatial condition rather than a level ramp. The class exists with an identical interface; the substantive work is [[hrtf-interpolation]].\n\n**Other listeners**, ideally naive to the hypothesis. Addresses both [[n-of-1]] and the individuality of HRTFs, and requires only sitting people down with a participant link.\n\n**[[head-tracking|Head tracking]].** Resolves front-back robustly and improves [[externalization]], at the cost of giving the listener an active strategy that may change the percept under study.\n\n**A motion aftereffect experiment.** If prolonged exposure biases the perceived direction of a subsequent static field, that indicates direction-selective adaptation and would be far stronger evidence than a description task, since it does not depend on reporting a subtle quality.\n\n**Reverberation.** The strongest natural distance cue is absent, which limits how convincingly radial motion can be presented.\n\n**A target coherence matrix** as a first-class control, so coherence structure can be specified directly rather than through per-component amounts."
         }
       ]
     }

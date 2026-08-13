@@ -91,9 +91,9 @@ material and this project's own vocabulary, with each entry labelled by status:
 | Measured here | A result reproducible from the test suite |
 | Conjecture | A hypothesis under test |
 
-That distinction matters when writing for others: *unison rotation*, *motion
-coherence share* and *component* are names from this project, not from the
-literature.
+That distinction matters when writing for others: *motion in unison*, *motion
+coherence share* and *component* are names from this project rather than from
+the literature.
 
 ## Files
 

@@ -543,6 +543,13 @@ def _control_key(cfg_in: FieldIn) -> str:
     Wander counts as motion, so the matched control freezes it too: wander_hz
     of zero holds every wanderer at a fixed offset drawn from the same seed,
     preserving the geometry while removing the movement.
+
+    time_scale is normalised for the same reason the other rates are. Freezing
+    a component stops its clock rather than zeroing its rates, which is the
+    preferred way to build a control because it keeps the level distribution
+    identical. Leaving time_scale in the key would give the frozen copy a
+    different identity from the component it controls for, and the pair the
+    listener deliberately constructed would never be recognised as one.
     """
     d = cfg_in.model_dump()
     d["rotation_deg_per_sec"] = 0.0
@@ -554,7 +561,8 @@ def _control_key(cfg_in: FieldIn) -> str:
         d["components"] = [{**c, "rotation_deg_per_sec": 0.0,
                             "rotation_outer_deg_per_sec": None,
                             "radial_speed_mps": 0.0, "drift_x_mps": 0.0,
-                            "drift_y_mps": 0.0, "wander_hz": 0.0}
+                            "drift_y_mps": 0.0, "wander_hz": 0.0,
+                            "time_scale": 1.0}
                            for c in d["components"]]
     return json.dumps(d, sort_keys=True, default=str)
 

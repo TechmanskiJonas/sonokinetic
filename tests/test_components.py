@@ -9,6 +9,8 @@ edge, so the count is constant and the flow is endless.
 import os
 import sys
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -305,6 +307,37 @@ def test_freezing_leaves_the_configured_motion_readable():
     assert frozen.drift_y_mps == -2.0
     assert frozen.time_scale == 0.0
     assert frozen.is_static()
+
+
+def test_a_frozen_variant_is_recognised_as_the_control_for_its_original():
+    """Freezing is the documented way to build a control, so the pairing has
+    to survive it.
+
+    The two routes to a static field produce different configurations: zeroing
+    the rates leaves time_scale at 1, while freezing leaves the rates alone and
+    stops the clock. Both have to land on the same control identity, or the
+    comparison the listener set up is never reported as a paired one.
+    """
+    from app import ComponentIn, FieldIn, _control_key, _has_motion
+
+    moving = C(lattice="polar", rings=3, per_ring=6, rotation_deg_per_sec=60.0,
+               radial_speed_mps=-0.5)
+    as_in = lambda c: FieldIn(components=[ComponentIn(**_component_fields(c))])
+
+    m = as_in(moving)
+    f = as_in(moving.frozen())
+    z = as_in(replace(moving, rotation_deg_per_sec=0.0, radial_speed_mps=0.0))
+
+    assert _has_motion(m)
+    assert not _has_motion(f) and not _has_motion(z)
+    assert _control_key(m) == _control_key(f), "frozen control lost its pairing"
+    assert _control_key(m) == _control_key(z)
+
+
+def _component_fields(c):
+    """The ComponentIn fields present on a ComponentConfig."""
+    from app import ComponentIn
+    return {k: getattr(c, k) for k in ComponentIn.model_fields if hasattr(c, k)}
 
 
 @pytest.mark.parametrize("comp,static", [
