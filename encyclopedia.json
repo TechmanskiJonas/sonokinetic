@@ -39,6 +39,12 @@
       "family": "project"
     },
     {
+      "id": "basics",
+      "title": "Sound and signals",
+      "status": "established",
+      "family": "established"
+    },
+    {
       "id": "hearing",
       "title": "How we hear direction",
       "status": "established",
@@ -108,7 +114,9 @@
         "ild",
         "duplex-theory",
         "woodworth-model",
-        "fractional-delay"
+        "fractional-delay",
+        "phase-locking",
+        "fine-structure"
       ]
     },
     "ild": {
@@ -126,7 +134,8 @@
         "itd",
         "duplex-theory",
         "head-shadow",
-        "bass-coherence"
+        "bass-coherence",
+        "wavelength"
       ]
     },
     "duplex-theory": {
@@ -143,7 +152,9 @@
       "see": [
         "itd",
         "ild",
-        "head-shadow"
+        "head-shadow",
+        "frequency",
+        "wavelength"
       ]
     },
     "binaural": {
@@ -228,7 +239,8 @@
       "see": [
         "ild",
         "brown-duda-shadow",
-        "diffraction"
+        "diffraction",
+        "wavelength"
       ]
     },
     "diffraction": {
@@ -241,7 +253,8 @@
       "see": [
         "head-shadow",
         "ild",
-        "bass-coherence"
+        "bass-coherence",
+        "wavelength"
       ]
     },
     "pinna": {
@@ -884,7 +897,8 @@
       "see": [
         "impulse-density",
         "transient-material",
-        "noise-floor"
+        "noise-floor",
+        "transient"
       ]
     },
     "impulse-density": {
@@ -915,7 +929,8 @@
       "see": [
         "envelope-confound",
         "impulse-density",
-        "velvet-noise"
+        "velvet-noise",
+        "envelope"
       ]
     },
     "frequency-dependent-decorrelation": {
@@ -1107,7 +1122,9 @@
       ],
       "see": [
         "windowed-sinc",
-        "sample-rate"
+        "sample-rate",
+        "interpolation",
+        "sampling"
       ]
     },
     "windowed-sinc": {
@@ -1174,7 +1191,8 @@
       "see": [
         "phase-spectrum",
         "allpass-filter",
-        "decorrelation"
+        "decorrelation",
+        "timbre"
       ]
     },
     "phase-spectrum": {
@@ -1184,12 +1202,14 @@
       "short": "The relative timing of each frequency component.",
       "body": "Hearing is relatively insensitive to the absolute phase of a steady sound, which is why scrambling it changes the waveform drastically while barely changing timbre.\n\nPhase is not irrelevant, though: it determines transient shape, so scrambling smears attacks. And relative phase **between the ears** is exactly what [[itd]] is, so phase between channels is spatially critical even when phase within a channel is not.",
       "prereq": [
-        "magnitude-spectrum"
+        "magnitude-spectrum",
+        "phase"
       ],
       "see": [
         "allpass-filter",
         "phase-depth",
-        "itd"
+        "itd",
+        "phase"
       ]
     },
     "sample-rate": {
@@ -1198,11 +1218,15 @@
       "status": "established",
       "short": "How many samples per second represent the signal. 44.1 kHz throughout here.",
       "body": "Sets the highest representable frequency at half the rate. It also sets the time grid: one sample at 44.1 kHz is about 23 microseconds, coarse compared to [[itd]] sensitivity, which is why [[fractional-delay]] is needed.\n\nThe same idea applies to derived series: the [[iacc-over-time]] series has its own effective rate set by the analysis window, which limits the [[rotation-signature|rotation frequencies]] it can resolve.",
-      "prereq": [],
+      "prereq": [
+        "sampling"
+      ],
       "see": [
         "fractional-delay",
         "frequency-resolution",
-        "iacc-over-time"
+        "iacc-over-time",
+        "sampling",
+        "interpolation"
       ]
     },
     "frequency-resolution": {
@@ -1300,7 +1324,8 @@
         "confound",
         "decorrelation-amount",
         "normalization",
-        "level-preserved"
+        "level-preserved",
+        "decibel"
       ]
     },
     "normalization": {
@@ -1471,7 +1496,8 @@
       "see": [
         "comb-filtering",
         "velvet-noise",
-        "level-matching"
+        "level-matching",
+        "timbre"
       ]
     },
     "source-distance": {
@@ -1815,6 +1841,215 @@
         "decorrelation",
         "degenerate-ring"
       ]
+    },
+    "waveform": {
+      "section": "basics",
+      "status": "established",
+      "title": "Waveform",
+      "prereq": [],
+      "see": [
+        "fine-structure",
+        "envelope",
+        "magnitude-spectrum"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "The shape of a sound plotted as pressure against time.",
+      "body": "Sound is a variation in air pressure. Drawing that variation against time gives the waveform, which is the most direct picture of a signal there is; everything else in this glossary is a way of summarising it.\n\nTwo timescales live in the same picture and are treated separately throughout. The rapid swings of the wave itself are its [[fine-structure|fine structure]]. The slower rise and fall of its overall size is its [[envelope]]. Hearing uses the two for different jobs.\n\nA [[magnitude-spectrum|spectrum]] describes the same signal by which frequencies it contains rather than by its shape over time."
+    },
+    "frequency": {
+      "section": "basics",
+      "status": "established",
+      "title": "Frequency",
+      "prereq": [
+        "waveform"
+      ],
+      "see": [
+        "wavelength",
+        "phase",
+        "duplex-theory"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "How many times a wave repeats each second, measured in hertz.",
+      "body": "One hertz is one cycle per second, and a kilohertz is a thousand of them. Human hearing spans roughly 20 Hz to 20 kHz, and pitch follows frequency: doubling it raises the pitch by an octave.\n\nThe period is the reciprocal, so a 1 kHz tone repeats every millisecond and a 5 kHz tone every 200 microseconds. Those numbers decide what the ear can follow in time.\n\nFrequency matters here because nearly every mechanism in this instrument behaves differently at the two ends of the range. Timing cues work below about 1.5 kHz and level cues above, which is the [[duplex-theory]]."
+    },
+    "wavelength": {
+      "section": "basics",
+      "status": "established",
+      "title": "Wavelength",
+      "prereq": [
+        "frequency"
+      ],
+      "see": [
+        "diffraction",
+        "head-shadow",
+        "ild"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "The distance one cycle of a wave spans as it travels.",
+      "body": "Wavelength is the [[speed-of-sound|speed of sound]] divided by the [[frequency]]. At 343 m/s a 100 Hz tone spans about 3.4 metres and an 8 kHz tone about 4 centimetres.\n\nComparing that distance against the width of a head decides most of what follows. A wave far longer than the head bends around it and reaches both ears at nearly the same level; a wave shorter than the head is blocked and leaves a shadow behind it. That is where the [[ild]] comes from and why it depends on frequency; see [[diffraction]] and [[head-shadow]].\n\nThe same comparison sets where interaural timing turns ambiguous, since a delay longer than one cycle can no longer be told apart from a delay of one cycle plus a little more."
+    },
+    "amplitude": {
+      "section": "basics",
+      "status": "established",
+      "title": "Amplitude",
+      "prereq": [
+        "waveform"
+      ],
+      "see": [
+        "decibel",
+        "envelope",
+        "transient"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "How large a wave's swing is, and so how loud it sounds.",
+      "body": "The size of the pressure variation. Amplitude relates to loudness, though not in proportion, which is why levels are quoted in [[decibel|decibels]] rather than as raw numbers.\n\nHow amplitude changes across a sound is its [[envelope]]. Sudden changes are [[transient|transients]]."
+    },
+    "phase": {
+      "section": "basics",
+      "status": "established",
+      "title": "Phase",
+      "prereq": [
+        "frequency"
+      ],
+      "see": [
+        "phase-spectrum",
+        "comb-filtering",
+        "allpass-filter"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "Where a wave sits within its cycle at a given instant.",
+      "body": "Two waves of the same [[frequency]] can be aligned or offset from one another, and phase names that offset, usually as an angle with a full cycle at 360 degrees.\n\nIt carries the interaural timing cue, since a delay between the ears appears as a phase difference at each frequency; see [[itd]]. It also decides what happens when signals are added together: aligned waves reinforce and opposed ones cancel, which is the mechanism behind [[comb-filtering]] and behind the collapse of a [[degenerate-ring|coherent symmetric ring]].\n\nHearing is largely insensitive to the absolute phase of a steady sound, and that insensitivity is what makes [[allpass-filter|allpass]] decorrelation possible: scrambling phase changes the [[waveform]] completely while leaving [[timbre]] nearly intact. See [[phase-spectrum]]."
+    },
+    "envelope": {
+      "section": "basics",
+      "status": "established",
+      "title": "Envelope",
+      "prereq": [
+        "waveform",
+        "amplitude"
+      ],
+      "see": [
+        "fine-structure",
+        "transient",
+        "ir-envelope"
+      ],
+      "grounding": "Standard material. Moore, An Introduction to the Psychology of Hearing, is the usual reference.",
+      "short": "The slow rise and fall of a sound's overall size, as distinct from the rapid wave inside it.",
+      "body": "Trace a line along the peaks of a [[waveform]] and the result is its envelope: the attack, sustain and decay of a note rather than the individual pressure swings that make it up.\n\nThe distinction from [[fine-structure|fine structure]] carries real weight in hearing. Interaural timing is read from fine structure at low frequencies, and above roughly 1.5 kHz that mechanism fails while envelope timing stays usable, because an envelope varies slowly enough to remain unambiguous; see [[itd]].\n\nDistinct from the [[ir-envelope|IR envelope]], which is a control over the shape of a decorrelating filter rather than a property of the audio."
+    },
+    "fine-structure": {
+      "section": "basics",
+      "status": "established",
+      "title": "Fine structure",
+      "prereq": [
+        "waveform",
+        "frequency"
+      ],
+      "see": [
+        "envelope",
+        "phase-locking",
+        "itd"
+      ],
+      "grounding": "Standard material. Moore, An Introduction to the Psychology of Hearing, is the usual reference.",
+      "short": "The rapid pressure swings of the wave itself, as distinct from its slower overall shape.",
+      "body": "The individual cycles of a [[waveform]], oscillating at the sound's [[frequency]], as opposed to the [[envelope]] riding on top of them.\n\nAt low frequencies the auditory system reads interaural timing from fine structure, following the wave cycle by cycle through [[phase-locking|phase locking]]. That is the most precise timing mechanism available to hearing, and it is why the [[itd]] is a low-frequency cue.\n\nAbove roughly 1.5 kHz it stops working, for two reasons at once. Neurons can no longer fire in step with cycles that short, and the [[wavelength]] drops below the width of the head, so more than one delay fits what the ears observe."
+    },
+    "timbre": {
+      "section": "basics",
+      "status": "established",
+      "title": "Timbre",
+      "prereq": [
+        "magnitude-spectrum"
+      ],
+      "see": [
+        "coloration",
+        "allpass-filter",
+        "decorrelation"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "What distinguishes two sounds of the same pitch and loudness.",
+      "body": "Tone colour: what makes a flute and a violin playing the same note at the same volume sound like different instruments. It follows mostly from the [[magnitude-spectrum]], the balance of frequencies present, and from how that balance shifts over the course of a note.\n\nIt is the one quality every decorrelating filter here is required to leave alone. A filter that altered timbre would turn every comparison into a comparison of colour rather than of coherence, which is why the filters are approximately [[allpass-filter|allpass]]; see [[coloration]]."
+    },
+    "transient": {
+      "section": "basics",
+      "status": "established",
+      "title": "Transient",
+      "prereq": [
+        "amplitude"
+      ],
+      "see": [
+        "envelope",
+        "transient-material",
+        "ir-length"
+      ],
+      "grounding": "Standard material. Moore, An Introduction to the Psychology of Hearing, is the usual reference.",
+      "short": "A sharp, precisely timed event at the start of a sound.",
+      "body": "A pluck, a hit, a consonant: a rapid rise in [[amplitude]] over a few milliseconds.\n\nTransients matter more to this project than to most, because they are exactly what the auditory system uses to fix a position. A sharp onset reaches the two ears at two well-defined instants, giving an unambiguous [[itd]] and with it a pointable location. That is the localization the experiment is trying to remove, so material full of onsets works against the treatment however the parameters are set; see [[transient-material]].\n\nDecorrelating filters also smear transients, since spreading a click across an impulse response is precisely what such a filter does; see [[ir-length]]."
+    },
+    "phase-locking": {
+      "section": "hearing",
+      "status": "established",
+      "title": "Phase locking",
+      "prereq": [
+        "fine-structure",
+        "phase"
+      ],
+      "see": [
+        "itd",
+        "envelope",
+        "duplex-theory"
+      ],
+      "grounding": "Rose, Brugge, Anderson and Hind (1967, Journal of Neurophysiology) measured phase-locking in the auditory nerve. Palmer and Russell (1986, Hearing Research) characterised its decline with frequency. Joris and Yin review its role in binaural processing.",
+      "short": "Auditory neurons firing at a consistent point in each cycle of a sound, which is how timing reaches the brain.",
+      "body": "Hair cells in the inner ear release transmitter in step with the pressure wave, so the nerve fibres they drive tend to fire at the same [[phase]] of every cycle rather than at arbitrary moments. A fibre does not fire on every cycle, but the firings it does produce cluster at one point in the [[waveform]].\n\nThis is how timing survives into the nervous system. A fibre from the left ear and one from the right, both locked to the same sound, carry the interaural delay directly in the offset between their spike times, and structures in the brainstem compare the two to recover it; see [[itd]].\n\nThe mechanism weakens as frequency rises and is largely gone by 4 to 5 kHz, with the useful range for interaural timing ending nearer 1.5 kHz. A cycle at 5 kHz lasts 200 microseconds, which is too short for a cell to mark reliably. Above that range, timing comes from the [[envelope]] instead."
+    },
+    "sampling": {
+      "section": "dsp",
+      "status": "established",
+      "title": "Sampling",
+      "prereq": [
+        "waveform"
+      ],
+      "see": [
+        "sample-rate",
+        "interpolation",
+        "fractional-delay"
+      ],
+      "grounding": "Standard material. Smith, The Scientist and Engineer's Guide to Digital Signal Processing, is a readable introduction; Oppenheim and Schafer, Discrete-Time Signal Processing, is the reference text.",
+      "short": "Representing a continuously varying signal as a list of values measured at regular instants.",
+      "body": "A microphone produces a voltage that varies continuously. Storing it digitally means measuring that voltage at regular intervals and keeping the numbers. Each measurement is a sample, and the interval between them is fixed by the [[sample-rate|sample rate]].\n\nAt the 44.1 kHz used here there are 44100 samples every second, so one sample covers about 23 microseconds. That figure sets the natural time grid for everything downstream, and it is coarse next to the roughly 10 microseconds of interaural delay a listener can resolve. Delays are therefore placed between samples rather than on them; see [[interpolation]] and [[fractional-delay]].\n\nThe rate also bounds frequency. A sampled signal can represent frequencies up to half the rate, which is 22.05 kHz here, comfortably above the top of hearing."
+    },
+    "interpolation": {
+      "section": "dsp",
+      "status": "established",
+      "title": "Interpolation",
+      "prereq": [
+        "sampling"
+      ],
+      "see": [
+        "fractional-delay",
+        "windowed-sinc",
+        "hrtf-interpolation"
+      ],
+      "grounding": "Standard material. Smith, The Scientist and Engineer's Guide to Digital Signal Processing, is a readable introduction; Oppenheim and Schafer, Discrete-Time Signal Processing, is the reference text.",
+      "short": "Estimating what a signal was doing between the instants where it was actually measured.",
+      "body": "Samples give the signal at fixed instants, so any operation needing a value in between has to construct one. The crudest method draws a straight line between neighbouring samples; better ones use more of the surrounding samples and reconstruct the underlying wave more faithfully.\n\nThis is what allows a delay finer than the sample grid. Shifting a signal by two and a half samples means working out what it would have been half a sample later, which for audio is done by the [[windowed-sinc|windowed sinc]] method; see [[fractional-delay]].\n\nThe same idea returns when moving between measured directions in an [[sofa|HRTF]] dataset, where blending naively causes [[comb-filtering]]; see [[hrtf-interpolation]]."
+    },
+    "decibel": {
+      "section": "level",
+      "status": "established",
+      "title": "Decibel",
+      "prereq": [
+        "amplitude"
+      ],
+      "see": [
+        "lufs",
+        "level-matching",
+        "rms"
+      ],
+      "grounding": "Standard material. Rossing, Moore and Wheeler, The Science of Sound, covers it at an introductory level.",
+      "short": "A logarithmic unit for level, in which equal ratios come out as equal steps.",
+      "body": "Sound levels span an enormous range, so they are quoted logarithmically. For amplitude, 20 dB is a factor of ten and 6 dB is roughly a factor of two, while 1 dB is around the smallest level change a listener notices on steady material.\n\nDecibels always describe a ratio, either between two signals or against a stated reference. A single number here is either against digital full scale or in [[lufs]], which is loudness weighted.\n\nThe scale matters for comparisons. A treatment sitting 3 dB louder than another tends to be preferred whatever else it does, which is why [[level-matching]] happens before any listening."
     }
   },
   "families": [

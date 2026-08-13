@@ -81,6 +81,21 @@ const progress = {
   save() { localStorage.setItem(PROGRESS_KEY, JSON.stringify([...this.done])); },
 };
 
+/** Titles that keep their capital wherever they appear: an acronym, or a name.
+ *  Everything else is an ordinary noun phrase that should read as one. */
+const KEEP_CAPITAL = /^[A-Z]{2,}|^(Brown|Woodworth|Hann|K-)/;
+
+/** Where a link sits in the sentence, which decides how its name is written.
+ *
+ *  An unlabelled [[link]] prints the entry's title, and titles are capitalised.
+ *  Dropped mid-sentence that produces "one Waveform has to slide", which reads
+ *  as a proper noun and makes the prose look machine-assembled. */
+const startsSentence = (str, at) => {
+  const before = str.slice(0, at).replace(/\s+$/, "");
+  return before === "" || /[.?!:]$|\*\*$|<br>$|<\/p>$/.test(before);
+};
+const lowerFirst = s => (KEEP_CAPITAL.test(s) ? s : s[0].toLowerCase() + s.slice(1));
+
 /** [[id]] and [[id|label]] become term links; **bold** and paragraph breaks
  *  are the only other markup. */
 function linkify(text) {
@@ -92,8 +107,10 @@ function linkify(text) {
       : `<span>${label}</span>`);
   return esc(text)
     .replace(/\[\[([a-z0-9-]+)\|([^\]]+)\]\]/g, (_, id, label) => anchor(id, label))
-    .replace(/\[\[([a-z0-9-]+)\]\]/g, (_, id) =>
-      anchor(id, REF.entries[id]?.title || pi[id]?.section.heading || id))
+    .replace(/\[\[([a-z0-9-]+)\]\]/g, (m, id, at, str) => {
+      const name = REF.entries[id]?.title || pi[id]?.section.heading || id;
+      return anchor(id, startsSentence(str, at) ? name : lowerFirst(name));
+    })
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
 }

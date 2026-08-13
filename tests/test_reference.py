@@ -496,3 +496,28 @@ def test_the_side_of_the_key_is_randomised(appjs):
 def test_catch_trials_pair_a_condition_with_itself(appjs):
     build = appjs.split("function buildTrials(")[1].split("\nfunction ")[0]
     assert "round.push([c, c])" in build
+
+
+def test_titles_that_must_keep_their_capital_are_named_in_the_renderer(ref, appjs):
+    """An unlabelled [[link]] prints the entry title, and titles are
+    capitalised, so mid-sentence it reads as a proper noun: "one Waveform has
+    to slide". The renderer lowercases it, except for acronyms and surnames.
+
+    This pins the exception list against the titles actually present, so
+    renaming an entry to start with a new surname fails here rather than
+    quietly lowercasing somebody's name.
+    """
+    import re
+    keep = re.search(r"const KEEP_CAPITAL = (/.+/);", appjs).group(1)
+    pattern = keep.strip("/")
+    protected = {t for t in (e["title"] for e in ref["entries"].values())
+                 if re.match(r"^[A-Z]{2,}|^(Brown|Woodworth|Hann|K-)", t)}
+    # every protected title must be matched by the pattern the renderer uses
+    for t in protected:
+        assert re.match(pattern.replace("(?:", "("), t), f"{t!r} would be lowercased"
+    # and nothing else should be
+    for e in ref["entries"].values():
+        t = e["title"]
+        if t not in protected:
+            assert not re.match(r"^[A-Z]{2,}", t), (
+                f"{t!r} looks like an acronym but is not in the protected set")
