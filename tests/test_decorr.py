@@ -42,13 +42,20 @@ CONFIGS = {
     "sparse velvet":      rf.DecorrConfig(density=200.0),
     "dense velvet":       rf.DecorrConfig(density=20000.0),
     "partial phase":      rf.DecorrConfig(family="allpass", phase_depth=0.4),
-    "bass coherent":      rf.DecorrConfig(crossovers=[200.0], band_amounts=[0.0, 1.0]),
-    "three bands":        rf.DecorrConfig(crossovers=[150.0, 2000.0],
-                                          band_amounts=[0.0, 0.6, 1.0]),
     "micro delay":        rf.DecorrConfig(family="none", micro_delay_ms=12.0),
     "micro pitch":        rf.DecorrConfig(family="none", micro_pitch_cents=14.0),
     "half amount":        rf.DecorrConfig(amount=0.5),
     "per source":         rf.DecorrConfig(per_source_amount=[0.0, 0.3, 0.7, 1.0]),
+}
+
+
+# Band amounts are the exception, and get their own test below: they change
+# how much of a band the sources SHARE, and shared and independent content do
+# not sum alike, so per-source level and ensemble level cannot both be held.
+BAND_CONFIGS = {
+    "bass coherent":      rf.DecorrConfig(crossovers=[200.0], band_amounts=[0.0, 1.0]),
+    "three bands":        rf.DecorrConfig(crossovers=[150.0, 2000.0],
+                                          band_amounts=[0.0, 0.6, 1.0]),
 }
 
 
@@ -361,3 +368,45 @@ def test_distinctiveness_finds_the_source_that_stands_out():
     assert marked["outlier"] == 4
     assert marked["spread_db"] > flat["spread_db"] + 3.0
     assert 2000 < marked["outlier_hz"] < 4500
+
+
+@pytest.mark.parametrize("name", list(BAND_CONFIGS))
+def test_band_amounts_preserve_the_ensemble_rather_than_each_source(signal, name):
+    """The one control where the two level invariants come apart.
+
+    Every other control decorrelates all sources equally, so holding each
+    source at the dry level also holds the sum. Band amounts change how much
+    of a band the sources share, and shared content sums differently from
+    independent content, so preserving one necessarily moves the other.
+
+    The sum is what reaches the ears, so the sum is what is held. Left
+    uncorrected, holding the bass coherent across nine sources measured +6.8 dB
+    below 300 Hz: the control changed timbre far more than coherence, and a
+    comparison made with it was a comparison of brightness.
+    """
+    cfg = BAND_CONFIGS[name]
+    n = 4
+    shaped = rf.SourceBank(signal, n, cfg, FS)
+    plain = rf.SourceBank(signal, n, rf.DecorrConfig(), FS)
+
+    a = shaped.blocks(0, len(signal), shaped.base_amounts()).sum(axis=0)
+    b = plain.blocks(0, len(signal), plain.base_amounts()).sum(axis=0)
+    da = 20 * np.log10(np.sqrt(np.mean(a ** 2)) / np.sqrt(np.mean(b ** 2)))
+    assert abs(da) < 1.0, f"{name}: ensemble level moved {da:+.2f} dB"
+
+    # and per source it is close but deliberately not exact
+    ref = np.sqrt(np.mean(signal ** 2))
+    per = shaped.blocks(0, len(signal), shaped.base_amounts())
+    for i in range(n):
+        assert 0.85 < np.sqrt(np.mean(per[i] ** 2)) / ref < 1.05
+
+
+def test_uniform_band_amounts_leave_the_signal_untouched(signal):
+    """The frequency control has to stay inert until it is used, or every
+    render that merely names a crossover starts differing from one that does
+    not."""
+    a = rf.SourceBank(signal, 4, rf.DecorrConfig(
+        crossovers=[500.0], band_amounts=[1.0, 1.0]), FS)
+    b = rf.SourceBank(signal, 4, rf.DecorrConfig(), FS)
+    assert np.allclose(a.blocks(0, len(signal), a.base_amounts()),
+                       b.blocks(0, len(signal), b.base_amounts()), atol=1e-9)

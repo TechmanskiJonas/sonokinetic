@@ -814,20 +814,85 @@ class SourceBank:
 
         rng = np.random.default_rng(self.cfg.seed)
 
-        diffs, stats = [], []
+        # The unshaped difference is kept only while band gains are in use: it
+        # is the reference the compensation below is measured against, and
+        # band_shape with uniform gains is inert, so a shaped copy cannot
+        # stand in for it.
+        shaping = bool(self.cfg.crossovers) and self.cfg.resolved_band_amounts() is not None
+        diffs, raws, stats = [], [], []
         for i in range(n_sources):
             c = self.cfgs[i]
             wet = self._wet(x, c, rng, i, n_sources, fs)
             # RMS-match wet to dry BEFORE differencing, so `amount` is a
             # coherence control and not a level control.
             wet = wet * np.sqrt(self.Pd / (np.mean(wet ** 2) + 1e-20))
-            d = band_shape(wet - x, c.crossovers, c.resolved_band_amounts(), fs)
+            raw = wet - x
+            d = band_shape(raw, c.crossovers, c.resolved_band_amounts(), fs)
             diffs.append(d)
+            if shaping:
+                raws.append(raw)
             stats.append((float(np.mean(x * d)), float(np.mean(d ** 2))))
 
         self.d = np.stack(diffs) if n_sources else np.zeros((0, len(x)))
         self.cross = np.array([s[0] for s in stats])   # <x, d_i>
         self.dpow = np.array([s[1] for s in stats])    # <d_i, d_i>
+
+        # Ensemble band compensation, applied after the per-source level
+        # correction and never before it: the correction holds each source at
+        # the dry level, and this deliberately moves bands away from that so
+        # the SUM keeps its spectrum. Folded into both halves of the blend,
+        # since band_shape is linear and the blend is x + a*d.
+        #
+        # cross and dpow stay as measured above, on the uncompensated signals,
+        # because the level correction they feed has to run first.
+        self.xb = None
+        cross = self.cfg.crossovers
+        ba = self.cfg.resolved_band_amounts()
+        if (n_sources > 1 and cross and ba is not None
+                and any(abs(b - 1.0) > 1e-9 for b in ba)):
+            gains = self._band_trim(x, diffs, raws, cross, ba, fs)
+            self.xb = np.stack([band_shape(x, cross, gains, fs)] * n_sources)
+            self.d = np.stack([band_shape(dd, cross, gains, fs) for dd in diffs])
+
+    def _band_trim(self, x, diffs, raws, cross, ba, fs):
+        """Per-band gains holding the ensemble's spectrum fixed, by measurement.
+
+        Reducing a band's amount leaves that band shared between the sources
+        instead of independent, and shared and independent content do not sum
+        to the same level. The size of the difference cannot be predicted from
+        the source count: an evenly spaced ring of identical signals largely
+        cancels rather than reinforcing, so the naive factor of N is wrong in
+        both magnitude and sign depending on the geometry.
+
+        So it is measured. Sum the ensemble as configured, sum it again with
+        the band amounts uniform, and take the ratio band by band. Uniform
+        amounts give a ratio of 1 in every band, which keeps the frequency
+        control inert until it is used.
+        """
+        base = self.base_amounts()
+
+        def ensemble(ds):
+            acc = np.zeros(len(x))
+            for i, dd in enumerate(ds):
+                p = self.Pd + 2.0 * base[i] * float(np.mean(x * dd)) \
+                    + base[i] ** 2 * float(np.mean(dd ** 2))
+                acc += (x + base[i] * dd) * np.sqrt(self.Pd / max(p, 1e-20))
+            return acc
+
+        want, got = ensemble(raws), ensemble(diffs)
+
+        edges = [0.0] + list(cross) + [fs / 2.0]
+        f = np.fft.rfftfreq(len(x), 1.0 / fs)
+        W = np.abs(np.fft.rfft(want)) ** 2
+        G = np.abs(np.fft.rfft(got)) ** 2
+        out = []
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            m = (f >= lo) & (f < hi)
+            if not m.any():
+                out.append(1.0)
+                continue
+            out.append(float(np.sqrt(np.sum(W[m]) / max(np.sum(G[m]), 1e-20))))
+        return out
 
     @staticmethod
     def _wet(x, dcfg, rng, i, n_sources, fs):
@@ -892,9 +957,10 @@ class SourceBank:
 
     def blocks(self, start: int, stop: int, a: np.ndarray) -> np.ndarray:
         """Blended block for every source. Returns (S, stop-start)."""
-        seg = self.x[start:stop]
+        seg = (self.xb[:, start:stop] if self.xb is not None
+               else self.x[start:stop][None, :])
         g = np.array([self._gain(i, a[i]) for i in range(self.n_sources)])
-        return (seg[None, :] + a[:, None] * self.d[:, start:stop]) * g[:, None]
+        return (seg + a[:, None] * self.d[:, start:stop]) * g[:, None]
 
 
 def decorrelate(x: np.ndarray, n_sources: int, method: str = "velvet",
