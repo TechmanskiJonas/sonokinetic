@@ -587,3 +587,13 @@ def test_a_switch_made_mid_fade_cannot_drop_the_signal(appjs):
     assert "linearRampToValueAtTime" in code, "needs a fallback that cannot throw"
     assert "renderPassages()" not in code, (
         "rebuilding every row on each keypress competes with scheduling the fade")
+
+
+def test_one_treatment_can_replace_another_without_passing_through_dry(appjs):
+    """Holding a second digit used to be ignored until the first was released,
+    and release goes to the untreated signal. So comparing two treatments meant
+    hearing dry in between, which is the one place a comparison cannot afford a
+    gap: memory for spatial quality is what the switching exists to defeat."""
+    block = appjs.split("// comparing two separate listens")[1][:2200]
+    assert "if (held !== n)" in block, "a new digit must take over from the held one"
+    assert "if (held === null)" not in block, "that guard is what blocked the takeover"

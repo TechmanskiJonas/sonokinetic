@@ -594,7 +594,7 @@ const LABELS = {
 
 // Shared clipboard for ring modules, so a ring built in one variant can be
 // pasted into another.
-const CLIP = { component: null };
+const CLIP = { component: null, variants: null };
 
 /** Decorrelation rows, reused for the variant default and per-component
  *  overrides so both editors stay in step. */
@@ -1199,8 +1199,34 @@ function renderPassages() {
     only.className = "sm"; only.textContent = "Render this passage";
     only.title = "render only the selected passage";
     only.addEventListener("click", () => doRender([S.active]));
+
+    // A whole treatment set is what gets carried to a new passage, so that a
+    // configuration worked out on one stretch of audio can be tried on
+    // another without rebuilding it variant by variant.
+    const copyAll = document.createElement("button");
+    copyAll.className = "sm ghost"; copyAll.textContent = "Copy variants";
+    copyAll.title = "copy every treated variant of this passage";
+    copyAll.addEventListener("click", () => {
+      const treated = (S.passages[S.active]?.variants || []).slice(1);
+      if (!treated.length) return;
+      CLIP.variants = JSON.parse(JSON.stringify(treated));
+      renderPassages();
+    });
+
+    const pasteAll = document.createElement("button");
+    pasteAll.className = "sm ghost";
+    pasteAll.textContent = `Paste variants${CLIP.variants ? ` (${CLIP.variants.length})` : ""}`;
+    pasteAll.title = "add the copied variants to this passage";
+    pasteAll.disabled = !CLIP.variants;
+    pasteAll.addEventListener("click", () => {
+      if (!CLIP.variants) return;
+      const p = S.passages[S.active];
+      for (const v of JSON.parse(JSON.stringify(CLIP.variants))) p.variants.push(v);
+      renderPassages(); markStale();
+    });
+
     bar.append(rename, Object.assign(document.createElement("span"),
-      { className: "grow" }), only, del);
+      { className: "grow" }), copyAll, pasteAll, only, del);
   }
   host.appendChild(bar);
 
@@ -1829,25 +1855,35 @@ function wireTransport() {
     if (!(n >= 1 && n <= 9) || !passage() || n >= passage().variants.length) return;
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
-      const already = S.latched && S.live && S.live.vi === n;
+      // Latching sets what release returns to, so two treatments can be held
+      // against each other: latch one, then hold the other.
+      const already = S.latched && S.ref === n;
       S.latched = !already;
-      applyVariant(S.active, already ? 0 : n);
+      S.ref = already ? 0 : n;
+      applyVariant(S.active, S.ref);
       held = null;
       renderPassages();
       return;
     }
-    if (held === null) { held = n; S.latched = false; applyVariant(S.active, n); }
+    // A second digit pressed while the first is still down takes over
+    // directly. Requiring a release in between put the untreated signal
+    // between every pair of treatments, which is the one place a comparison
+    // cannot afford a gap.
+    if (held !== n) { held = n; applyVariant(S.active, n); }
   });
   addEventListener("keyup", e => {
     const n = e.code && e.code.startsWith("Digit")
       ? parseInt(e.code.slice(5), 10) : parseInt(e.key, 10);
     if (n === held) {
       held = null;
-      if (!S.latched) applyVariant(S.active, S.ref);
+      applyVariant(S.active, S.latched ? S.ref : 0);
     }
   });
   addEventListener("blur", () => {
-    if (held !== null) { held = null; if (!S.latched) applyVariant(S.active, S.ref); }
+    if (held !== null) {
+      held = null;
+      applyVariant(S.active, S.latched ? S.ref : 0);
+    }
   });
 }
 
@@ -3046,14 +3082,14 @@ async function boot() {
 
   if (tracks.length) {
     await loadTrack(tracks[0].name);
-    // Opens on sustained material, which decorrelates far more readily than
-    // percussive material and is the better starting stimulus.
-    // Sustained material decorrelates far more readily than percussive
-    // material, so the default runs from the theremin section up to the guitar
-    // entry rather than sampling a few seconds of it.
-    // Sustained material from the theremin section up to where the drums
-    // return, which is the longest stretch of the track without hard onsets.
-    S.sel = [Math.min(141, Math.max(0, S.duration - 10)), Math.min(185, S.duration)];
+    // Opens on a passage rather than on an empty bench, so a fresh clone has
+    // something to render immediately. Sustained material decorrelates far
+    // more readily than percussive material, so both defaults pick a stretch
+    // without hard onsets: 10 to 40 seconds of the demo drone, which is all of
+    // it once the fades are excluded, or the theremin section of a song.
+    S.sel = S.track === "demo-drone.wav"
+      ? [10, Math.min(40, S.duration)]
+      : [Math.min(141, Math.max(0, S.duration - 10)), Math.min(185, S.duration)];
     S.cursor = S.sel[0];
     S.passages = [newPassage(S.sel[0], S.sel[1], "Passage 1")];
     syncSel(); renderPassages(); drawWave();
