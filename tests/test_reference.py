@@ -578,8 +578,12 @@ def test_a_switch_made_mid_fade_cannot_drop_the_signal(appjs):
     silent. Heard as a gap on every fast switch, which is the one comparison
     this instrument exists to make.
     """
-    body = appjs.split("function applyVariant(")[1].split("\nfunction ")[0]
-    assert body.count("try {") >= 2, "both scheduling calls must contain their own failure"
-    assert "linearRampToValueAtTime" in body, "needs a fallback that cannot throw"
-    assert "renderPassages()" not in body, (
+    # Stop at the function's own closing brace. The prose after it discusses
+    # renderPassages, and the assertion below is that nothing calls it.
+    body = appjs.split("function applyVariant(")[1].split("\n}")[0]
+    code = "\n".join(l for l in body.splitlines()
+                     if not l.lstrip().startswith(("*", "//", "/*")))
+    assert code.count("try {") >= 2, "both scheduling calls must contain their own failure"
+    assert "linearRampToValueAtTime" in code, "needs a fallback that cannot throw"
+    assert "renderPassages()" not in code, (
         "rebuilding every row on each keypress competes with scheduling the fade")
