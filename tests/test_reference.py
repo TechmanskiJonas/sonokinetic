@@ -555,3 +555,14 @@ def test_boot_attaches_listeners_without_assuming_the_node_exists(appjs):
 def test_nothing_still_calls_the_removed_arrangement_code(appjs):
     for gone in ("wireArrangement", "renderArrangement", "#arrangelist"):
         assert gone not in appjs, f"{gone} survives the removal"
+
+
+def test_the_first_component_of_a_kind_is_not_named_the_second(appjs):
+    """autoName counts existing variants with the same base name to pick a
+    suffix, and the variant being named is already in that list. Counting it
+    made the first of anything the second: one turning ring in the passage,
+    named "Turning ring 2", with no "Turning ring 1" anywhere to explain it.
+    """
+    body = appjs.split("function autoName(")[1].split("\nfunction ")[0]
+    assert "self" in body.split("{")[0], "autoName must know which variant it is naming"
+    assert "v !== self" in body, "the variant being named must not count itself"

@@ -795,18 +795,21 @@ function newPassage(start, end, name) {
 
 /** A variant built from a single component takes that component's name, with
  *  a number appended when the passage already has one of the same kind. */
-function autoName(passage, cfg) {
+function autoName(passage, cfg, self) {
   const comps = cfg?.components || [];
   if (comps.length !== 1) return null;
   const base = comps[0].label || LATTICES[comps[0].lattice]?.label || "component";
+  // Excluding the variant being named. It is already in the list, so counting
+  // it made the first of anything the second: one turning ring, named
+  // "Turning ring 2", with no "Turning ring 1" anywhere.
   const taken = passage.variants.filter(v =>
-    v.name === base || v.name.startsWith(base + " ")).length;
+    v !== self && (v.name === base || v.name.startsWith(base + " "))).length;
   return taken ? `${base} ${taken + 1}` : base;
 }
 
 function renameFromComponents(passage, variant) {
   if (variant.renamed) return;
-  const auto = autoName(passage, variant.config);
+  const auto = autoName(passage, variant.config, variant);
   if (auto) variant.name = auto;
 }
 
@@ -1103,9 +1106,23 @@ function buildComponentEditor(host, cfg, onChange, hue) {
 
   const bar = document.createElement("div");
   bar.className = "ringbar";
+
+  // One click for the usual case. Adding anything at all used to mean opening
+  // a menu and choosing from twelve presets, when nine times in ten the answer
+  // is a turning ring: the configuration this project is built around.
+  const addBtn = document.createElement("button");
+  addBtn.className = "sm";
+  addBtn.textContent = "Add turning ring";
+  addBtn.title = "a ring of sources turning together, the starting configuration";
+  addBtn.addEventListener("click", () => {
+    cfg.components.push(defaultComponent("polar", COMPONENT_PRESETS.polar[1]));
+    rebuild(); onChange();
+  });
+  bar.appendChild(addBtn);
+
   const addSel = document.createElement("select");
   addSel.className = "sm";
-  addSel.innerHTML = `<option value="">Add component…</option>` +
+  addSel.innerHTML = `<option value="">Something else…</option>` +
     Object.entries(LATTICES).map(([k, v]) =>
       `<optgroup label="${v.label} — ${v.hint}">` +
       COMPONENT_PRESETS[k].map((p, i) =>
@@ -1214,7 +1231,10 @@ function renderPassages() {
     add.title = "add an empty variant to build from components";
     add.addEventListener("click", e => {
       e.stopPropagation();
-      p.variants.push({ name: `variant ${p.variants.length}`, config: emptyField() });
+      // Open, because the next thing anyone does with a new variant is put a
+      // component in it, and that control lives inside the body.
+      p.variants.push({ name: `variant ${p.variants.length}`,
+                        config: emptyField(), open: true });
       renderPassages(); markStale();
     });
     head.appendChild(add);
