@@ -1250,6 +1250,7 @@ function renderPassages() {
         const hue = variantColour(v, vi);
         const vr = document.createElement("div");
         vr.className = "variant" + (isLive ? " live" : "") + (latched ? " latched" : "");
+        vr.dataset.pi = pi; vr.dataset.vi = vi;   // markLiveVariant finds rows by these
         if (vi > 0) vr.style.borderLeft = `4px solid ${shadeOf(hue, 0, 2)}`;
 
         const key = document.createElement("span");
@@ -1728,12 +1729,32 @@ function applyVariant(pi, vi, ms) {
   const T = (ms ?? Number($("#fadems").value)) / 1000;
   const t0 = AC.currentTime;
 
+  /** Move one gain to its target, surviving a switch made mid-fade.
+   *
+   * cancelAndHoldAtTime throws NotSupportedError when a value curve is still
+   * running, and punching in does exactly that: press, release and press again
+   * inside one 18 ms fade. The throw used to escape applyVariant. Dry is
+   * ramped first, so dry ducked and then the loop over the variants never ran,
+   * leaving the variant that was asked for silent until the next keypress
+   * happened to land on a clear param. Heard as a gap on every fast switch,
+   * which is the comparison this instrument exists to make.
+   *
+   * Each call now contains its own failure, and falls back to a linear ramp
+   * from wherever the gain currently sits. A linear fade between decorrelated
+   * signals dips about 3 dB in the middle, which is worth it once in a while
+   * to never drop the signal.
+   */
   const ramp = (param, target) => {
-    if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t0);
-    else param.cancelScheduledValues(t0);
     const cur = param.value;
+    try {
+      if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t0);
+      else param.cancelScheduledValues(t0);
+    } catch (_) {
+      param.cancelScheduledValues(t0);
+      param.setValueAtTime(cur, t0);
+    }
     if (T <= 0.001 || Math.abs(cur - target) < 1e-4) {
-      param.setValueAtTime(target, t0);
+      try { param.setValueAtTime(target, t0); } catch (_) { param.value = target; }
       return;
     }
     // Equal power: hold cur^2 + target^2 constant across the transition, so a
@@ -1743,15 +1764,37 @@ function applyVariant(pi, vi, ms) {
       const x = n / (N - 1);
       curve[n] = Math.sqrt(cur * cur * (1 - x) + target * target * x);
     }
-    param.setValueCurveAtTime(curve, t0, T);
+    try {
+      param.setValueCurveAtTime(curve, t0, T);
+    } catch (_) {
+      param.cancelScheduledValues(t0);
+      param.setValueAtTime(cur, t0);
+      param.linearRampToValueAtTime(target, t0 + T);
+    }
   };
 
   if (dryGain) ramp(dryGain.gain, S.live ? 0 : 1);
   varNodes.forEach(n => ramp(n.gain.gain,
     S.live && n.pi === S.live.pi && n.vi === S.live.vi ? share : 0));
 
-  renderPassages();
+  markLiveVariant();
   showMetrics();
+}
+
+/** Move the highlight to whichever variant is sounding.
+ *
+ * This used to call renderPassages(), which rebuilds every variant row and
+ * every component editor inside them. On a passage holding four variants with
+ * their settings open that is several milliseconds of layout on each keypress,
+ * spent to move one class, on the same thread that has to schedule the fade.
+ */
+function markLiveVariant() {
+  $$("#passages .variant").forEach(row => {
+    const pi = Number(row.dataset.pi), vi = Number(row.dataset.vi);
+    const isLive = !!S.live && S.live.pi === pi && S.live.vi === vi;
+    row.classList.toggle("live", isLive);
+    row.classList.toggle("latched", isLive && !!S.latched);
+  });
 }
 
 function wireTransport() {

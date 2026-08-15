@@ -566,3 +566,20 @@ def test_the_first_component_of_a_kind_is_not_named_the_second(appjs):
     body = appjs.split("function autoName(")[1].split("\nfunction ")[0]
     assert "self" in body.split("{")[0], "autoName must know which variant it is naming"
     assert "v !== self" in body, "the variant being named must not count itself"
+
+
+def test_a_switch_made_mid_fade_cannot_drop_the_signal(appjs):
+    """cancelAndHoldAtTime throws NotSupportedError while a value curve is
+    still running, and punching in does exactly that: press, release and press
+    again inside one 18 ms fade.
+
+    The throw escaped applyVariant. Dry is ramped first, so dry ducked and the
+    loop over the variants never ran, leaving the variant that was asked for
+    silent. Heard as a gap on every fast switch, which is the one comparison
+    this instrument exists to make.
+    """
+    body = appjs.split("function applyVariant(")[1].split("\nfunction ")[0]
+    assert body.count("try {") >= 2, "both scheduling calls must contain their own failure"
+    assert "linearRampToValueAtTime" in body, "needs a fallback that cannot throw"
+    assert "renderPassages()" not in body, (
+        "rebuilding every row on each keypress competes with scheduling the fade")
