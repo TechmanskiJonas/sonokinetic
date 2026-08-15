@@ -14,7 +14,6 @@
   <button id="starttour" class="help" title="Take a guided tour of the interface">?</button>
   <nav>
     <button class="tab on" data-tab="bench">Bench</button>
-    <button class="tab" data-tab="arrange">Arrangement</button>
     <button class="tab" data-tab="blind">Blind test</button>
     <button class="tab" data-tab="courses">Courses</button>
     <button class="tab" data-tab="purpose">Purpose</button>
@@ -131,44 +130,6 @@
 </section>
 
 <!-- ================================================================== -->
-<section id="arrange" class="page">
-  <div class="cols">
-    <div class="card wide">
-      <div class="cardhead">
-        <h2>Arrangement</h2>
-        <span class="grow"></span>
-        <label>Mode
-          <select id="amode">
-            <option value="timeline">One arrangement across the track</option>
-            <option value="blocks">Whole arrangements back to back</option>
-            <option value="sequence">One passage, different treatments</option>
-          </select>
-        </label>
-        <button id="arender" class="primary">Render</button>
-      </div>
-      <p class="note">Each passage contributes its selected variant. The result
-        is a single rendered file, with a timeline and subtitle track describing
-        what is playing at each moment.</p>
-      <div id="arrangelist" class="tlist"></div>
-      <div class="row">
-        <button id="aimport" class="sm">Import JSON</button>
-        <button id="aexport" class="sm">Export JSON</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="cardhead"><h2>Result</h2></div>
-      <audio id="aplayer" controls style="width:100%"></audio>
-      <div id="atimeline" class="tlist"></div>
-      <div class="hr"></div>
-      <div class="row">
-        <label>Name <input id="exname" value="sonokinetic"></label>
-        <button id="doexport">Export WAV + JSON + SRT</button>
-      </div>
-      <div id="aexportstate" class="msg"></div>
-    </div>
-  </div>
-</section>
 
 <!-- ================================================================== -->
 <section id="blind" class="page">

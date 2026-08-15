@@ -792,6 +792,67 @@ def _render_session(req: RenderIn, mono, stereo, hrtf, fs) -> Dict[str, Any]:
             "passages": out_passages}
 
 
+def _source_distinctiveness(sigs, fs: int, lo: float = 200.0, hi: float = 12000.0):
+    """How far each source's spectrum sits from the ensemble average, in dB.
+
+    Decorrelation is carried by phase and distinctiveness by magnitude, so the
+    coherence matrix can read near zero while one source still has a spectral
+    signature: a resonance or a notch its neighbours do not share. The ear
+    holds on to that source, it stops being part of the ground and becomes a
+    figure, and the field is heard as a thing that circles rather than as a
+    field in motion. No correlation measure reports this, because correlation
+    does not look at magnitude.
+
+    Measured on the rendered per-source signals rather than on the filters, so
+    the blend amount and any band shaping are included.
+    """
+    n = len(sigs)
+    if n < 2:
+        return None
+    nfft = 4096
+    take = min(len(sigs[0]), nfft * 8)
+    win = np.hanning(nfft)
+    mags = []
+    for s in sigs:
+        acc = np.zeros(nfft // 2 + 1)
+        hops = max(1, (take - nfft) // (nfft // 2))
+        for k in range(hops):
+            seg = s[k * nfft // 2: k * nfft // 2 + nfft]
+            if len(seg) < nfft:
+                break
+            acc += np.abs(np.fft.rfft(seg * win))
+        mags.append(20 * np.log10(acc / max(hops, 1) + 1e-9))
+    M = np.array(mags)
+    f = np.fft.rfftfreq(nfft, 1 / fs)
+
+    # Third-octave bands, not raw bins. A source is grabbed by a resonance
+    # wide enough to hear, and bin-by-bin deviation is dominated by the ripple
+    # every filter has, which averages out to much the same number for all of
+    # them and hides the one that stands out.
+    edges, fc = [], lo
+    while fc < hi:
+        edges.append((fc, fc * 2 ** (1 / 3)))
+        fc *= 2 ** (1 / 3)
+    B = np.array([[M[i, (f >= a) & (f < b)].mean() for a, b in edges]
+                  for i in range(n)])
+    B = np.nan_to_num(B)
+    mean = B.mean(axis=0)
+    dev = B - mean
+
+    colour = np.sqrt((dev ** 2).mean(axis=1))    # how coloured each source is
+    handle = np.abs(dev).max(axis=1)             # its worst single band
+    worst = int(np.argmax(handle))
+    # Where it sticks out, meaning energy this source has and its neighbours do
+    # not. Reporting the largest deviation of either sign points at the region
+    # a resonant source is missing rather than at the resonance itself.
+    at = float(edges[int(np.argmax(dev[worst]))][0])
+    return {"per_source_db": [round(float(v), 2) for v in handle],
+            "colour_db": [round(float(v), 2) for v in colour],
+            "mean_db": round(float(handle.mean()), 2),
+            "spread_db": round(float(handle.max() - handle.min()), 2),
+            "outlier": worst, "outlier_hz": round(at)}
+
+
 def _component_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int):
     """Measured inter-source coherence within each component separately.
 
@@ -844,7 +905,7 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
     if moving and duration > 0:
         times = [duration * f for f in (0.0, 0.25, 0.5, 0.75)]
 
-    mats, means = [], []
+    mats, means, distinct = [], [], None
     for t in times:
         amts = bank.amounts_at(t, az + cfg.rotation_deg_per_sec * t)
         sigs = bank.blocks(0, len(take), amts)
@@ -852,9 +913,12 @@ def _measured_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int,
         off = m[~np.eye(len(m), dtype=bool)]
         mats.append(m)
         means.append(float(np.mean(np.abs(off))) if len(off) else 0.0)
+        if distinct is None:
+            distinct = _source_distinctiveness(sigs, fs)
 
     out = {"matrix": [[round(float(v), 3) for v in row] for row in mats[0]],
            "mean_offdiagonal": round(means[0], 4),
+           "distinctiveness": distinct,
            "time_varying": moving}
     if moving:
         out["mean_offdiagonal_range"] = [round(min(means), 4), round(max(means), 4)]

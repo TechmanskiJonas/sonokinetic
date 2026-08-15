@@ -2582,12 +2582,7 @@ const TOURS = [
     sub: "Hands on: mark a passage, set up variants, render, compare.",
     steps: buildTour,
   },
-  {
-    id: "arrange", title: "Arrangements",
-    sub: "Rendering a finished sequence to a file.",
-    steps: arrangeTour,
-  },
-  {
+    {
     id: "blindtour", title: "Blind testing",
     sub: "Collecting responses that can serve as evidence.",
     steps: blindTour,
@@ -2631,17 +2626,11 @@ function welcomeTour() {
         table across the passage's variants.`,
     },
     {
-      el: '.tab[data-tab="arrange"]',
-      title: "Arrangement",
-      body: `Renders the passages and their chosen variants into a single file,
-        with a timeline and subtitle track.`,
-    },
-    {
       el: '.tab[data-tab="blind"]',
       title: "Blind test",
-      body: `Presents a passage's variants in random order with labels hidden
-        and writes responses to disk. This page is what turns listening into
-        data.`,
+      body: `Holds two variants at once with their labels hidden, one on the
+        space bar and one on release, and writes responses to disk. This page
+        is what turns listening into data.`,
     },
     {
       el: '.tab[data-tab="courses"]',
@@ -2784,38 +2773,6 @@ function buildTour() {
       body: `The Arrangement page renders passages to a file. The Blind test
         page presents variants unlabeled and records responses. Both have short
         tours under the same help menu.`,
-    },
-  ];
-}
-
-function arrangeTour() {
-  return [
-    {
-      el: '.tab[data-tab="arrange"]',
-      title: "Arrangements",
-      body: `Each passage contributes its selected variant, rendered into one
-        file on the track's own timeline.`,
-      before: () => showTab("arrange"),
-    },
-    {
-      el: "#amode",
-      title: "Three layouts",
-      body: `One arrangement across the track; whole arrangements back to back;
-        or one passage repeated under each of its treatments.`,
-    },
-    {
-      el: "#arender",
-      title: "Render and export",
-      body: `The result plays here, with per-segment measurements. Export
-        writes the audio together with a timeline JSON and an SRT subtitle
-        track, so a player shows what is active at each moment.`,
-    },
-    {
-      el: "#aexport",
-      title: "Portable definitions",
-      body: `Passages and variants can be exported and imported as JSON, and
-        saved on the server as named experiments from the Bench.`,
-      before: () => showTab("arrange"),
     },
   ];
 }

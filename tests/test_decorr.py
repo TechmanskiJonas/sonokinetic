@@ -324,3 +324,40 @@ def test_legacy_scalar_fields_still_drive_the_render(hrtf, signal):
     assert d.amount == 0.7 and d.family == "allpass"
     y = rf.render(signal[: FS], hrtf, cfg, FS)
     assert y.shape == (FS, 2)
+
+
+def test_distinctiveness_finds_the_source_that_stands_out():
+    """Correlation and distinctiveness are different quantities.
+
+    Decorrelation is carried by phase; a spectral signature is carried by
+    magnitude. So the coherence matrix can read near zero while one source
+    still has a resonance its neighbours lack, and that source is the one the
+    ear holds on to. No correlation measure reports it, which is why this one
+    exists.
+
+    Asserted by planting a resonance: one source is filtered through a narrow
+    peak, which barely moves the coherence and should move this measure a lot.
+    """
+    import app as A
+
+    fs = 44100
+    rng = np.random.default_rng(0)
+    n = fs
+    sigs = [rng.normal(0, 1, n) for _ in range(6)]
+
+    flat = A._source_distinctiveness(sigs, fs)
+    assert flat["spread_db"] < 3.0, "independent noise should look uniform"
+
+    # a two-pole resonance at 3 kHz on source 4 only
+    w = 2 * np.pi * 3000 / fs
+    r = 0.995
+    a1, a2 = -2 * r * np.cos(w), r * r
+    y = np.zeros(n)
+    for i in range(2, n):
+        y[i] = sigs[4][i] - a1 * y[i - 1] - a2 * y[i - 2]
+    sigs[4] = 0.5 * y / (np.std(y) + 1e-12)
+
+    marked = A._source_distinctiveness(sigs, fs)
+    assert marked["outlier"] == 4
+    assert marked["spread_db"] > flat["spread_db"] + 3.0
+    assert 2000 < marked["outlier_hz"] < 4500
