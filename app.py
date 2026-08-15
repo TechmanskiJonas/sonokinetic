@@ -810,15 +810,15 @@ def _component_coherence(x: np.ndarray, cfg: rf.FieldConfig, fs: int):
         cfgs = per[at:at + n]
         at += n
         if n < 2:
-            out.append({"label": c.label or f"{c.kind} {ci + 1}",
-                        "kind": c.kind, "n": n, "mean_offdiagonal": None})
+            out.append({"label": c.label or f"{c.lattice} {ci + 1}",
+                        "kind": c.lattice, "n": n, "mean_offdiagonal": None})
             continue
         bank = rf.SourceBank(take, n, cfgs, fs)
         sigs = bank.blocks(0, len(take), bank.base_amounts())
         m = rf.coherence_matrix(sigs)
         off = m[~np.eye(n, dtype=bool)]
-        out.append({"label": c.label or f"{c.kind} {ci + 1}", "kind": c.kind,
-                    "n": n,
+        out.append({"label": c.label or f"{c.lattice} {ci + 1}",
+                    "kind": c.lattice, "n": n,
                     "mean_offdiagonal": round(float(np.mean(np.abs(off))), 4)})
     return out
 

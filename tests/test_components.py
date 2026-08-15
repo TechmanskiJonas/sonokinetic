@@ -414,3 +414,25 @@ def test_component_gain_scales_that_component_only(hrtf, signal):
     yq = rf.render(signal, hrtf, quiet, FS, normalize=False)
     db = 20 * np.log10(np.sqrt(np.mean(yl ** 2) / np.mean(yq ** 2)))
     assert db == pytest.approx(12.0, abs=0.5)
+
+
+def test_per_component_coherence_survives_a_multi_component_field():
+    """The readout reached for c.kind, which components have never had; the
+    attribute is lattice. Nothing exercised it, because the readout is only
+    built when metrics are requested, so every multi-component render with
+    measurement on returned a 500 instead of audio.
+    """
+    import app as A
+
+    field = A.FieldIn(components=[
+        A.ComponentIn(lattice="polar", rings=1, per_ring=9,
+                      rotation_deg_per_sec=60.0),
+        A.ComponentIn(lattice="cartesian", cols=3, rows=3, drift_y_mps=-2.0),
+    ])
+    x = np.random.default_rng(0).normal(0, 0.1, 44100)
+    out = A._component_coherence(x, field.to_cfg(10.0), 44100)
+
+    assert [o["kind"] for o in out] == ["polar", "cartesian"]
+    assert [o["n"] for o in out] == [9, 9]
+    for o in out:
+        assert 0.0 <= o["mean_offdiagonal"] <= 1.0

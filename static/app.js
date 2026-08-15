@@ -29,14 +29,17 @@ const fmt = (v, d = 2) =>
  * Drawing it fixes both. The triangle below is centred on its bounding box
  * rather than on its centroid, which is what the eye reads as centred and
  * what keeps the 90° rotation between the two states from shifting the mark.
- * Proportions are near equilateral: 7.8 wide by 9 tall before the stroke,
- * which rounds the points and adds 0.55 evenly on every side.
+ *
+ * Size and proportion are deliberate. A near-equilateral triangle at this
+ * scale reads as a play button, so it is 6 wide by 7.6 tall before the stroke,
+ * taller than it is wide, and small within its box: the box is the click
+ * target and does not need to be filled.
  */
-const TRI_RIGHT = "M4.1 3.5 L11.9 8 L4.1 12.5 Z";
+const TRI_RIGHT = "M5 4.2 L11 8 L5 11.8 Z";
 const chevron = (open, size = 14) =>
   `<svg class="chev${open ? " open" : ""}" width="${size}" height="${size}"
      viewBox="0 0 16 16" aria-hidden="true"><path d="${TRI_RIGHT}"
-     fill="currentColor" stroke="currentColor" stroke-width="1.1"
+     fill="currentColor" stroke="currentColor" stroke-width="0.9"
      stroke-linejoin="round"/></svg>`;
 
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
@@ -627,14 +630,33 @@ const defaultField = () => ({
   block: 256, seed: 0
 });
 
-/** Distinct hues, one per variant. Components take shades of their variant's
- *  hue, so a field of several reads as one thing with parts. */
-const VARIANT_HUES = [205, 25, 150, 285, 8, 45, 190, 320];
+/** Distinct hues, one per component.
+ *
+ *  Colour used to name the variant, from when several could sound at once and
+ *  telling them apart mattered. A trial holds one variant at a time now, so
+ *  the useful distinction moved down a level: a field built from a near ring
+ *  and a far grid reads as two things, and the monitor should say which is
+ *  which. Rings or rows inside a component take shades of its hue. */
+const COMPONENT_HUES = [205, 25, 150, 285, 8, 45, 190, 320];
+const VARIANT_HUES = COMPONENT_HUES;   // older saved experiments name this
+
+const componentHue = (c, ci) =>
+  (c && c.hue !== undefined && c.hue !== null)
+    ? c.hue : COMPONENT_HUES[ci % COMPONENT_HUES.length];
 
 function variantColour(v, vi) {
   const h = v.hue !== undefined && v.hue !== null ? v.hue
-    : VARIANT_HUES[(vi - 1 + VARIANT_HUES.length) % VARIANT_HUES.length];
+    : COMPONENT_HUES[(vi - 1 + COMPONENT_HUES.length) % COMPONENT_HUES.length];
   return h;
+}
+
+/** Hues for the components of whatever is sounding, in component order. */
+function liveComponentHues(n) {
+  const cs = S.live
+    ? (S.passages[S.live.pi]?.variants[S.live.vi]?.config?.components || [])
+    : (passage()?.variants[S.ref]?.config?.components || []);
+  return Array.from({ length: Math.max(n, 1) },
+                    (_, ci) => componentHue(cs[ci], ci));
 }
 
 /** Shade k of n within a variant's hue: darker toward the centre of the field. */
@@ -967,10 +989,11 @@ function buildComponentEditor(host, cfg, onChange, hue) {
   const n = Math.max(cfg.components.length, 2);
 
   cfg.components.forEach((c, ci) => {
+    const chue = componentHue(c, ci);
     const mod = document.createElement("div");
     mod.className = "ringmod";
     if (c.collapsed) mod.classList.add("collapsed");
-    mod.style.borderLeft = `3px solid ${shadeOf(hue, ci, n)}`;
+    mod.style.borderLeft = `3px solid ${shadeOf(chue, 1, 2)}`;
 
     const head = document.createElement("div");
     head.className = "rmhead";
@@ -982,6 +1005,17 @@ function buildComponentEditor(host, cfg, onChange, hue) {
       e.stopPropagation(); c.collapsed = !c.collapsed; rebuild();
     });
     head.appendChild(twist);
+
+    // The component's colour, which is how it is identified in the monitor.
+    const swatch = document.createElement("button");
+    swatch.className = "huepick";
+    swatch.title = "component colour";
+    swatch.style.background = shadeOf(chue, 1, 2);
+    swatch.addEventListener("click", e => {
+      e.stopPropagation();
+      toggleHuePicker(swatch, chue, h => { c.hue = h; rebuild(); onChange(); });
+    });
+    head.appendChild(swatch);
 
     const name = document.createElement("input");
     name.className = "cname";
@@ -1240,17 +1274,7 @@ function renderPassages() {
           });
           vr.appendChild(latch);
 
-          // Hue only: components take shades of the variant's colour, so
-          // saturation and lightness are not the variant's to set.
-          const swatch = document.createElement("button");
-          swatch.className = "huepick";
-          swatch.style.background = shadeOf(hue, 0, 2);
-          swatch.title = "variant colour";
-          swatch.addEventListener("click", e => {
-            e.stopPropagation();
-            toggleHuePicker(swatch, hue, h => { v.hue = h; renderPassages(); });
-          });
-          vr.appendChild(swatch);
+          // Colour belongs to the component now, and is set on its header.
         }
 
         if (v.config && hasMotion(v.config)) {
@@ -1859,18 +1883,15 @@ function drawRing() {
     || Array(nSrc).fill(0);
   const baseDist = v.params.resolved_distances || Array(nSrc).fill(REFD);
   const lvlAt = frame => frame.lvl || Array(nSrc).fill(1);
-  // Shade by ring or row within the component, and by component within the
-  // variant, so depth is legible without a second colour scheme.
-  const hue = liveHue();
+  // Hue names the component; shade within it names the ring or row, so depth
+  // stays legible without a second colour scheme. Only one variant sounds at a
+  // time now, so a hue per variant bought nothing, while a hue per component
+  // tells a listener which part of a multi-part field they are looking at.
   const compShades = v.params.component_shades || [1];
-  const shadeIdx = (v.params.resolved_shade_of || Array(nSrc).fill(0))
-    .map((s, i) => {
-      const ci = ringOf[i];
-      let before = 0;
-      for (let k = 0; k < ci; k++) before += compShades[k] || 1;
-      return before + s;
-    });
-  const nShades = Math.max(2, compShades.reduce((a, b) => a + b, 0));
+  const hues = liveComponentHues(compShades.length);
+  const hueOf = i => hues[ringOf[i] % hues.length];
+  const shadesIn = i => Math.max(2, compShades[ringOf[i]] || 1);
+  const shadeIdx = v.params.resolved_shade_of || Array(nSrc).fill(0);
   const distAt = frame => frame.dist || baseDist;
   const unit = d => Math.pow(Math.max(d, 0.2) / REFD, 0.7);
   const maxUnit = Math.max(1, ...baseDist.map(unit)) * 1.02;
@@ -1892,63 +1913,14 @@ function drawRing() {
     x.setLineDash([]);
   }
 
-  // Motion trails: where each source has just been.
-  const trail = framesBetween(v.trace, now - TRAIL_SECONDS, now);
-  if (trail.length > 1) {
-    x.lineCap = "round";
-    for (let i = 0; i < nSrc; i++) {
-      for (let k = 1; k < trail.length; k++) {
-        const a0 = trail[k - 1].az[i], a1 = trail[k].az[i];
-        if (Math.abs(a1 - a0) > 180) continue;         // skip the 360 wrap
-        const age = k / trail.length;
-        const [x0, y0] = posD(a0, distAt(trail[k - 1])[i]);
-        const [x1, y1] = posD(a1, distAt(trail[k])[i]);
-        const [cr, cg, cb] = shadeRGB(hue, shadeIdx[i], nShades);
-        const lv = lvlAt(trail[k])[i];
-        x.strokeStyle = `rgba(${cr},${cg},${cb},${(0.62 * age * age * lv).toFixed(3)})`;
-        x.lineWidth = 1.2 + 3.4 * age;
-        x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
-      }
-    }
-    x.lineCap = "butt";
-
-    // Constellation per ring, drawn now and a moment ago. Sources rotating in
-    // unison keep the shape rigid; wanderers visibly deform it.
-    const nRings = Math.max(...ringOf) + 1;
-    const poly = (frame, alpha, dash) => {
-      for (let g = 0; g < nRings; g++) {
-        // Only a polar lattice has a closed outline worth drawing
-        // of sources passing through, and joining its ends would draw a shape
-        // that is not there.
-        // Only a polar lattice has a closed outline worth drawing; joining the
-        // ends of a grid would draw a shape that is not there.
-        if ((v.params.resolved_components?.[g]?.lattice || "polar") !== "polar") continue;
-        const idx = [];
-        for (let i = 0; i < nSrc; i++) if (ringOf[i] === g) idx.push(i);
-        if (idx.length < 2) continue;
-        const [cr, cg, cb] = shadeRGB(hue, g, Math.max(nRings, 2));
-        x.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
-        x.lineWidth = 1;
-        x.setLineDash(dash);
-        x.beginPath();
-        idx.forEach((i, k) => {
-          const [px_, py] = posD(frame.az[i], distAt(frame)[i]);
-          k ? x.lineTo(px_, py) : x.moveTo(px_, py);
-        });
-        x.closePath(); x.stroke();
-        x.setLineDash([]);
-      }
-    };
-    poly(trail[0], 0.16, [3, 3]);
-    poly(fr, 0.42, []);
-  }
-
-
+  // Sources only. Trails and a polygon joining each ring were drawn here, and
+  // on a ring of nine they turned the picture into a thicket: the motion was
+  // legible from the dots alone and the extra ink competed with it.
   fr.az.forEach((a, i) => {
     const [sx, sy] = posD(a, distAt(fr)[i]);
     const coh = 1 - (fr.amt[i] ?? 1);       // filled = coherent, hollow = decorrelated
     const lv = lvlAt(fr)[i];                // a fading source fades on screen
-    const [cr, cg, cb] = shadeRGB(hue, shadeIdx[i], nShades);
+    const [cr, cg, cb] = shadeRGB(hueOf(i), shadeIdx[i], shadesIn(i));
     x.beginPath(); x.arc(sx, sy, 4.5 + 4.5 * coh, 0, Math.PI * 2);
     x.fillStyle = `rgba(${cr},${cg},${cb},${((0.10 + 0.85 * coh) * lv).toFixed(3)})`;
     x.fill();

@@ -618,10 +618,10 @@ button.busy {
 select:not([multiple]) {
   appearance: none; -webkit-appearance: none;
   padding-right: 21px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 4.1 L12.5 4.1 L8 11.9 Z' fill='%237c766c' stroke='%237c766c' stroke-width='1.1' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.2 5 L11.8 5 L8 11 Z' fill='%237c766c' stroke='%237c766c' stroke-width='0.9' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 4px center;
-  background-size: 12px 12px;
+  background-position: right 5px center;
+  background-size: 13px 13px;
 }
 select:not([multiple]):hover { background-color: var(--sunken); }
 select:disabled { opacity: .55; }
