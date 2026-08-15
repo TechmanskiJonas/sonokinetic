@@ -2997,9 +2997,30 @@ async function loadTrack(name) {
   $("#trackinfo").textContent = `${mmss(info.duration)} at ${info.fs} Hz`;
   S.sel = [clamp(S.sel[0], 0, S.duration), clamp(S.sel[1], 0, S.duration)];
   if (S.sel[1] - S.sel[0] < 1) S.sel = [0, Math.min(20, S.duration)];
+  S.cursor = clamp(S.cursor || 0, 0, S.duration);
+
+  // Passages belong to the track they were cut from. Carried onto a shorter
+  // file they point past its end, and then the waveform looks empty, the
+  // transport has nothing to play and no passage can be selected: every
+  // symptom of a broken track, on a track that is fine.
+  const kept = [];
+  for (const p of S.passages) {
+    const a = clamp(p.start, 0, S.duration);
+    const b = clamp(p.end, 0, S.duration);
+    if (b - a >= 1) { p.start = a; p.end = b; kept.push(p); }
+  }
+  const dropped = S.passages.length - kept.length;
+  S.passages = kept;
+  S.active = Math.max(0, Math.min(S.active, kept.length - 1));
+
   S.rendered = null; S.dryBuffer = null; S.buffers = {}; S.live = null;
-  stopPlayback();
-  syncSel(); drawWave(); showMetrics(); markStale();
+  stopPlayback(); stopPreview();
+  syncSel(); drawWave(); renderPassages(); showMetrics(); markStale();
+  if (dropped) {
+    $("#renderstate").textContent =
+      `${dropped} passage${dropped > 1 ? "s" : ""} fell outside this track and ` +
+      `${dropped > 1 ? "were" : "was"} removed.`;
+  }
 }
 
 function wireUpload() {

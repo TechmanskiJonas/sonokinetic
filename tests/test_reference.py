@@ -521,3 +521,17 @@ def test_titles_that_must_keep_their_capital_are_named_in_the_renderer(ref, appj
         if t not in protected:
             assert not re.match(r"^[A-Z]{2,}", t), (
                 f"{t!r} looks like an acronym but is not in the protected set")
+
+
+def test_changing_track_drops_passages_that_fall_off_the_end(appjs):
+    """Passages belong to the track they were cut from.
+
+    Carried onto a shorter file they point past its end, and then the waveform
+    looks empty, the transport has nothing to play and no passage can be
+    selected: every symptom of a broken track, on a track that is fine. The
+    default passages are cut from a five-minute song, so switching to the
+    45-second demo reproduces it exactly.
+    """
+    body = appjs.split("async function loadTrack(")[1].split("\nfunction ")[0]
+    assert "S.passages" in body, "loadTrack must reconcile passages with the new duration"
+    assert "S.cursor" in body, "the cursor can also sit past the end"
