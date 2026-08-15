@@ -535,3 +535,23 @@ def test_changing_track_drops_passages_that_fall_off_the_end(appjs):
     body = appjs.split("async function loadTrack(")[1].split("\nfunction ")[0]
     assert "S.passages" in body, "loadTrack must reconcile passages with the new duration"
     assert "S.cursor" in body, "the cursor can also sit past the end"
+
+
+def test_boot_attaches_listeners_without_assuming_the_node_exists(appjs):
+    """One missing id used to disable everything wired after it.
+
+    boot() attaches several dozen listeners in sequence. A direct
+    $("#id").addEventListener on an element that is not in the page throws,
+    and the rest of boot never runs, so the page renders normally and half its
+    controls silently do nothing. Removing the arrangement section did exactly
+    that and took Add passage, the transport and the blind test with it.
+    """
+    body = appjs.split("async function boot() {")[1].split("\nboot();")[0]
+    unguarded = re.findall(r'\$\("#[a-zA-Z0-9_-]+"\)\.addEventListener', body)
+    assert not unguarded, f"use on() instead: {unguarded}"
+    assert "function on(sel, ev, fn" in appjs
+
+
+def test_nothing_still_calls_the_removed_arrangement_code(appjs):
+    for gone in ("wireArrangement", "renderArrangement", "#arrangelist"):
+        assert gone not in appjs, f"{gone} survives the removal"

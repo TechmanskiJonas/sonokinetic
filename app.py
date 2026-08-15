@@ -1259,7 +1259,18 @@ def ensure_demo_audio() -> None:
     ramp = np.sin(np.linspace(0, np.pi / 2, fade)) ** 2
     x[:fade] *= ramp
     x[-fade:] *= ramp[::-1]
-    x = 0.7 * x / (np.max(np.abs(x)) or 1.0)
+
+    # Levelled by RMS, not by peak. A drone is flat, so a peak-normalised one
+    # is far louder than music normalised the same way: this at 0.7 peak
+    # measured 4.9 dB hotter than the song it sits next to in the list, and
+    # arrives on headphones with no warning. Target is a quiet -26 dBFS with a
+    # peak ceiling well below full scale, since the first thing anyone hears
+    # should never be the loudest.
+    rms = float(np.sqrt(np.mean(x ** 2))) or 1.0
+    x = x * (10 ** (-26.0 / 20.0) / rms)
+    peak = float(np.max(np.abs(x))) or 1.0
+    if peak > 0.5:
+        x *= 0.5 / peak
 
     sf.write(os.path.join(ROOT, DEMO_TRACK), x.astype(np.float32), fs)
     print(f"wrote {DEMO_TRACK}: 45s of sustained material to start from")

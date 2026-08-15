@@ -2215,142 +2215,6 @@ function drawSpark(series) {
 // Arrangement
 // ====================================================================
 
-async function renderArrangement() {
-  const mode = $("#amode").value;
-  const segs = [];
-  const sorted = [...S.passages].sort((a, b) => a.start - b.start);
-  for (const p of sorted) {
-    const v = p.variants[p.selected] || p.variants[0];
-    segs.push({ start: p.start, end: p.end, config: v.config, fade: 0.25, label: `${p.name}: ${v.name}` });
-  }
-  if (!segs.length) return;
-
-  const body = {
-    track: S.track, mode, match: $("#match").value,
-    dry_mono: $("#drymono").checked, with_trace: false, with_metrics: true,
-  };
-  if (mode === "timeline") body.segments = segs;
-  else if (mode === "blocks") body.blocks = sorted.map((p, i) => ({
-    label: p.name,
-    segments: p.variants.map(v => ({
-      start: p.start, end: p.end, config: v.config, fade: 0.25, label: v.name
-    }))
-  }));
-  else body.takes = sorted.flatMap(p => p.variants.map(v => ({
-    src_start: p.start, src_end: p.end, config: v.config, label: `${p.name}: ${v.name}`
-  })));
-
-  const st = $("#aexportstate");
-  st.className = "msg"; st.textContent = "Rendering…";
-  const abtn = $("#arender");
-  abtn.classList.add("busy");
-  try {
-    const res = await post("/api/render", body);
-    S.arr = res;
-    $("#aplayer").src = res.url;
-    st.textContent = `Rendered in ${res.render_seconds}s.`;
-    $("#atimeline").innerHTML = res.timeline.map((e, i) => `
-      <div class="trow" data-i="${i}">
-        <span class="tt">${fmt(e.out_start, 1)}–${fmt(e.out_end, 1)}s</span>
-        <span>${esc(e.group ? `[${e.group}] ` : "")}${esc(e.label)}</span>
-        <span class="grow"></span>
-        <span class="num dim">${fmt(res.segment_metrics?.[i]?.iacc, 3)}</span>
-      </div>`).join("");
-  } catch (e) {
-    st.className = "msg err"; st.textContent = "Failed: " + e.message;
-  } finally {
-    abtn.classList.remove("busy");
-  }
-}
-
-function wireArrangement() {
-  $("#arender").addEventListener("click", renderArrangement);
-  $("#aexport").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ passages: S.passages }, null, 2)],
-      { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = "sonokinetic-passages.json"; a.click();
-  });
-  $("#aimport").addEventListener("click", () => {
-    const inp = document.createElement("input");
-    inp.type = "file"; inp.accept = ".json";
-    inp.addEventListener("change", async () => {
-      const data = JSON.parse(await inp.files[0].text());
-      if (Array.isArray(data.passages)) S.passages = data.passages;
-      renderPassages(); drawWave(); markStale();
-    });
-    inp.click();
-  });
-  $("#doexport").addEventListener("click", async () => {
-    if (!S.arr) return;
-    const st = $("#aexportstate");
-    st.textContent = "Exporting…";
-    const res = await post("/api/export", {
-      id: S.arr.id, name: $("#exname").value, timeline: S.arr.timeline
-    });
-    st.textContent = "Wrote " + res.wrote.filter(Boolean).join(", ");
-  });
-  $("#aplayer").addEventListener("timeupdate", () => {
-    if (!S.arr) return;
-    const t = $("#aplayer").currentTime;
-    S.arr.timeline.forEach((e, i) => {
-      $(`.trow[data-i="${i}"]`)?.classList.toggle("now", t >= e.out_start && t < e.out_end);
-    });
-  });
-}
-
-// ====================================================================
-// Blind test
-// ====================================================================
-
-/* Response items.
- *
- * Localization and centredness are separated: a mono signal sits at a single
- * position, the centre of the head, so "can you point at anything" alone would
- * be answered yes for the untreated reference and the question would not
- * discriminate. Graded qualities use 0-6 scales. The motion-kind item appears
- * only after a nonzero motion rating. A rotation-direction item is deliberately
- * absent: the head model is front-back symmetric, so direction is not
- * recoverable from the cues it produces, and asking would collect noise.
- */
-/** Trial items for a paired comparison.
- *
- * A trial holds two conditions at once and the listener moves between them, so
- * the items ask which of the two rather than how much of a quality. Absolute
- * ratings would throw away the sensitivity that switching buys: a rating
- * collected from one stimulus is compared against a remembered one, and memory
- * for spatial quality is the thing that fades.
- *
- * The free description runs first, before any fixed response supplies the
- * categories. What the percept is like is exactly what the fixed items cannot
- * ask, and asking afterwards collects their vocabulary back.
- */
-const PAIR_QUESTIONS = [
-  { id: "description", type: "text", optional: true, ref: "phenomenology",
-    text: "What did you notice when you switched?",
-    placeholder: "Whatever stands out. There is no right answer, and “nothing” is a real one." },
-  { id: "differ", type: "opts", ref: "forced-choice",
-    text: "Did the two differ at all?",
-    opts: ["yes", "no", "cannot say"] },
-  { id: "confidence", type: "scale", ref: "forced-choice",
-    text: "How sure are you of that?", lo: "guessing", hi: "certain",
-    when: r => r.differ === "yes" || r.differ === "no" },
-  { id: "which_moves", type: "opts", ref: "auditory-motion",
-    text: "Which one moved more?", when: r => r.differ === "yes",
-    opts: ["A", "B", "the same", "cannot say"] },
-  { id: "motion_kind", type: "opts", ref: "auditory-motion",
-    text: "What kind of movement?",
-    when: r => r.which_moves === "A" || r.which_moves === "B",
-    opts: ["circling", "side to side", "nearer and farther", "irregular", "cannot say"] },
-  { id: "which_diffuse", type: "opts", ref: "localization",
-    text: "In which was it harder to point at anything?", when: r => r.differ === "yes",
-    opts: ["A", "B", "the same", "cannot say"] },
-  { id: "pointable", type: "opts", ref: "localization",
-    text: "Setting the comparison aside, could you point at any individual source in either?",
-    opts: ["yes, clearly", "yes, vaguely", "no"] },
-  { id: "notes", type: "text", text: "Anything else", optional: true },
-];
-
 function questionHtml(q) {
   let controls;
   if (q.type === "scale") {
@@ -3059,43 +2923,63 @@ async function upload(f) {
 // Boot
 // ====================================================================
 
+/** Attach a listener, tolerating a node that is not there.
+ *
+ * boot() wires several dozen elements one after another, so a single absent
+ * id used to throw and leave everything after it unwired. The page still
+ * rendered, which is what made it hard to see: the interface looked normal
+ * and half its controls did nothing. Removing the arrangement section did
+ * exactly this, and took Add passage, the transport and the blind test with
+ * it. A missing node is now reported and the rest still comes up.
+ */
+function on(sel, ev, fn, opts) {
+  const el = typeof sel === "string" ? $(sel) : sel;
+  if (!el) { console.warn(`no element matches ${sel}; listener not attached`); return null; }
+  el.addEventListener(ev, fn, opts);
+  return el;
+}
+
 async function boot() {
   try { REF = await api("/api/encyclopedia"); } catch (_) { }
   try { PURPOSE = await api("/api/purpose"); } catch (_) { }
   try { COURSES = await api("/api/courses"); } catch (_) { }
   renderCoursesPage();
   renderPurposePage();
-  wireSheet();
-  wireHelpMenu();
-  wireExperiments();
-  wireFeedback();
+  const step = (name, fn) => {
+    try { fn(); } catch (e) { console.error(`${name} failed to wire:`, e); }
+  };
+  step("sheet", wireSheet);
+  step("help menu", wireHelpMenu);
+  step("experiments", wireExperiments);
+  step("feedback", wireFeedback);
 
   const tracks = await loadTracks();
-  $("#track").addEventListener("change", e => loadTrack(e.target.value));
+  on("#track", "change", e => loadTrack(e.target.value));
 
-  wireWave(); wireTransport(); wireArrangement(); wireBlind(); wireUpload();
+  step("waveform", wireWave); step("transport", wireTransport);
+  step("blind test", wireBlind); step("upload", wireUpload);
 
-  $("#pstart").addEventListener("change", e => { S.sel[0] = Number(e.target.value); drawWave(); });
-  $("#pend").addEventListener("change", e => { S.sel[1] = Number(e.target.value); drawWave(); });
-  $("#addpassage").addEventListener("click", () => {
+  on("#pstart", "change", e => { S.sel[0] = Number(e.target.value); drawWave(); });
+  on("#pend", "change", e => { S.sel[1] = Number(e.target.value); drawWave(); });
+  on("#addpassage", "click", () => {
     S.passages.push(newPassage(S.sel[0], S.sel[1]));
     S.active = S.passages.length - 1;
     renderPassages(); drawWave(); markStale();
   });
-  $("#newpassage").addEventListener("click", () => $("#addpassage").click());
-  $("#render").addEventListener("click", doRender);
+  on("#newpassage", "click", () => $("#addpassage").click());
+  on("#render", "click", doRender);
 
   $$(".tab").forEach(t => t.addEventListener("click", () => {
     $$(".tab").forEach(o => o.classList.toggle("on", o === t));
     $$(".page").forEach(p => p.classList.toggle("on", p.id === t.dataset.tab));
   }));
 
-  $("#gtstop").addEventListener("click", () => { stopPreview(); stopPlayback(); });
-  $("#gtbench").addEventListener("click", () => showTab("bench"));
+  on("#gtstop", "click", () => { stopPreview(); stopPlayback(); });
+  on("#gtbench", "click", () => showTab("bench"));
 
-  $("#selplay").addEventListener("click", () => previewSelection(S.cursor ?? S.sel[0], false));
-  $("#selloop").addEventListener("click", () => previewSelection(S.sel[0], true));
-  $("#selstop").addEventListener("click", () => { stopPreview(); drawWave(); });
+  on("#selplay", "click", () => previewSelection(S.cursor ?? S.sel[0], false));
+  on("#selloop", "click", () => previewSelection(S.sel[0], true));
+  on("#selstop", "click", () => { stopPreview(); drawWave(); });
 
   if (tracks.length) {
     await loadTrack(tracks[0].name);
