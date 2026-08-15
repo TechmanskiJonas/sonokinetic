@@ -436,3 +436,47 @@ def test_per_component_coherence_survives_a_multi_component_field():
     assert [o["n"] for o in out] == [9, 9]
     for o in out:
         assert 0.0 <= o["mean_offdiagonal"] <= 1.0
+
+
+def test_the_demo_track_is_material_the_treatment_can_actually_work_on():
+    """A fresh clone has no audio, so the app writes a synthetic passage.
+
+    Whatever it writes is the first thing anyone hears, which makes it a claim
+    about the instrument. Two properties decide whether that claim is fair:
+    it has to be free of transients, since onsets restore the localization the
+    treatment removes, and it has to carry high-frequency energy, since the
+    level difference between the ears is a high-frequency cue. A dark drone
+    passes the first test and fails the second, and demos the effect failing.
+    """
+    import os
+    import shutil
+    import tempfile
+
+    import soundfile as sf
+
+    import app as A
+
+    tmp = tempfile.mkdtemp()
+    old = (A.ROOT, A.UPLOADS)
+    try:
+        A.ROOT, A.UPLOADS = tmp, os.path.join(tmp, "uploads")
+        os.makedirs(A.UPLOADS, exist_ok=True)
+        A.ensure_demo_audio()
+        x, fs = sf.read(os.path.join(tmp, A.DEMO_TRACK))
+    finally:
+        A.ROOT, A.UPLOADS = old
+        shutil.rmtree(tmp)
+
+    assert len(x) / fs > 30, "too short to pick passages out of"
+
+    # no transients: a smoothed envelope never jumps
+    env = np.convolve(np.abs(x), np.ones(2048) / 2048, mode="same")
+    assert np.max(np.diff(env[fs * 3:-fs * 3])) < 5e-3
+
+    # and it decorrelates: a fully decorrelated ring of nine goes diffuse
+    hrtf = rf.AnalyticHRTF(fs=fs)
+    cfg = rf.FieldConfig(seed=0, decorr=rf.DecorrConfig(amount=1.0), components=[
+        C(lattice="polar", rings=1, per_ring=9, r_near_m=2.0, r_far_m=2.0,
+          rotation_deg_per_sec=60.0)])
+    y = rf.render(x[:fs * 6], hrtf, cfg, fs, normalize=False)
+    assert rf.metrics(y, fs)["iacc"] < 0.35

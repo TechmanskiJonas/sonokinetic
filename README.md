@@ -28,6 +28,20 @@ python app.py
 Open http://127.0.0.1:8000, on headphones, with any operating-system spatial
 audio switched off: it applies a second head model on top of this one.
 
+### Audio
+
+Recordings are not in the repository, so the first run writes `demo-drone.wav`,
+45 seconds of synthetic sustained material, and selects it. It is built to suit
+the treatment: no transients, since onsets restore the localization the
+treatment exists to remove, and energy up to 8 kHz, since the level difference
+between the ears is a high-frequency cue.
+
+Any track can be dropped onto the waveform, or placed in the project folder.
+Sustained, nearly transient-free material works best — pads, drones, bowed
+strings, organ, held voice, cymbal wash — and the reason is measured rather
+than aesthetic: see *Sustained material decorrelates far more readily* under
+Purpose.
+
 The `?` beside the title runs a guided tour. Four are available: an overview, a
 hands-on build, arrangements, and blind testing.
 

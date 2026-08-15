@@ -1137,8 +1137,73 @@ app.mount("/", NoCacheStatic(directory=os.path.join(ROOT, "static"), html=True),
           name="static")
 
 
+DEMO_TRACK = "demo-drone.wav"
+
+
+def ensure_demo_audio() -> None:
+    """Write a synthetic passage if the folder has no audio in it.
+
+    Audio is excluded from the repository, so a fresh clone starts with an
+    empty track list and nothing to listen to. That makes the instrument look
+    broken to anyone who did not build it.
+
+    sweep.make_test_signal exists but is the wrong stimulus: it is a string of
+    plucks, and transients are exactly what restores the localization this is
+    trying to remove, so a first listen on it would show the treatment failing.
+    This is sustained and nearly transient-free instead, which is the material
+    the method calls for: a harmonic drone with slowly beating partials over a
+    band-limited wash, broadband enough to carry a level difference between
+    the ears.
+    """
+    for folder in (ROOT, UPLOADS):
+        for f in os.listdir(folder) if os.path.isdir(folder) else []:
+            if f.lower().endswith(AUDIO_EXT) and not f.startswith("."):
+                return
+
+    fs, dur = 44100, 45.0
+    n = int(fs * dur)
+    t = np.arange(n) / fs
+    rng = np.random.default_rng(7)
+    x = np.zeros(n)
+
+    # Partials over a 110 Hz fundamental, up to 8 kHz. Each is detuned a little
+    # and breathes at its own sub-hertz rate, so the sound evolves without any
+    # event in it sharp enough to time. The stack has to reach the top of the
+    # range: the level difference between the ears is a high-frequency cue, so
+    # a drone with nothing above 2 kHz would be spatially inert.
+    # The 1/k**0.45 tilt is set by measurement, not by taste. A steeper tilt
+    # sounds more like an organ and decorrelates far worse, because the energy
+    # collects in the bass where there is no level difference to work with: at
+    # 1/k**0.9 a fully decorrelated ring of nine still measures IACC 0.65,
+    # against 0.25 here. A demo on the darker version would show the treatment
+    # failing and look like a bug in the instrument.
+    for k in range(1, 73):
+        detune = 1.0 + rng.uniform(-0.004, 0.004)
+        breathe = 0.55 + 0.45 * np.sin(2 * np.pi * rng.uniform(0.03, 0.11) * t
+                                       + rng.uniform(0, 6.28))
+        x += (breathe / k ** 0.45) * np.sin(2 * np.pi * 110.0 * k * detune * t
+                                            + rng.uniform(0, 6.28))
+
+    # A wash between the partials, so the spectrum is continuous rather than a
+    # comb. Lightly smoothed to take the edge off while keeping the top octaves.
+    wash = rng.normal(0, 1, n)
+    kern = np.hanning(7)
+    wash = np.convolve(wash, kern / kern.sum(), mode="same")
+    x = x + 0.30 * wash / (np.max(np.abs(wash)) or 1.0)
+
+    fade = int(fs * 2.0)
+    ramp = np.sin(np.linspace(0, np.pi / 2, fade)) ** 2
+    x[:fade] *= ramp
+    x[-fade:] *= ramp[::-1]
+    x = 0.7 * x / (np.max(np.abs(x)) or 1.0)
+
+    sf.write(os.path.join(ROOT, DEMO_TRACK), x.astype(np.float32), fs)
+    print(f"wrote {DEMO_TRACK}: 45s of sustained material to start from")
+
+
 if __name__ == "__main__":
     import uvicorn
+    ensure_demo_audio()
     print("ringfield: http://127.0.0.1:8000")
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
 
