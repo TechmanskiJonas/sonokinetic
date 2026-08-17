@@ -147,6 +147,27 @@
       ]
     },
     {
+      "id": "sessions",
+      "title": "What listening has shown",
+      "sections": [
+        {
+          "id": "sessions-what-this-is",
+          "heading": "What this chapter is",
+          "body": "A running record of blind listening sessions: what was asked, what came back, and what it changed. Kept separate from [[the-question|the measured results]] because those are properties of the code, reproducible from the test suite, while these are reports from a person and carry all the weight that implies.\n\nEvery entry here comes from one listener who built the instrument. That is stated once rather than repeated; see [[n-of-1]]."
+        },
+        {
+          "id": "session-one",
+          "heading": "First paired session: eleven trials",
+          "body": "Four conditions and their frozen twins, presented as pairs with the labels hidden, one repeat, plus a catch trial pairing the untreated signal with itself.\n\n**The catch trial passed.** The listener reported no difference, at full confidence, after switching between the two sides 141 times in 42 seconds. Every other trial in the session drew between 4 and 21 switches. Working that hard to find a difference and then reporting its absence is what makes the rest of the answers worth reading.\n\n**Rotation was picked as the moving side in every trial it appeared in**, always described as circling, always at full confidence, and always alongside a metallic or phasey quality. One report separated the two: *pretty strong motion even barring that*.\n\n**Travel across the listener was heard as jumping.** The lattice wraps to keep the field endless, and a source leaving one edge reappears at the other. Measured, that wrap costs almost nothing in level, and produces no step at the ear, so it is not a click; what it is is a source vanishing on one side and arriving on the other, which is an appearance event, and appearance events localise. The mechanism that makes the field endless is the one that undermines it.\n\n**Two trials were unusable, and the fault was in the stimulus.** The synthetic drone had been built from partials breathing at 0.03 to 0.11 Hz and swung 3.3 dB on its own, so frozen fields were reported as fading away and returning. The listener suspected the material both times without being able to confirm it. The drone now holds within 0.72 dB.\n\n**Two questions were wrong and the listener said so.** Pointing and centring had been one item, and a centred mono image is trivially pointable while feeling like nothing can be pointed at, so every untreated and frozen side scored as unlocalizable for the wrong reason. They are two items now. The glossary buttons beside each question were also open during trials, describing the configurations under test; they are withheld now."
+        },
+        {
+          "id": "session-one-open",
+          "heading": "What it left open",
+          "body": "The listener heard part of the movement with one ear covered, which leaves no interaural information at all. So some of what reads as motion here is spectral: as the sources turn, the interference pattern between them sweeps, and a sweeping spectrum is audible with one ear; see [[comb-filtering]].\n\nHow much is the open question. The next session puts a binaural render against the same render summed to a single signal on both ears, which removes every interaural difference and leaves the spectral sweep almost exactly as it was. A listener who cannot tell those apart was never hearing the motion spatially."
+        }
+      ]
+    },
+    {
       "id": "method",
       "title": "Testing without fooling yourself",
       "sections": [

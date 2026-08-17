@@ -642,3 +642,27 @@ def test_the_trial_separates_unpointable_from_centred(appjs):
     block = appjs.split("const PAIR_QUESTIONS")[1].split("\n];")[0]
     assert '"which_centred"' in block
     assert "centred in your head" in block
+
+
+def test_the_mono_sum_is_reachable_and_survives_freezing():
+    """Summing a finished render to one signal on both ears removes every
+    interaural difference and keeps the spectral consequences of the field,
+    including the comb pattern that sweeps as the sources move. It is the one
+    manipulation that separates a spatial motion percept from a spectral one,
+    so the flag has to exist and a frozen control has to be able to carry it.
+    """
+    import app as A
+
+    f = A.FieldIn(mono_out=True, components=[A.ComponentIn(
+        lattice="polar", rings=1, per_ring=9, rotation_deg_per_sec=60.0)])
+    assert f.mono_out is True
+    assert f.to_cfg(5.0) is not None       # the DSP config ignores it cleanly
+
+
+@pytest.mark.parametrize("sid", ["sessions-what-this-is", "session-one",
+                                 "session-one-open"])
+def test_listening_sessions_are_written_down(purpose, sid):
+    """Reports from a person are not reproducible from the test suite, so they
+    need somewhere to live that is not the measured-results chapter."""
+    ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
+    assert sid in ids

@@ -557,6 +557,10 @@ const PARAMS = [
       { k: "hrtf_taps", ref: "hrir", type: "sel", opts: [64, 128, 256, 512] },
       { k: "hrtf_grid_step", ref: "hrtf-interpolation", type: "range", min: 0.5, max: 10, step: 0.5, unit: "°" },
       { k: "block", ref: "block-size", type: "sel", opts: [128, 256, 512, 1024] },
+      // Sums the finished render to one signal on both ears. Every interaural
+      // difference goes and every spectral consequence stays, so it isolates
+      // how much of a motion percept is carried by the spectrum alone.
+      { k: "mono_out", ref: "mono-dry", type: "sel", opts: [0, 1] },
     ]
   },
 ];
@@ -589,7 +593,7 @@ const LABELS = {
   kind: "pattern", heading_deg: "heading", speed_mps: "speed",
   path_m: "path length", spread_m: "width", radial_speed_mps: "radial speed",
   r_near_m: "inner limit", r_far_m: "outer limit", fade_frac: "fade",
-  label: "name",
+  label: "name", mono_out: "sum to mono",
 };
 
 // Shared clipboard for ring modules, so a ring built in one variant can be
@@ -627,7 +631,7 @@ const defaultField = () => ({
     COMPONENT_PRESETS.polar.find(p => p.label === "Turning ring"))],
   decorr: defaultDecorr(),
   head_radius: 0.0875, speed_of_sound: 343, hrtf_taps: 128, hrtf_grid_step: 1,
-  block: 256, seed: 0
+  block: 256, seed: 0, mono_out: 0
 });
 
 /** Distinct hues, one per component.

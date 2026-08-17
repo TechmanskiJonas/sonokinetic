@@ -185,6 +185,7 @@ class FieldIn(BaseModel):
     hrtf_grid_step: float = 1.0
     block: int = 256
     seed: int = 0
+    mono_out: bool = False     # sum the finished render to one signal on both ears
 
     def to_cfg(self, duration: Optional[float] = None) -> rf.FieldConfig:
         rate = self.rotation_deg_per_sec
@@ -700,6 +701,13 @@ def _render_session(req: RenderIn, mono, stereo, hrtf, fs) -> Dict[str, Any]:
             # resolved per variant rather than once for the request.
             y = rf.render(mono[a:b], rf.hrtf_for(cfg, fs), cfg, fs,
                           normalize=False, trace=tr)
+            if getattr(v.config, "mono_out", False):
+                # Collapse the finished render to one signal on both ears.
+                # Every interaural difference goes; every spectral consequence
+                # of the field stays, including the comb pattern that sweeps as
+                # the sources move. A listener who cannot tell this from the
+                # binaural version was never hearing the motion spatially.
+                y = np.repeat(y.mean(axis=1, keepdims=True), 2, axis=1)
             y = rf._match_level(y, dry_full[a:b], fs, req.match)
             chunks.append(y * 10 ** (v.gain_db / 20.0))
             trs.append(tr)
