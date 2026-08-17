@@ -2314,6 +2314,44 @@ function drawSpark(series) {
 // Arrangement
 // ====================================================================
 
+/** Trial items for a paired comparison.
+ *
+ * A trial holds two conditions at once and the listener moves between them, so
+ * the items ask which of the two rather than how much of a quality. Absolute
+ * ratings would throw away the sensitivity that switching buys: a rating
+ * collected from one stimulus is compared against a remembered one, and memory
+ * for spatial quality is the thing that fades.
+ *
+ * The free description runs first, before any fixed response supplies the
+ * categories. What the percept is like is exactly what the fixed items cannot
+ * ask, and asking afterwards collects their vocabulary back.
+ */
+const PAIR_QUESTIONS = [
+  { id: "description", type: "text", optional: true, ref: "phenomenology",
+    text: "What did you notice when you switched?",
+    placeholder: "Whatever stands out. There is no right answer, and “nothing” is a real one." },
+  { id: "differ", type: "opts", ref: "forced-choice",
+    text: "Did the two differ at all?",
+    opts: ["yes", "no", "cannot say"] },
+  { id: "confidence", type: "scale", ref: "forced-choice",
+    text: "How sure are you of that?", lo: "guessing", hi: "certain",
+    when: r => r.differ === "yes" || r.differ === "no" },
+  { id: "which_moves", type: "opts", ref: "auditory-motion",
+    text: "Which one moved more?", when: r => r.differ === "yes",
+    opts: ["A", "B", "the same", "cannot say"] },
+  { id: "motion_kind", type: "opts", ref: "auditory-motion",
+    text: "What kind of movement?",
+    when: r => r.which_moves === "A" || r.which_moves === "B",
+    opts: ["circling", "side to side", "nearer and farther", "irregular", "cannot say"] },
+  { id: "which_diffuse", type: "opts", ref: "localization",
+    text: "In which was it harder to point at anything?", when: r => r.differ === "yes",
+    opts: ["A", "B", "the same", "cannot say"] },
+  { id: "pointable", type: "opts", ref: "localization",
+    text: "Setting the comparison aside, could you point at any individual source in either?",
+    opts: ["yes, clearly", "yes, vaguely", "no"] },
+  { id: "notes", type: "text", text: "Anything else", optional: true },
+];
+
 function questionHtml(q) {
   let controls;
   if (q.type === "scale") {
@@ -2405,6 +2443,16 @@ function startBlind() {
   const rp = S.rendered?.passages[S.active];
   if (!rp || rp.variants.length < 2) {
     $("#btrial").innerHTML = '<p class="note">Render a passage with at least two variants first.</p>';
+    return;
+  }
+  // A render that no longer matches the passage on the bench would build the
+  // trial list from variants the listener is not being played, so it is
+  // refused rather than run. Silent disagreement here costs a whole session.
+  const p = passage();
+  if (!p || p.variants.length !== rp.variants.length) {
+    $("#btrial").innerHTML = '<p class="note">The passage has changed since the '
+      + 'last render. Render again before starting, so the trials match what '
+      + 'is played.</p>';
     return;
   }
   const pool = rp.variants.map((v, i) => ({ vi: i, label: v.label, kind: v.kind }));
@@ -2872,6 +2920,13 @@ async function applyExperiment(name) {
   }
   S.passages = exp.data.passages || [];
   S.active = 0;
+  // The previous render belongs to the passages that were just replaced. Left
+  // in place it stays the thing every downstream reader trusts: the blind test
+  // builds its trial list from it, so loading a five-variant experiment over a
+  // nine-variant render produced thirty-seven trials of the old audio against
+  // the new passage's timings.
+  S.rendered = null; S.dryBuffer = null; S.buffers = {}; S.live = null;
+  stopPlayback(); stopPreview();
   renderPassages(); drawWave(); markStale();
   return exp;
 }

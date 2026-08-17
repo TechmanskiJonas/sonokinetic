@@ -597,3 +597,31 @@ def test_one_treatment_can_replace_another_without_passing_through_dry(appjs):
     block = appjs.split("// comparing two separate listens")[1][:2200]
     assert "if (held !== n)" in block, "a new digit must take over from the held one"
     assert "if (held === null)" not in block, "that guard is what blocked the takeover"
+
+
+# Every module-level constant the front end defines. Splicing this file by
+# locating one function and cutting to the next has twice removed a
+# declaration that happened to sit between them, and the loss is silent: the
+# page still loads and only the path that reads the name fails.
+# PAIR_QUESTIONS went that way and left the blind test showing a trial counter
+# and no questions. Adding a constant means adding it here.
+FRONT_END_CONSTANTS = [
+    "CLIP", "COMPONENT_HUES", "COMPONENT_PRESETS", "COMPONENT_ROWS", "COURSES",
+    "DECORR_ROWS", "FOLDED", "KEEP_CAPITAL", "LABELS", "LATTICES",
+    "MIN_SWITCHES", "PAIR_QUESTIONS", "PARAMS", "PROGRESS_KEY", "PURPOSE",
+    "REF", "TOURS", "TRAIL_SECONDS", "TRI_RIGHT", "VARIANT_HUES",
+]
+
+
+@pytest.mark.parametrize("name", FRONT_END_CONSTANTS)
+def test_the_front_end_still_declares_its_constants(appjs, name):
+    assert re.search(r"^(?:const|let|var)\s+" + name + r"\s*=", appjs, re.M), (
+        f"{name} is used but no longer declared")
+
+
+def test_no_constant_is_used_without_being_listed(appjs):
+    """Keeps the list above honest as the file grows."""
+    found = set(re.findall(r"^(?:const|let|var)\s+([A-Z][A-Z0-9_]{2,})\s*=",
+                           appjs, re.M))
+    assert found == set(FRONT_END_CONSTANTS), (
+        f"update FRONT_END_CONSTANTS: {sorted(found ^ set(FRONT_END_CONSTANTS))}")
