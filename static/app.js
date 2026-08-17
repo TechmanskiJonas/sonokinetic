@@ -2343,9 +2343,19 @@ const PAIR_QUESTIONS = [
     text: "What kind of movement?",
     when: r => r.which_moves === "A" || r.which_moves === "B",
     opts: ["circling", "side to side", "nearer and farther", "irregular", "cannot say"] },
+  // "Harder to point at" and "centred in the head" were one item, and a
+  // listener caught the conflation: a mono image is trivially pointable, at
+  // the middle of the head, yet feels like nothing can be pointed at. Without
+  // the second item every untreated and frozen side scores as unlocalizable
+  // for the wrong reason.
   { id: "which_diffuse", type: "opts", ref: "localization",
-    text: "In which was it harder to point at anything?", when: r => r.differ === "yes",
+    text: "Leaving aside anything centred in your head, in which was it harder "
+        + "to point at a source?", when: r => r.differ === "yes",
     opts: ["A", "B", "the same", "cannot say"] },
+  { id: "which_centred", type: "opts", ref: "lateralization",
+    text: "In which did the sound sit at the centre of your head?",
+    when: r => r.differ === "yes",
+    opts: ["A", "B", "both", "neither"] },
   { id: "pointable", type: "opts", ref: "localization",
     text: "Setting the comparison aside, could you point at any individual source in either?",
     opts: ["yes, clearly", "yes, vaguely", "no"] },
@@ -2366,7 +2376,8 @@ function questionHtml(q) {
       q.opts.map(o => `<button data-v="${esc(o)}">${esc(o)}</button>`).join("") + `</div>`;
   }
   return `<div class="qbox" data-q="${q.id}">
-    <div class="qtext">${esc(q.text)}${q.ref ? ` <button class="i" data-ref="${q.ref}">i</button>` : ""}</div>
+    <div class="qtext">${esc(q.text)}${q.ref && !S.blind
+      ? ` <button class="i" data-ref="${q.ref}">i</button>` : ""}</div>
     ${controls}</div>`;
 }
 

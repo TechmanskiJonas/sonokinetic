@@ -1241,9 +1241,14 @@ def ensure_demo_audio() -> None:
     # 1/k**0.9 a fully decorrelated ring of nine still measures IACC 0.65,
     # against 0.25 here. A demo on the darker version would show the treatment
     # failing and look like a bug in the instrument.
+    # The breathing is shallow on purpose. At +/-0.45 per partial the finished
+    # drone swung 3.3 dB over a few seconds, and a listener judging motion
+    # reported static fields as fading away and returning, correctly suspecting
+    # the material rather than the treatment. A stimulus for motion judgements
+    # has to hold still in every respect except the one under test.
     for k in range(1, 73):
         detune = 1.0 + rng.uniform(-0.004, 0.004)
-        breathe = 0.55 + 0.45 * np.sin(2 * np.pi * rng.uniform(0.03, 0.11) * t
+        breathe = 0.93 + 0.07 * np.sin(2 * np.pi * rng.uniform(0.03, 0.11) * t
                                        + rng.uniform(0, 6.28))
         x += (breathe / k ** 0.45) * np.sin(2 * np.pi * 110.0 * k * detune * t
                                             + rng.uniform(0, 6.28))

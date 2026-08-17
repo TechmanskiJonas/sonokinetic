@@ -625,3 +625,20 @@ def test_no_constant_is_used_without_being_listed(appjs):
                            appjs, re.M))
     assert found == set(FRONT_END_CONSTANTS), (
         f"update FRONT_END_CONSTANTS: {sorted(found ^ set(FRONT_END_CONSTANTS))}")
+
+
+def test_a_trial_shows_no_glossary_buttons(appjs):
+    """A listener asked for this: the info button beside a trial question opens
+    an entry describing the very configurations under test. Reading one
+    mid-session tells the participant what they are supposed to be hearing."""
+    html = appjs.split("function questionHtml(")[1].split("\n}")[0]
+    assert "!S.blind" in html, "info buttons must be withheld while a trial runs"
+
+
+def test_the_trial_separates_unpointable_from_centred(appjs):
+    """A mono image is trivially pointable, at the middle of the head, and yet
+    feels like nothing can be pointed at. With one item for both, every
+    untreated and frozen side scores as unlocalizable for the wrong reason."""
+    block = appjs.split("const PAIR_QUESTIONS")[1].split("\n];")[0]
+    assert '"which_centred"' in block
+    assert "centred in your head" in block
