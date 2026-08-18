@@ -666,3 +666,26 @@ def test_listening_sessions_are_written_down(purpose, sid):
     need somewhere to live that is not the measured-results chapter."""
     ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
     assert sid in ids
+
+
+@pytest.mark.parametrize("sid", ["session-two", "session-two-consequences"])
+def test_the_second_session_is_written_down(purpose, sid):
+    ids = {s["id"] for c in purpose["chapters"] for s in c["sections"]}
+    assert sid in ids
+
+
+def test_the_question_carries_the_spectral_caution(purpose):
+    """Blind listening found the movement surviving a sum to mono, so a report
+    of motion from this instrument is not on its own evidence about spatial
+    hearing. A reader meeting the question should meet that with it."""
+    sec = {s["id"]: s for c in purpose["chapters"] for s in c["sections"]}
+    assert "one ear" in sec["the-question"]["body"]
+
+
+def test_the_trial_items_need_no_exclusion_clause(appjs):
+    """Splitting pointing from centring produced a question a listener could
+    not answer when one side was entirely centred: it asked them to set aside
+    the only thing that side had."""
+    block = appjs.split("const PAIR_QUESTIONS")[1].split("\n];")[0]
+    assert "Leaving aside" not in block
+    assert '"which_pointable"' in block and '"which_centred"' in block
