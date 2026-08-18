@@ -84,41 +84,24 @@
     <p id="vbody"></p>
   </section>
 
-  <section class="numbers">
-    <h2>Objective measurement</h2>
-    <p>
-      Interaural cross-correlation (IACC) is the standard objective measure of
-      how diffuse a binaural signal is, where 1.0 corresponds to a single
-      coherent image and values near zero to full decorrelation. It is reported
-      below for every render on this page.
-    </p>
-    <div class="tablewrap">
-      <table id="metrics">
-        <thead><tr><th>Variant</th><th>Motion</th><th class="num">IACC, drone</th><th class="num">IACC, strings</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p class="finding">
-      The two highlighted rows differ in whether the field rotates. Their IACC
-      scores differ by 0.019 on the drone and 0.028 on the strings, while the
-      measure itself varies by 0.038 across random seeds at a fixed
-      configuration. The separation between a rotating field and a static one
-      therefore falls below the measure's own variability on both beds.
-      Establishing that a field is heard to move consequently requires a
-      matched control and a listener who is blind to the condition, which is
-      the arrangement implemented in the application accompanying this page.
-    </p>
-  </section>
-
   <section class="limits">
     <h2>Scope</h2>
     <p>
-      The default head model is a rigid sphere, so front-back information is
-      available only in the variant rendered through the measured HRTF.
+      The head model is a rigid sphere, so left and right are carried by both
+      interaural cues while front and back are rendered identically. Front-back
+      information is available only in the variant using the measured HRTF.
       Distance is carried by level alone, without propagation delay, Doppler
-      shift, air absorption or reverberation. The results reported here come
-      from a single listener who is aware of the hypothesis. The full set of
-      limitations is documented in the
+      shift, air absorption or reverberation.
+    </p>
+    <p>
+      The IACC figure in the readout is interaural cross-correlation, where 1.0
+      corresponds to a single coherent image and values near zero to full
+      decorrelation. It describes how diffuse a render is rather than whether
+      the field moves. Blind listening on this instrument found the sensation
+      of movement surviving a sum to mono, which removes every interaural
+      difference and indicates that the effect is substantially spectral. The
+      results so far come from a single listener who is aware of the
+      hypothesis. Further detail is in the
       <a href="https://github.com/TechmanskiJonas/sonokinetic#known-limits">repository README</a>.
     </p>
   </section>

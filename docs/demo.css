@@ -200,28 +200,8 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 .explain h2 { font-size: 14px; margin-bottom: 6px; }
 .explain p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
 
-.numbers, .limits { margin: 34px 0 0; max-width: 74ch; }
-.numbers p, .limits li { color: var(--ink-2); font-size: 13.5px; }
-
-.tablewrap { overflow-x: auto; margin: 12px 0; }
-table#metrics { width: 100%; border-collapse: collapse; font-size: 13px; }
-table#metrics th, table#metrics td {
-  padding: 5px 9px; text-align: left; border-bottom: 1px solid var(--rule-soft);
-  white-space: nowrap;
-}
-table#metrics th { color: var(--ink-3); font-weight: 500; font-size: 12px; }
-table#metrics td.num, table#metrics th.num { text-align: right; font-family: var(--mono); }
-table#metrics tr.mark td { background: var(--warm-w); }
-table#metrics tr.mark td:first-child { box-shadow: inset 2px 0 0 var(--warm); }
-
-.finding {
-  padding: 12px 15px; background: var(--card);
-  border: 1px solid var(--rule); border-radius: var(--r);
-}
-.finding strong { color: var(--ink); }
-
-.limits ul { margin: 0; padding-left: 20px; }
-.limits li { margin-bottom: 9px; }
+.limits { margin: 34px 0 0; max-width: 74ch; }
+.limits p { color: var(--ink-2); font-size: 13.5px; }
 
 footer {
   margin: 40px 0 30px; padding-top: 16px;

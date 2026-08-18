@@ -41,12 +41,15 @@ const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(
 // ----------------------------------------------------------------------
 
 async function boot() {
-  S.manifest = await (await fetch(DATA + "manifest.json")).json();
+  // Revalidated on every load, so a rebuilt page reaches a returning visitor.
+  // It is small, and it carries the build stamp the rest of the data is
+  // requested with, which lets the audio stay cacheable.
+  S.manifest = await (await fetch(DATA + "manifest.json",
+                                  { cache: "no-cache" })).json();
   S.duration = S.manifest.passage_secs;
 
   buildBeds();
   buildVariants();
-  buildMetrics();
 
   selectBed(S.manifest.beds[0].id, { load: false });
   selectVariant(S.manifest.variants[0].id);
@@ -101,30 +104,6 @@ function buildVariants() {
   });
 }
 
-function buildMetrics() {
-  const body = $("#metrics tbody");
-  body.textContent = "";
-  for (const v of S.manifest.variants) {
-    const tr = el("tr");
-    // The pair the section's argument rests on: one turns, one does not, and
-    // the measure cannot separate them.
-    if (v.id === "rotating" || v.id === "decoy") tr.className = "mark";
-    const turning = !v.has_trace ? "none"
-      : (v.rotation_deg_per_sec ? "one revolution"
-        : v.moving ? "translation" : "none");
-    for (const [text, cls] of [
-      [v.label, ""],
-      [turning, ""],
-      [v.metrics.drone.iacc.toFixed(3), "num"],
-      [v.metrics.strings.iacc.toFixed(3), "num"],
-    ]) {
-      const td = el("td", cls);
-      td.textContent = text;
-      tr.appendChild(td);
-    }
-    body.appendChild(tr);
-  }
-}
 
 // ----------------------------------------------------------------------
 // selection
@@ -194,12 +173,13 @@ async function loadBed() {
   tick();
 
   await Promise.all(vs.map(async v => {
-    const stem = `${S.bed}-${v.id}`;
+    const stem = `${DATA}${S.bed}-${v.id}`;
+    const v_ = `?v=${S.manifest.build}`;
     const [buf, trace] = await Promise.all([
-      fetch(`${DATA}${stem}.mp3`).then(r => r.arrayBuffer())
+      fetch(stem + ".mp3" + v_).then(r => r.arrayBuffer())
         .then(a => ctx().decodeAudioData(a)),
       v.has_trace
-        ? fetch(`${DATA}${stem}.trace.json`).then(r => r.json())
+        ? fetch(stem + ".trace.json" + v_).then(r => r.json())
         : Promise.resolve(null),
     ]);
     if (token !== S.loadToken) return;      // a bed switch overtook this load
@@ -392,7 +372,8 @@ function drawReadout() {
   const m = v.metrics[S.bed];
   const rows = [
     ["Sources", v.has_trace ? v.n_sources : "none"],
-    ["Layout", v.has_trace ? (v.lattice === "cartesian" ? "5 × 5 lattice" : "ring") : "none"],
+    ["Layout", v.has_trace
+      ? (v.grid ? `${v.grid[0]} × ${v.grid[1]} lattice` : "ring") : "none"],
     ["Motion", v.motion],
     ["Head model", v.has_trace ? (v.measured_hrtf ? "KEMAR measured" : "sphere") : "none"],
     ["IACC", m.iacc.toFixed(3)],

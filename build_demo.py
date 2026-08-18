@@ -19,6 +19,7 @@ as a treatment difference.
 import json
 import os
 import shutil
+import time
 import numpy as np
 import soundfile as sf
 
@@ -29,11 +30,14 @@ OUT = os.path.join(HERE, "docs", "data")
 
 SOFA = os.path.join(HERE, "hrtf", "mit_kemar_normal_pinna.sofa")
 
-# One lap over the passage, which is the comparison the whole page is built
-# around: a full revolution against a control that does not revolve.
 PASSAGE_SECS = 20.0
-LAP_DEG_PER_SEC = 360.0 / PASSAGE_SECS
 N_SOURCES = 6
+
+# Two rates on one ring, so a single stopped control serves both of them.
+# A rate slow enough to take the whole passage to come round once is hard to
+# hear as rotation at all, which is why neither of these is that slow.
+SLOW_DEG_PER_SEC = 60.0
+FAST_DEG_PER_SEC = 120.0
 SEED = 1                      # held fixed: the measures' noise floor across
                               # seeds is larger than several effects here
 
@@ -43,8 +47,8 @@ BEDS = [
     {"id": "drone", "file": "demo-drone.wav", "start": 8.0,
      "label": "Drone",
      "blurb": "A stationary harmonic drone, held constant in spectrum and "
-              "level for the duration of the passage. The measurements "
-              "reported below were made on this material."},
+              "level for the duration of the passage, which makes it the "
+              "material any judgement of movement is best made on."},
     {"id": "strings", "file": "demo-strings.wav", "start": 6.0,
      "label": "Strings",
      "blurb": "A slow modal progression with crossfaded chord changes, "
@@ -56,7 +60,6 @@ BEDS = [
 
 def variants(fs):
     """The running order. Each entry renders one FieldConfig, or None for dry."""
-    lap = LAP_DEG_PER_SEC
     return [
         dict(
             id="dry", label="Untreated",
@@ -68,93 +71,103 @@ def variants(fs):
 
         dict(
             id="coherent", label="Coherent ring",
-            short="six sources on a rotating ring, without decorrelation",
+            short="six identical sources on a rotating ring",
             body="Six copies of the same signal are placed around the "
-                 "listener and rotated. Because the copies are identical they "
-                 "sum to a single image at the centre of the head, and "
-                 "rotating them leaves the result unchanged. The case "
-                 "establishes why decorrelation is applied in the variants "
-                 "that follow.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES, rotation_deg_per_sec=lap,
+                 "listener and rotated at 60 degrees per second. Identical "
+                 "copies at symmetric angles sum to a single image at the "
+                 "centre of the head, and rotating that arrangement leaves "
+                 "the sum unchanged. The variant sets the baseline against "
+                 "which decorrelation is applied below.",
+            cfg=rf.FieldConfig(n_sources=N_SOURCES,
+                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
                                decorr_amount=0.0, seed=SEED)),
 
         dict(
-            id="rotating", label="Rotating field",
-            short="six decorrelated sources completing one revolution",
+            id="slow", label="Rotating field, slow",
+            short="six decorrelated sources at 60 degrees per second",
             body="The same ring with each source rendered mutually "
                  "incoherent, so that no individual source can be localized. "
-                 "The field completes one full revolution over the twenty "
-                 "seconds. Whether that revolution is audible is the question "
-                 "under investigation.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES, rotation_deg_per_sec=lap,
+                 "The field turns at 60 degrees per second, completing three "
+                 "and a third revolutions across the passage. Motion here is "
+                 "a property of the ensemble, while localizability is a "
+                 "property of its parts, and the two are set independently.",
+            cfg=rf.FieldConfig(n_sources=N_SOURCES,
+                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
+                               decorr_amount=1.0, seed=SEED)),
+
+        dict(
+            id="fast", label="Rotating field, fast",
+            short="the same field at 120 degrees per second",
+            body="The slow field with its rotation rate doubled and every "
+                 "other parameter held fixed. Rate is the one variable "
+                 "separating the two, so the pair indicates whether the "
+                 "reported sensation tracks angular velocity.",
+            cfg=rf.FieldConfig(n_sources=N_SOURCES,
+                               rotation_deg_per_sec=FAST_DEG_PER_SEC,
                                decorr_amount=1.0, seed=SEED)),
 
         dict(
             id="static", label="Static field (control)",
             short="the same field with its rotation rate set to zero",
-            body="The matched control for the rotating variant. Source count, "
-                 "decorrelation, random seed and spectrum are held identical, "
-                 "and the rotation rate alone is set to zero. Comparison "
-                 "against the rotating field is the only basis on which a "
-                 "claim about motion can rest, since the objective measures "
-                 "respond to diffuseness as well as to motion.",
+            body="The matched control for both rotating variants. Source "
+                 "count, decorrelation, random seed and spectrum are held "
+                 "identical, and the rotation rate alone is set to zero. A "
+                 "single render carries no evidence of motion on its own, "
+                 "since the available measures respond to diffuseness as well "
+                 "as to movement, so comparison against a stopped field is "
+                 "what any claim about motion rests on.",
             cfg=rf.FieldConfig(n_sources=N_SOURCES, rotation_deg_per_sec=0.0,
-                               decorr_amount=1.0, seed=SEED)),
-
-        dict(
-            id="decoy", label="Static field at matched IACC",
-            short="thirteen static sources scoring as the rotating field does",
-            body="Thirteen static sources in place of six. The configuration "
-                 "measures IACC 0.33 against the rotating field's 0.31, a "
-                 "difference smaller than the 0.038 by which the measure "
-                 "varies across random seeds. Two fields that differ in "
-                 "whether they rotate therefore receive scores the measure "
-                 "cannot separate, which is the basis for evaluating the "
-                 "effect by listening rather than by measurement.",
-            cfg=rf.FieldConfig(n_sources=13, rotation_deg_per_sec=0.0,
                                decorr_amount=1.0, seed=SEED)),
 
         dict(
             id="hotspot", label="Coherence hotspot",
             short="one coherent source circulating within a diffuse bed",
             body="The first source retains full coherence while the remaining "
-                 "five are fully decorrelated, so that a localizable source "
-                 "travels through a diffuse background. The configuration "
-                 "corresponds most directly to the hypothesis under test.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES, rotation_deg_per_sec=lap,
+                 "five are fully decorrelated, so a locatable source travels "
+                 "through a background that is not. The arrangement separates "
+                 "two things the other variants combine, since it allows the "
+                 "listener to report where something is as well as whether "
+                 "the field is turning.",
+            cfg=rf.FieldConfig(n_sources=N_SOURCES,
+                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
                                per_source_amount=[0.0] + [1.0] * (N_SOURCES - 1),
                                decorr_method="velvet", seed=SEED)),
 
         dict(
-            id="field", label="Drifting grid",
-            short="a five by five lattice translating past the listener",
-            body="Twenty-five sources arranged on a rectangular lattice and "
-                 "translated past the listener rather than rotated around "
-                 "them. Sources wrap at the boundaries of the lattice, so the "
-                 "count remains constant throughout. Distance is carried by "
-                 "level, which accounts for the variation in opacity as "
-                 "sources pass.",
+            id="lateral", label="Field passing sideways",
+            short="a lattice travelling left to right past the listener",
+            body="Twenty-four sources on a rectangular lattice, carried past "
+                 "the listener in a straight line rather than turned around "
+                 "them. The direction is lateral because the head model "
+                 "reproduces left and right through both interaural cues, "
+                 "while front and back are rendered identically and would "
+                 "leave the direction of travel ambiguous. The lattice spans "
+                 "24 metres and the field crosses two thirds of it during the "
+                 "passage, with each source fading to silence before reaching "
+                 "an edge, so the wrap that keeps the source count constant "
+                 "stays out of the way.",
             cfg=rf.FieldConfig(
                 components=[rf.ComponentConfig(
-                    lattice="cartesian", cols=5, rows=5,
-                    extent_x_m=8.0, extent_y_m=8.0,
-                    drift_y_mps=-0.9, drift_x_mps=0.35,
-                    label="grid")],
+                    lattice="cartesian", cols=8, rows=3,
+                    extent_x_m=24.0, extent_y_m=4.0,
+                    drift_x_mps=0.80, drift_y_mps=0.0,
+                    edge_fade=0.35, label="lattice")],
                 decorr=rf.DecorrConfig(amount=1.0, family="velvet", seed=SEED),
                 seed=SEED)),
 
         dict(
             id="measured", label="Rotating field (measured HRTF)",
-            short="the same revolution rendered through measured ears",
+            short="the slow field rendered through measured ears",
             body="The default head model is a rigid sphere without an outer "
-                 "ear, which renders 30 degrees and 150 degrees identically "
-                 "and folds a full revolution into a back-and-forth motion. "
-                 "Substituting the MIT KEMAR measurement supplies front-back "
-                 "information. Comparison against the rotating field isolates "
-                 "the contribution of the head model, since the motion is "
-                 "identical in both.",
+                 "ear, so azimuth 30 degrees and azimuth 150 degrees produce "
+                 "identical signals and a revolution folds into a "
+                 "back-and-forth motion. Substituting the MIT KEMAR "
+                 "measurement supplies the front-back difference. Motion is "
+                 "identical to the slow field, so the pair isolates the "
+                 "contribution of the head model.",
             requires_sofa=True,
-            cfg=rf.FieldConfig(n_sources=N_SOURCES, rotation_deg_per_sec=lap,
+            cfg=rf.FieldConfig(n_sources=N_SOURCES,
+                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
                                decorr_amount=1.0, seed=SEED,
                                hrtf_file=SOFA, hrtf_grid_step=1.0)),
     ]
@@ -191,8 +204,12 @@ def build():
     if not have_sofa:
         print(f"note: {SOFA} not found, skipping the measured-HRTF variant")
 
+    # A build stamp the page appends to every audio and trace request. The
+    # manifest itself is revalidated on load, so a rebuilt page reaches a
+    # returning visitor instead of their cached copy of the previous one.
     manifest = {"passage_secs": PASSAGE_SECS, "n_sources": N_SOURCES,
-                "seed": SEED, "beds": [], "variants": []}
+                "seed": SEED, "build": int(time.time()),
+                "beds": [], "variants": []}
     rendered = {}       # (bed, variant) -> stereo float array
     peak = 0.0
     fs_out = 44100
@@ -263,6 +280,8 @@ def build():
             entry["rotation_deg_per_sec"] = round(rot, 2)
             entry["drift_mps"] = round(drift, 2)
             entry["lattice"] = comps[0].lattice
+            if comps[0].lattice == "cartesian":
+                entry["grid"] = [int(comps[0].cols), int(comps[0].rows)]
             entry["measured_hrtf"] = bool(cfg.hrtf_file)
             entry["distances"] = [round(float(d), 2)
                                   for d in rf.FieldGeometry(cfg).distances(0.0)]
