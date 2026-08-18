@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sonokinetic: motion perception in decorrelated sound fields</title>
+<meta name="description" content="A binaural renderer and listening bench for testing whether motion in a field of sound can be perceived when its individual sources cannot be localized.">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap hrow">
+    <div>
+      <h1>Sonokinetic</h1>
+      <p class="sub">Can motion in a field of sound be perceived without localizing anything in it?</p>
+    </div>
+    <nav>
+      <a href="https://github.com/TechmanskiJonas/sonokinetic">Source</a>
+      <a href="https://github.com/TechmanskiJonas/sonokinetic#readme">README</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="intro">
+    <p>
+      A single piece of audio is used to build a ring of virtual sources around
+      the listener. Each source is made individually too diffuse to localize,
+      and the ring is then rotated. The question is whether a field whose
+      contents cannot be located is still heard to move.
+    </p>
+    <p>
+      The variants below are rendered from the same twenty seconds of the same
+      signal. Each one is aligned to the sample and matched in loudness against
+      the untreated reference, so that moving between them varies the treatment
+      while the material is held constant. The monitor shows source positions
+      as recorded by the renderer during the render itself.
+    </p>
+    <div class="callout">
+      <strong>Headphones are required</strong>, since the method depends on
+      interaural differences that survive only under headphone playback.
+      Operating-system spatial audio should be disabled, as it applies a second
+      head-related transfer function to signals that already carry one.
+    </div>
+  </section>
+
+  <section class="bedpick">
+    <span class="lbl">Material</span>
+    <div class="segmented" id="beds"></div>
+    <p class="bedblurb" id="bedblurb"></p>
+  </section>
+
+  <section class="bench">
+    <div class="col-variants">
+      <h2>Variants <span class="dim">(click, or press 1 to 8)</span></h2>
+      <ul class="variants" id="variants"></ul>
+    </div>
+
+    <div class="col-monitor">
+      <h2>Monitor</h2>
+      <canvas id="ring" width="340" height="340" aria-label="Field of sources seen from above"></canvas>
+      <p class="legend">
+        The field is shown from above with the listener at the centre facing
+        front. Filled dots indicate coherent sources and hollow dots indicate
+        decorrelated ones. Dot size and fill track coherence, and opacity
+        tracks level.
+      </p>
+
+      <div class="transport">
+        <button id="play" class="primary">Play</button>
+        <input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Position">
+        <span class="clock num" id="clock">0.0s</span>
+      </div>
+      <p class="loading" id="loading" hidden></p>
+
+      <div class="readout" id="readout"></div>
+    </div>
+  </section>
+
+  <section class="explain">
+    <h2 id="vlabel">&nbsp;</h2>
+    <p id="vbody"></p>
+  </section>
+
+  <section class="numbers">
+    <h2>Objective measurement</h2>
+    <p>
+      Interaural cross-correlation (IACC) is the standard objective measure of
+      how diffuse a binaural signal is, where 1.0 corresponds to a single
+      coherent image and values near zero to full decorrelation. It is reported
+      below for every render on this page.
+    </p>
+    <div class="tablewrap">
+      <table id="metrics">
+        <thead><tr><th>Variant</th><th>Motion</th><th class="num">IACC, drone</th><th class="num">IACC, strings</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="finding">
+      The two highlighted rows differ in whether the field rotates. Their IACC
+      scores differ by 0.019 on the drone and 0.028 on the strings, while the
+      measure itself varies by 0.038 across random seeds at a fixed
+      configuration. The separation between a rotating field and a static one
+      therefore falls below the measure's own variability on both beds.
+      Establishing that a field is heard to move consequently requires a
+      matched control and a listener who is blind to the condition, which is
+      the arrangement implemented in the application accompanying this page.
+    </p>
+  </section>
+
+  <section class="limits">
+    <h2>Scope</h2>
+    <p>
+      The default head model is a rigid sphere, so front-back information is
+      available only in the variant rendered through the measured HRTF.
+      Distance is carried by level alone, without propagation delay, Doppler
+      shift, air absorption or reverberation. The results reported here come
+      from a single listener who is aware of the hypothesis. The full set of
+      limitations is documented in the
+      <a href="https://github.com/TechmanskiJonas/sonokinetic#known-limits">repository README</a>.
+    </p>
+  </section>
+
+  <footer>
+    <p>
+      Jonas Techmanski ·
+      <a href="https://github.com/TechmanskiJonas/sonokinetic">github.com/TechmanskiJonas/sonokinetic</a>
+    </p>
+    <p class="dim">
+      Both beds are synthesised by <code>make_demo_audio.py</code>, and every
+      file served by this page is generated by <code>build_demo.py</code>. The
+      page is rebuilt from the renderer rather than maintained by hand, so its
+      contents follow the current state of the code.
+    </p>
+  </footer>
+
+</main>
+
+<script src="demo.js"></script>
+</body>
+</html>

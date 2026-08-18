@@ -9,6 +9,10 @@ heard to move is the experiment.
 
 Jonas Techmanski · jonas030405@gmail.com
 
+**[Hear it without installing anything →](https://techmanskijonas.github.io/sonokinetic/)**
+Eight variants of the same twenty seconds, sample-aligned and loudness-matched,
+with the field drawn as it plays. Headphones required.
+
 ## Setup
 
 ```bash
@@ -137,12 +141,30 @@ the literature.
 | `app.py` | web backend. Wraps the renderers, contains no DSP. |
 | `static/` | the interface |
 | `courses.json`, `purpose.json`, `encyclopedia.json` | all written content |
-| `tests/` | 310 tests. Run before and after any change. |
+| `tests/` | 311 tests. Run before and after any change. |
 | `make_track.py`, `compare.py`, `variations.py`, `sweep.py` | command line renderers |
+| `make_demo_audio.py` | synthesises the two demo beds, drone and strings |
+| `build_demo.py` | renders everything the public page serves |
+| `docs/` | the public page. `docs/data/` is generated, never hand-edited. |
 
 ```bash
 pytest -q
 ```
+
+### Rebuilding the public page
+
+```bash
+python make_demo_audio.py
+python build_demo.py
+```
+
+The first writes the two beds, the second renders every variant of each and
+writes the audio, the monitor traces and the measured numbers into
+`docs/data/`. Both beds are synthesised rather than sampled, so the page
+carries no recording that could not be distributed. Each variant is rendered
+unnormalised, loudness-matched to the untreated reference, and then all of
+them are scaled by one common factor: normalising each file on its own would
+hand a listener a loudness difference to mistake for a treatment difference.
 
 ## Known limits
 
