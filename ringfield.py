@@ -859,10 +859,11 @@ class SourceBank:
 
         Reducing a band's amount leaves that band shared between the sources
         instead of independent, and shared and independent content do not sum
-        to the same level. The size of the difference cannot be predicted from
-        the source count: an evenly spaced ring of identical signals largely
-        cancels rather than reinforcing, so the naive factor of N is wrong in
-        both magnitude and sign depending on the geometry.
+        to the same level. One factor cannot cover the whole spectrum: summed
+        through their head-related filters, nine identical sources gain 9.0 dB
+        below 300 Hz, close to the 9.5 dB of perfect addition, but only 3.9 dB
+        by 1 kHz and less than nothing above it, where the filters differ
+        enough to cancel. A closed form fitted to the bass overshoots the rest.
 
         So it is measured. Sum the ensemble as configured, sum it again with
         the band amounts uniform, and take the ratio band by band. Uniform
