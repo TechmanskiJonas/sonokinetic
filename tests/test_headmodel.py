@@ -124,3 +124,57 @@ def test_config_dict_reports_the_physical_model(hrtf_signal):
 def hrtf_signal():
     from sweep import make_test_signal
     return make_test_signal(FS, 2.0)
+
+
+# ----------------------------------------------------------------------
+# Measured HRTFs
+# ----------------------------------------------------------------------
+
+SOFA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                    "hrtf", "mit_kemar_normal_pinna.sofa")
+
+
+@pytest.mark.skipif(not os.path.isfile(SOFA), reason="no SOFA file present")
+def test_a_measured_set_breaks_the_front_back_symmetry():
+    """The sphere renders mirrored azimuths bit-identically, which is why
+    rotation reaches the ears as a doubled-rate oscillation and why direction
+    cannot be recovered. A measured set carries pinna cues, and the whole
+    reason to fit one is that those differ front from back.
+    """
+    fs = 44100
+    sphere = rf.AnalyticHRTF(fs=fs)
+    kemar = rf.SofaHRTF(SOFA, fs=fs)
+
+    freqs = np.fft.rfftfreq(512, 1.0 / fs)
+    pinna = (freqs > 3000) & (freqs < 12000)
+
+    def spread(hrtf, a, b):
+        fa = 20 * np.log10(np.abs(np.fft.rfft(hrtf.hrir(a)[0], 512)) + 1e-9)
+        fb = 20 * np.log10(np.abs(np.fft.rfft(hrtf.hrir(b)[0], 512)) + 1e-9)
+        return float(np.mean(np.abs(fa - fb)[pinna]))
+
+    for a, b in ((0.0, 180.0), (30.0, 150.0), (45.0, 135.0), (60.0, 120.0)):
+        assert spread(sphere, a, b) < 1e-9, "the sphere must stay symmetric"
+        assert spread(kemar, a, b) > 3.0, f"KEMAR gives no front-back at {a}/{b}"
+
+
+@pytest.mark.skipif(not os.path.isfile(SOFA), reason="no SOFA file present")
+def test_choosing_a_measured_set_changes_what_renders():
+    """hrtf_file has to reach the renderer, and distance has to survive it:
+    the measured set supplies direction only, while level and the near-field
+    growth stay with the geometry, which applies them after the convolution.
+    """
+    fs = 44100
+    x = np.random.default_rng(0).normal(0, 0.2, fs)
+
+    def one(path, az):
+        cfg = rf.FieldConfig(
+            hrtf_file=path, decorr=rf.DecorrConfig(amount=0.0),
+            components=[rf.ComponentConfig(
+                lattice="polar", rings=1, per_ring=1, r_near_m=2.0,
+                r_far_m=2.0, start_azimuths=[az])])
+        return rf.render(x, rf.hrtf_for(cfg, fs), cfg, fs, normalize=False)
+
+    assert np.array_equal(one(None, 0.0), one(None, 180.0))
+    assert not np.array_equal(one(SOFA, 0.0), one(SOFA, 180.0))
+    assert isinstance(rf.hrtf_for(rf.FieldConfig(hrtf_file=SOFA), fs), rf.SofaHRTF)

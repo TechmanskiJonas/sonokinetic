@@ -1041,6 +1041,7 @@ class FieldConfig:
     head_radius: float = HEAD_RADIUS
     speed_of_sound: float = C_SOUND
     hrtf_taps: int = 128
+    hrtf_file: Optional[str] = None   # SOFA path; None uses the sphere model
     hrtf_grid_step: float = 1.0
 
     block: int = 256
@@ -1141,11 +1142,18 @@ def hrtf_for(cfg: FieldConfig, fs: int = 44100):
     same head, so the cache matters when a passage has several of them.
     """
     key = (fs, round(cfg.head_radius, 6), round(cfg.speed_of_sound, 4),
-           int(cfg.hrtf_taps), round(cfg.hrtf_grid_step, 4))
+           int(cfg.hrtf_taps), round(cfg.hrtf_grid_step, 4),
+           cfg.hrtf_file or "")
     hit = _HRTF_CACHE.get(key)
     if hit is None:
         if len(_HRTF_CACHE) > 24:
             _HRTF_CACHE.clear()
+        if cfg.hrtf_file:
+            # Measured directions, and nothing else: distance and level stay
+            # with the geometry, which applies them after the convolution, so
+            # a far-field set loses none of the near-field behaviour.
+            _HRTF_CACHE[key] = SofaHRTF(cfg.hrtf_file, fs=fs)
+            return _HRTF_CACHE[key]
         hit = AnalyticHRTF(fs=fs, n_taps=int(cfg.hrtf_taps),
                            grid_step=cfg.hrtf_grid_step,
                            head_radius=cfg.head_radius,

@@ -31,3 +31,7 @@ presets/
 # local machine settings
 .claude/settings.local.json
 
+
+# Measured HRTF sets: freely downloadable, and large enough not to vendor.
+# app.py names one in the Front or back experiment; see the README.
+hrtf/

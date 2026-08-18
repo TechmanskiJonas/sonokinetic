@@ -36,14 +36,34 @@ the treatment: no transients, since onsets restore the localization the
 treatment exists to remove, and energy up to 8 kHz, since the level difference
 between the ears is a high-frequency cue.
 
+### Measured HRTFs
+
+The head model is a rigid sphere by default, which renders mirrored azimuths
+identically and so carries no front-back information at all. A measured set
+supplies that. Nothing is vendored here, since the files are freely available:
+
+```bash
+pip install sofar
+mkdir hrtf
+curl -o hrtf/mit_kemar_normal_pinna.sofa https://sofacoustics.org/data/database/mit/mit_kemar_normal_pinna.sofa
+```
+
+That is the Gardner and Martin KEMAR measurement, 1.2 MB, 72 positions on the
+horizontal plane. Set `hrtf_file` on a variant to use it; leave it unset for
+the sphere. Direction comes from the measured set and distance stays with the
+geometry, so near-field behaviour is unaffected.
+
+Interpolation is nearest-neighbour on a 5 degree grid, which is fine for
+static sources and not yet fine for moving ones.
+
 Any track can be dropped onto the waveform, or placed in the project folder.
 Sustained, nearly transient-free material works best — pads, drones, bowed
 strings, organ, held voice, cymbal wash — and the reason is measured rather
 than aesthetic: see *Sustained material decorrelates far more readily* under
-Purpose.
+Research.
 
-The `?` beside the title runs a guided tour. Four are available: an overview, a
-hands-on build, arrangements, and blind testing.
+The `?` beside the title runs a guided tour. Three are available: an overview, a
+hands-on build, and blind testing.
 
 ## How it works
 
@@ -92,9 +112,9 @@ fixed when comparing, or average across several.
 ## Learning it
 
 **Courses** are a sequenced curriculum from two ears and two differences through
-to running a listening test that counts as evidence. **Purpose** covers the
-research question, its standing in the literature, and the results measured
-here. **Glossary** defines every term the interface uses, split into established
+to running a listening test that counts as evidence. **Research** covers the
+question, its standing in the literature, the results measured here, and what
+blind listening has shown. **Glossary** defines every term the interface uses, split into established
 material and this project's own vocabulary, with each entry labelled by status:
 
 | Status | Meaning |
@@ -117,7 +137,7 @@ the literature.
 | `app.py` | web backend. Wraps the renderers, contains no DSP. |
 | `static/` | the interface |
 | `courses.json`, `purpose.json`, `encyclopedia.json` | all written content |
-| `tests/` | 254 tests. Run before and after any change. |
+| `tests/` | 310 tests. Run before and after any change. |
 | `make_track.py`, `compare.py`, `variations.py`, `sweep.py` | command line renderers |
 
 ```bash
@@ -126,10 +146,12 @@ pytest -q
 
 ## Known limits
 
-The head model is a rigid sphere with no pinna, so it has no elevation and no
-front-back discrimination: azimuth 0° and 180° produce identical signals, and
-motion direction is not recoverable. Measured HRTFs in SOFA format would change
-this and the class is already in place. Distance is carried by level and
+The head model is a rigid sphere by default, with no pinna, so it has no
+elevation and no front-back discrimination: azimuth 0° and 180° produce
+identical signals, and motion direction is not recoverable. A measured HRTF in
+SOFA format removes that and is selectable per variant, though interpolation
+between measured directions is still nearest-neighbour, which suits static
+sources rather than moving ones. Distance is carried by level and
 near-field level difference only, with no propagation delay, Doppler, air
 absorption or reverberation.
 

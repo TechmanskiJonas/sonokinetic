@@ -68,6 +68,18 @@ def resolve_track(name: str) -> str:
     return path
 
 
+def resolve_hrtf(name: str) -> str:
+    """Absolute path for a SOFA file, confined to the project folder.
+
+    The name arrives from a request and is handed to a file reader, so it gets
+    the same treatment as a track name rather than being trusted.
+    """
+    path = os.path.abspath(os.path.join(ROOT, name.replace("\\", "/")))
+    if os.path.commonpath([path, ROOT]) != ROOT or not os.path.isfile(path):
+        raise HTTPException(404, f"no such HRTF file: {name}")
+    return path
+
+
 def get_track(name: str):
     """(stereo, mono, fs) for a track. Decoding an mp3 is slow, so cache it."""
     path = resolve_track(name)
@@ -183,6 +195,7 @@ class FieldIn(BaseModel):
     speed_of_sound: float = rf.C_SOUND
     hrtf_taps: int = 128
     hrtf_grid_step: float = 1.0
+    hrtf_file: Optional[str] = None   # SOFA path, relative to the project
     block: int = 256
     seed: int = 0
     mono_out: bool = False     # sum the finished render to one signal on both ears
@@ -202,6 +215,7 @@ class FieldIn(BaseModel):
             decorr=self.decorr.to_cfg(),
             head_radius=self.head_radius, speed_of_sound=self.speed_of_sound,
             hrtf_taps=self.hrtf_taps, hrtf_grid_step=self.hrtf_grid_step,
+            hrtf_file=(resolve_hrtf(self.hrtf_file) if self.hrtf_file else None),
             block=self.block, seed=self.seed)
 
 
