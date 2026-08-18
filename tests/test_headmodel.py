@@ -178,3 +178,28 @@ def test_choosing_a_measured_set_changes_what_renders():
     assert np.array_equal(one(None, 0.0), one(None, 180.0))
     assert not np.array_equal(one(SOFA, 0.0), one(SOFA, 180.0))
     assert isinstance(rf.hrtf_for(rf.FieldConfig(hrtf_file=SOFA), fs), rf.SofaHRTF)
+
+
+@pytest.mark.skipif(not os.path.isfile(SOFA), reason="no SOFA file present")
+def test_lateral_mirror_pairs_carry_more_than_median_ones():
+    """Directly ahead against directly behind is the hardest pair there is.
+
+    Both sit on the median plane, so the ears receive identical signals under
+    any head model and the whole front-back cue is a monaural change of
+    colour. Away from the median plane a real head is not front-back
+    symmetric even in level, so a mirrored pair differs between the ears too.
+    A test of whether a measured set works should not open on the one pair
+    that withholds half of what the set provides.
+    """
+    fs = 44100
+    kemar = rf.SofaHRTF(SOFA, fs=fs)
+
+    def ild(a):
+        left, right = kemar.hrir(a)
+        f = np.fft.rfftfreq(512, 1.0 / fs)
+        m = (f > 2000) & (f < 8000)
+        power = lambda s: np.mean(np.abs(np.fft.rfft(s, 512))[m] ** 2)
+        return 10 * np.log10(power(left) / power(right))
+
+    assert abs(ild(0.0) - ild(180.0)) < 0.5      # median plane: nothing interaural
+    assert abs(ild(45.0) - ild(135.0)) > 2.0     # off it: a real difference
