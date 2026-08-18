@@ -31,7 +31,17 @@ OUT = os.path.join(HERE, "docs", "data")
 SOFA = os.path.join(HERE, "hrtf", "mit_kemar_normal_pinna.sofa")
 
 PASSAGE_SECS = 20.0
-N_SOURCES = 6
+
+# The ring below is the configuration the blind sessions in sessions/ were run
+# on, rather than a minimal one assembled for the page. Nine sources at two
+# metres, allpass decorrelation, and every source wandering 60 degrees at a
+# quarter hertz. Sessions one and two returned "circling" at confidence 6 on
+# it. A plainer six-source velvet ring with no wander is a much weaker stimulus
+# and misrepresents what the instrument does.
+N_SOURCES = 9
+RING_RADIUS_M = 2.0
+WANDER_DEG = 60.0
+WANDER_HZ = 0.25
 
 # Two rates on one ring, so a single stopped control serves both of them.
 # A rate slow enough to take the whole passage to come round once is hard to
@@ -40,6 +50,23 @@ SLOW_DEG_PER_SEC = 60.0
 FAST_DEG_PER_SEC = 120.0
 SEED = 1                      # held fixed: the measures' noise floor across
                               # seeds is larger than several effects here
+
+
+def decorr(amount=1.0, per_source=None):
+    """The decorrelation the sessions used, which is allpass rather than velvet."""
+    return rf.DecorrConfig(amount=amount, per_source_amount=per_source,
+                           family="allpass", ir_ms=30.0, phase_depth=1.0,
+                           envelope="auto", seed=SEED)
+
+
+def ring(rate_deg_per_sec, wander=WANDER_DEG, label="ring"):
+    """One nine-source ring at the session geometry."""
+    return rf.ComponentConfig(
+        lattice="polar", rings=1, per_ring=N_SOURCES,
+        r_near_m=RING_RADIUS_M, r_far_m=RING_RADIUS_M,
+        rotation_deg_per_sec=rate_deg_per_sec,
+        wander_deg=wander, wander_hz=WANDER_HZ,
+        random_fraction=0.0, label=label)
 
 TRACE_FPS = 20                # the monitor is smooth at 20; 60 triples the JSON
 
@@ -71,29 +98,30 @@ def variants(fs):
 
         dict(
             id="coherent", label="Coherent ring",
-            short="six identical sources on a rotating ring",
-            body="Six copies of the same signal are placed around the "
-                 "listener and rotated at 60 degrees per second. Identical "
-                 "copies at symmetric angles sum to a single image at the "
-                 "centre of the head, and rotating that arrangement leaves "
-                 "the sum unchanged. The variant sets the baseline against "
-                 "which decorrelation is applied below.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES,
-                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
-                               decorr_amount=0.0, seed=SEED)),
+            short="nine identical sources on a rotating ring",
+            body="Nine copies of the same signal are placed around the "
+                 "listener at two metres and rotated at 60 degrees per "
+                 "second. Identical copies at opposed angles cancel toward a "
+                 "single image at the centre of the head, which stays centred "
+                 "as the ring turns. It measures IACC 0.95 where the same "
+                 "ring decorrelated measures 0.22. Cancellation is exact for "
+                 "an even ring and approximate for this one, which has an odd "
+                 "count to match the sessions.",
+            cfg=rf.FieldConfig(components=[ring(SLOW_DEG_PER_SEC, wander=0.0)],
+                               decorr=decorr(0.0), seed=SEED)),
 
         dict(
             id="slow", label="Rotating field, slow",
-            short="six decorrelated sources at 60 degrees per second",
-            body="The same ring with each source rendered mutually "
-                 "incoherent, so that no individual source can be localized. "
-                 "The field turns at 60 degrees per second, completing three "
-                 "and a third revolutions across the passage. Motion here is "
-                 "a property of the ensemble, while localizability is a "
-                 "property of its parts, and the two are set independently.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES,
-                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
-                               decorr_amount=1.0, seed=SEED)),
+            short="nine decorrelated sources at 60 degrees per second",
+            body="The ring with each source rendered mutually incoherent, so "
+                 "that no individual source can be localized, and with every "
+                 "source wandering 60 degrees about its position at a quarter "
+                 "hertz. The field turns at 60 degrees per second. This is "
+                 "the configuration the blind sessions recorded in the "
+                 "repository were run on, and the condition reported there as "
+                 "circling at the top of the confidence scale.",
+            cfg=rf.FieldConfig(components=[ring(SLOW_DEG_PER_SEC)],
+                               decorr=decorr(1.0), seed=SEED)),
 
         dict(
             id="fast", label="Rotating field, fast",
@@ -102,58 +130,60 @@ def variants(fs):
                  "other parameter held fixed. Rate is the one variable "
                  "separating the two, so the pair indicates whether the "
                  "reported sensation tracks angular velocity.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES,
-                               rotation_deg_per_sec=FAST_DEG_PER_SEC,
-                               decorr_amount=1.0, seed=SEED)),
+            cfg=rf.FieldConfig(components=[ring(FAST_DEG_PER_SEC)],
+                               decorr=decorr(1.0), seed=SEED)),
 
         dict(
             id="static", label="Static field (control)",
-            short="the same field with its rotation rate set to zero",
-            body="The matched control for both rotating variants. Source "
-                 "count, decorrelation, random seed and spectrum are held "
-                 "identical, and the rotation rate alone is set to zero. A "
-                 "single render carries no evidence of motion on its own, "
+            short="the same field with time stopped",
+            body="The matched control for both rotating variants, made by "
+                 "stopping time rather than by zeroing the rates. Every "
+                 "source holds the position and the level it had, the "
+                 "wandering stops along with the rotation, and the spatial "
+                 "and level distribution of the field is preserved exactly. "
+                 "A single render carries no evidence of motion on its own, "
                  "since the available measures respond to diffuseness as well "
-                 "as to movement, so comparison against a stopped field is "
-                 "what any claim about motion rests on.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES, rotation_deg_per_sec=0.0,
-                               decorr_amount=1.0, seed=SEED)),
+                 "as to movement, so any claim about motion rests on the "
+                 "comparison with this.",
+            cfg=rf.FieldConfig(components=[ring(SLOW_DEG_PER_SEC).frozen()],
+                               decorr=decorr(1.0), seed=SEED)),
 
         dict(
             id="hotspot", label="Coherence hotspot",
             short="one coherent source circulating within a diffuse bed",
             body="The first source retains full coherence while the remaining "
-                 "five are fully decorrelated, so a locatable source travels "
+                 "eight are fully decorrelated, so a locatable source travels "
                  "through a background that is not. The arrangement separates "
                  "two things the other variants combine, since it allows the "
                  "listener to report where something is as well as whether "
                  "the field is turning.",
-            cfg=rf.FieldConfig(n_sources=N_SOURCES,
-                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
-                               per_source_amount=[0.0] + [1.0] * (N_SOURCES - 1),
-                               decorr_method="velvet", seed=SEED)),
+            cfg=rf.FieldConfig(
+                components=[ring(SLOW_DEG_PER_SEC)],
+                decorr=decorr(1.0, [0.0] + [1.0] * (N_SOURCES - 1)),
+                seed=SEED)),
 
         dict(
             id="lateral", label="Field passing sideways",
             short="a lattice travelling left to right past the listener",
             body="Twenty-four sources on a rectangular lattice, carried past "
                  "the listener in a straight line rather than turned around "
-                 "them. The direction is lateral because the head model "
-                 "reproduces left and right through both interaural cues, "
-                 "while front and back are rendered identically and would "
-                 "leave the direction of travel ambiguous. The lattice spans "
-                 "24 metres and the field crosses two thirds of it during the "
-                 "passage, with each source fading to silence before reaching "
-                 "an edge, so the wrap that keeps the source count constant "
-                 "stays out of the way.",
+                 "them. The rows are offset so that none of them runs through "
+                 "the listener's position, which keeps the closest approach at "
+                 "one metre. A source passing through the head arrives loud "
+                 "and immediately locatable, which is what an earlier version "
+                 "of this variant did and what the session logs describe as "
+                 "nearer and farther rather than side to side. Travel is "
+                 "lateral because the head model reproduces left and right "
+                 "through both interaural cues while rendering front and back "
+                 "identically.",
             cfg=rf.FieldConfig(
                 components=[rf.ComponentConfig(
-                    lattice="cartesian", cols=8, rows=3,
-                    extent_x_m=24.0, extent_y_m=4.0,
-                    drift_x_mps=0.80, drift_y_mps=0.0,
+                    lattice="cartesian", cols=6, rows=4,
+                    extent_x_m=24.0, extent_y_m=8.0,
+                    drift_x_mps=1.0, drift_y_mps=0.0,
+                    wander_deg=WANDER_DEG, wander_hz=WANDER_HZ,
                     edge_fade=0.35, label="lattice")],
-                decorr=rf.DecorrConfig(amount=1.0, family="velvet", seed=SEED),
-                seed=SEED)),
+                decorr=decorr(1.0), seed=SEED)),
 
         dict(
             id="measured", label="Rotating field (measured HRTF)",
@@ -166,9 +196,8 @@ def variants(fs):
                  "identical to the slow field, so the pair isolates the "
                  "contribution of the head model.",
             requires_sofa=True,
-            cfg=rf.FieldConfig(n_sources=N_SOURCES,
-                               rotation_deg_per_sec=SLOW_DEG_PER_SEC,
-                               decorr_amount=1.0, seed=SEED,
+            cfg=rf.FieldConfig(components=[ring(SLOW_DEG_PER_SEC)],
+                               decorr=decorr(1.0), seed=SEED,
                                hrtf_file=SOFA, hrtf_grid_step=1.0)),
     ]
 

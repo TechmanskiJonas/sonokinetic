@@ -1,8 +1,8 @@
 {
  "passage_secs": 20.0,
- "n_sources": 6,
+ "n_sources": 9,
  "seed": 1,
- "build": 1787072222,
+ "build": 1787073285,
  "beds": [
   {
    "id": "drone",
@@ -27,26 +27,29 @@
    "metrics": {
     "drone": {
      "iacc": 1.0,
-     "lufs": -13.2
+     "lufs": -11.7
     },
     "strings": {
      "iacc": 1.0,
-     "lufs": -14.8
+     "lufs": -13.3
     }
    }
   },
   {
    "id": "coherent",
    "label": "Coherent ring",
-   "short": "six identical sources on a rotating ring",
-   "body": "Six copies of the same signal are placed around the listener and rotated at 60 degrees per second. Identical copies at symmetric angles sum to a single image at the centre of the head, and rotating that arrangement leaves the sum unchanged. The variant sets the baseline against which decorrelation is applied below.",
+   "short": "nine identical sources on a rotating ring",
+   "body": "Nine copies of the same signal are placed around the listener at two metres and rotated at 60 degrees per second. Identical copies at opposed angles cancel toward a single image at the centre of the head, which stays centred as the ring turns. It measures IACC 0.95 where the same ring decorrelated measures 0.22. Cancellation is exact for an even ring and approximate for this one, which has an odd count to match the sessions.",
    "has_trace": true,
-   "n_sources": 6,
+   "n_sources": 9,
    "rotation_deg_per_sec": 60.0,
    "drift_mps": 0.0,
    "lattice": "polar",
    "measured_hrtf": false,
    "distances": [
+    2.0,
+    2.0,
+    2.0,
     2.0,
     2.0,
     2.0,
@@ -58,27 +61,30 @@
    "motion": "60 \u00b0/s, 3.3 revolutions",
    "metrics": {
     "drone": {
-     "iacc": 1.0,
-     "lufs": -13.2
+     "iacc": 0.946,
+     "lufs": -11.7
     },
     "strings": {
-     "iacc": 1.0,
-     "lufs": -14.8
+     "iacc": 0.934,
+     "lufs": -13.3
     }
    }
   },
   {
    "id": "slow",
    "label": "Rotating field, slow",
-   "short": "six decorrelated sources at 60 degrees per second",
-   "body": "The same ring with each source rendered mutually incoherent, so that no individual source can be localized. The field turns at 60 degrees per second, completing three and a third revolutions across the passage. Motion here is a property of the ensemble, while localizability is a property of its parts, and the two are set independently.",
+   "short": "nine decorrelated sources at 60 degrees per second",
+   "body": "The ring with each source rendered mutually incoherent, so that no individual source can be localized, and with every source wandering 60 degrees about its position at a quarter hertz. The field turns at 60 degrees per second. This is the configuration the blind sessions recorded in the repository were run on, and the condition reported there as circling at the top of the confidence scale.",
    "has_trace": true,
-   "n_sources": 6,
+   "n_sources": 9,
    "rotation_deg_per_sec": 60.0,
    "drift_mps": 0.0,
    "lattice": "polar",
    "measured_hrtf": false,
    "distances": [
+    2.0,
+    2.0,
+    2.0,
     2.0,
     2.0,
     2.0,
@@ -90,12 +96,12 @@
    "motion": "60 \u00b0/s, 3.3 revolutions",
    "metrics": {
     "drone": {
-     "iacc": 0.308,
-     "lufs": -13.2
+     "iacc": 0.217,
+     "lufs": -11.7
     },
     "strings": {
-     "iacc": 0.301,
-     "lufs": -14.8
+     "iacc": 0.211,
+     "lufs": -13.3
     }
    }
   },
@@ -105,12 +111,15 @@
    "short": "the same field at 120 degrees per second",
    "body": "The slow field with its rotation rate doubled and every other parameter held fixed. Rate is the one variable separating the two, so the pair indicates whether the reported sensation tracks angular velocity.",
    "has_trace": true,
-   "n_sources": 6,
+   "n_sources": 9,
    "rotation_deg_per_sec": 120.0,
    "drift_mps": 0.0,
    "lattice": "polar",
    "measured_hrtf": false,
    "distances": [
+    2.0,
+    2.0,
+    2.0,
     2.0,
     2.0,
     2.0,
@@ -122,59 +131,30 @@
    "motion": "120 \u00b0/s, 6.7 revolutions",
    "metrics": {
     "drone": {
-     "iacc": 0.31,
-     "lufs": -13.2
+     "iacc": 0.216,
+     "lufs": -11.7
     },
     "strings": {
-     "iacc": 0.303,
-     "lufs": -14.8
+     "iacc": 0.205,
+     "lufs": -13.3
     }
    }
   },
   {
    "id": "static",
    "label": "Static field (control)",
-   "short": "the same field with its rotation rate set to zero",
-   "body": "The matched control for both rotating variants. Source count, decorrelation, random seed and spectrum are held identical, and the rotation rate alone is set to zero. A single render carries no evidence of motion on its own, since the available measures respond to diffuseness as well as to movement, so comparison against a stopped field is what any claim about motion rests on.",
+   "short": "the same field with time stopped",
+   "body": "The matched control for both rotating variants, made by stopping time rather than by zeroing the rates. Every source holds the position and the level it had, the wandering stops along with the rotation, and the spatial and level distribution of the field is preserved exactly. A single render carries no evidence of motion on its own, since the available measures respond to diffuseness as well as to movement, so any claim about motion rests on the comparison with this.",
    "has_trace": true,
-   "n_sources": 6,
-   "rotation_deg_per_sec": 0.0,
-   "drift_mps": 0.0,
-   "lattice": "polar",
-   "measured_hrtf": false,
-   "distances": [
-    2.0,
-    2.0,
-    2.0,
-    2.0,
-    2.0,
-    2.0
-   ],
-   "moving": false,
-   "motion": "none",
-   "metrics": {
-    "drone": {
-     "iacc": 0.493,
-     "lufs": -13.2
-    },
-    "strings": {
-     "iacc": 0.417,
-     "lufs": -14.8
-    }
-   }
-  },
-  {
-   "id": "hotspot",
-   "label": "Coherence hotspot",
-   "short": "one coherent source circulating within a diffuse bed",
-   "body": "The first source retains full coherence while the remaining five are fully decorrelated, so a locatable source travels through a background that is not. The arrangement separates two things the other variants combine, since it allows the listener to report where something is as well as whether the field is turning.",
-   "has_trace": true,
-   "n_sources": 6,
+   "n_sources": 9,
    "rotation_deg_per_sec": 60.0,
    "drift_mps": 0.0,
    "lattice": "polar",
    "measured_hrtf": false,
    "distances": [
+    2.0,
+    2.0,
+    2.0,
     2.0,
     2.0,
     2.0,
@@ -186,12 +166,47 @@
    "motion": "60 \u00b0/s, 3.3 revolutions",
    "metrics": {
     "drone": {
-     "iacc": 0.236,
-     "lufs": -13.2
+     "iacc": 0.443,
+     "lufs": -11.7
     },
     "strings": {
-     "iacc": 0.308,
-     "lufs": -14.8
+     "iacc": 0.379,
+     "lufs": -13.3
+    }
+   }
+  },
+  {
+   "id": "hotspot",
+   "label": "Coherence hotspot",
+   "short": "one coherent source circulating within a diffuse bed",
+   "body": "The first source retains full coherence while the remaining eight are fully decorrelated, so a locatable source travels through a background that is not. The arrangement separates two things the other variants combine, since it allows the listener to report where something is as well as whether the field is turning.",
+   "has_trace": true,
+   "n_sources": 9,
+   "rotation_deg_per_sec": 60.0,
+   "drift_mps": 0.0,
+   "lattice": "polar",
+   "measured_hrtf": false,
+   "distances": [
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0
+   ],
+   "moving": true,
+   "motion": "60 \u00b0/s, 3.3 revolutions",
+   "metrics": {
+    "drone": {
+     "iacc": 0.2,
+     "lufs": -11.7
+    },
+    "strings": {
+     "iacc": 0.208,
+     "lufs": -13.3
     }
    }
   },
@@ -199,53 +214,53 @@
    "id": "lateral",
    "label": "Field passing sideways",
    "short": "a lattice travelling left to right past the listener",
-   "body": "Twenty-four sources on a rectangular lattice, carried past the listener in a straight line rather than turned around them. The direction is lateral because the head model reproduces left and right through both interaural cues, while front and back are rendered identically and would leave the direction of travel ambiguous. The lattice spans 24 metres and the field crosses two thirds of it during the passage, with each source fading to silence before reaching an edge, so the wrap that keeps the source count constant stays out of the way.",
+   "body": "Twenty-four sources on a rectangular lattice, carried past the listener in a straight line rather than turned around them. The rows are offset so that none of them runs through the listener's position, which keeps the closest approach at one metre. A source passing through the head arrives loud and immediately locatable, which is what an earlier version of this variant did and what the session logs describe as nearer and farther rather than side to side. Travel is lateral because the head model reproduces left and right through both interaural cues while rendering front and back identically.",
    "has_trace": true,
    "n_sources": 24,
    "rotation_deg_per_sec": 0.0,
-   "drift_mps": 0.8,
+   "drift_mps": 1.0,
    "lattice": "cartesian",
    "grid": [
-    8,
-    3
+    6,
+    4
    ],
    "measured_hrtf": false,
    "distances": [
-    10.58,
-    10.5,
-    10.58,
-    7.62,
-    7.5,
-    7.62,
-    4.69,
-    4.5,
-    4.69,
-    2.01,
-    1.5,
-    2.01,
-    2.01,
-    1.5,
-    2.01,
-    4.69,
-    4.5,
-    4.69,
-    7.62,
-    7.5,
-    7.62,
-    10.58,
-    10.5,
-    10.58
+    10.44,
+    10.05,
+    10.05,
+    10.44,
+    6.71,
+    6.08,
+    6.08,
+    6.71,
+    3.61,
+    2.24,
+    2.24,
+    3.61,
+    3.61,
+    2.24,
+    2.24,
+    3.61,
+    6.71,
+    6.08,
+    6.08,
+    6.71,
+    10.44,
+    10.05,
+    10.05,
+    10.44
    ],
    "moving": true,
-   "motion": "translation at 0.80 m/s",
+   "motion": "translation at 1.00 m/s",
    "metrics": {
     "drone": {
-     "iacc": 0.249,
-     "lufs": -13.2
+     "iacc": 0.151,
+     "lufs": -11.7
     },
     "strings": {
-     "iacc": 0.19,
-     "lufs": -14.8
+     "iacc": 0.237,
+     "lufs": -13.3
     }
    }
   },
@@ -255,7 +270,7 @@
    "short": "the slow field rendered through measured ears",
    "body": "The default head model is a rigid sphere without an outer ear, so azimuth 30 degrees and azimuth 150 degrees produce identical signals and a revolution folds into a back-and-forth motion. Substituting the MIT KEMAR measurement supplies the front-back difference. Motion is identical to the slow field, so the pair isolates the contribution of the head model.",
    "has_trace": true,
-   "n_sources": 6,
+   "n_sources": 9,
    "rotation_deg_per_sec": 60.0,
    "drift_mps": 0.0,
    "lattice": "polar",
@@ -266,18 +281,21 @@
     2.0,
     2.0,
     2.0,
+    2.0,
+    2.0,
+    2.0,
     2.0
    ],
    "moving": true,
    "motion": "60 \u00b0/s, 3.3 revolutions",
    "metrics": {
     "drone": {
-     "iacc": 0.134,
-     "lufs": -13.2
+     "iacc": 0.086,
+     "lufs": -11.7
     },
     "strings": {
-     "iacc": 0.063,
-     "lufs": -14.8
+     "iacc": 0.104,
+     "lufs": -13.3
     }
    }
   }
