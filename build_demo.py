@@ -302,10 +302,12 @@ def build():
         if cfg is not None:
             comps = cfg.resolved_components()
             entry["n_sources"] = cfg.total_sources()
-            rot = max((c.rotation_deg_per_sec for c in comps),
+            # Scaled by time_scale, since a frozen control keeps its configured
+            # rates and would otherwise report itself as moving.
+            rot = max((c.rotation_deg_per_sec * c.time_scale for c in comps),
                       key=abs, default=0.0)
             drift = max((float(np.hypot(c.drift_x_mps, c.drift_y_mps))
-                         for c in comps), default=0.0)
+                         * abs(c.time_scale) for c in comps), default=0.0)
             entry["rotation_deg_per_sec"] = round(rot, 2)
             entry["drift_mps"] = round(drift, 2)
             entry["lattice"] = comps[0].lattice

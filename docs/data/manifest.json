@@ -2,7 +2,7 @@
  "passage_secs": 20.0,
  "n_sources": 9,
  "seed": 1,
- "build": 1787073285,
+ "build": 1787073498,
  "beds": [
   {
    "id": "drone",
@@ -147,7 +147,7 @@
    "body": "The matched control for both rotating variants, made by stopping time rather than by zeroing the rates. Every source holds the position and the level it had, the wandering stops along with the rotation, and the spatial and level distribution of the field is preserved exactly. A single render carries no evidence of motion on its own, since the available measures respond to diffuseness as well as to movement, so any claim about motion rests on the comparison with this.",
    "has_trace": true,
    "n_sources": 9,
-   "rotation_deg_per_sec": 60.0,
+   "rotation_deg_per_sec": 0.0,
    "drift_mps": 0.0,
    "lattice": "polar",
    "measured_hrtf": false,
@@ -162,8 +162,8 @@
     2.0,
     2.0
    ],
-   "moving": true,
-   "motion": "60 \u00b0/s, 3.3 revolutions",
+   "moving": false,
+   "motion": "none",
    "metrics": {
     "drone": {
      "iacc": 0.443,
