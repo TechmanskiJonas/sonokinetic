@@ -2,9 +2,9 @@
 
 Can motion in a field of sound be perceived without localizing anything in it?
 
-The instrument builds a field of virtual sources from a piece of audio, gives
+This tool builds a field of virtual sources from a piece of audio, gives
 the field a motion, and makes each source individually too diffuse to locate.
-Whether a listener still hears the field move is the experiment.
+The experiment: can you still hear the sound as "moving?"
 
 Jonas Techmanski · jonas030405@gmail.com
 
@@ -33,17 +33,15 @@ carry one.
 
 ### Audio
 
-Recordings stay out of the repository, so the first run writes
-`demo-drone.wav`, 45 seconds of synthetic sustained material, and selects it.
-The signal is built to what the treatment needs. It has no transients, because
-onsets restore the localization the treatment removes. It carries energy up to
+The first run writes
+`demo-drone.wav` (45 seconds of synthetic sustained material) and selects it.
+It has no transients, because
+onsets are easily localized by the ear. It carries energy up to
 8 kHz, because the level difference between the ears is a high-frequency cue.
-Running `make_demo_audio.py` writes that file and `demo-strings.wav` beside it.
 
 Any track can be dropped onto the waveform or put in the project folder.
-Sustained material with few transients works best. Pads, drones, bowed strings,
-organ, held voice and cymbal wash all qualify. The reason is measured and sits
-under *Sustained material decorrelates far more readily* in the Research
+Sustained material with few transients works best (pads, drones, bowed strings,
+organ, held voice and cymbal wash). An explanation of that effect is in *Sustained material decorrelates far more readily* in the Research
 chapter.
 
 The `?` beside the title runs a guided tour. There are three, covering an
@@ -53,7 +51,7 @@ overview, a hands-on build, and blind testing.
 
 The head model is a rigid sphere by default. A sphere renders mirrored azimuths
 identically and so carries no front-back information. A measured set supplies
-it, and the files are free to download:
+it (though success depends on the listener's physical pinna), and the files are free to download:
 
 ```bash
 pip install sofar
@@ -80,10 +78,7 @@ organised in three levels:
 
 There are two lattices. A **polar** one is concentric rings. A **grid** is a
 rectangle of sources spanning an extent in metres. Rotation, radial flow and
-translational drift combine freely on either, so a whirlpool is a polar lattice
-turning while it flows inward, and driving through a field of sources is a grid
-with a backward drift. Sources wrap within the lattice, which holds the count
-constant.
+translational drift combine freely on either.
 
 Each component carries its own decorrelation or inherits the variant's. Any
 share of its sources can be given over to random wandering in place of the
@@ -120,8 +115,7 @@ the seed fixed when comparing, or average across several.
 
 ## Learning it
 
-**Courses** run from two ears and two differences through to conducting a
-listening test that counts as evidence. **Research** covers the question, where
+**Courses** I built out for myself to learn more about the science and how to conduct experimentation. **Research** covers the question, where
 it sits in the literature, the results measured here, and what blind listening
 has shown. **Glossary** defines every term the interface uses, split into
 established material and this project's own vocabulary, each entry labelled by
@@ -166,8 +160,7 @@ python build_demo.py
 
 The first writes the two beds. The second renders every variant of each and
 writes the audio, the monitor traces and the measured numbers into
-`docs/data/`. Both beds are synthesised, which keeps the published page clear
-of material that cannot be redistributed.
+`docs/data/`.
 
 The page renders the ring at the geometry the blind sessions used, which is
 nine sources at two metres with allpass decorrelation and every source
